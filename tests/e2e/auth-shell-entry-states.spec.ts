@@ -122,6 +122,7 @@ test.describe("Auth Shell Entry States", () => {
     await expect(
       page.getByTestId("league-directory-page").getByRole("heading", { name: "Choose a League" }),
     ).toBeVisible();
+    await expect(page.getByTestId("league-directory-open-create-wizard")).toBeVisible();
 
     await commissioner.dispose();
   });
@@ -153,6 +154,46 @@ test.describe("Auth Shell Entry States", () => {
     await expect(page.getByTestId("no-league-create-button")).toBeVisible();
     await expect(page.getByTestId("no-league-join-button")).toBeVisible();
     await expect(page.getByTestId("no-league-sign-out")).toBeVisible();
+  });
+
+  test("no-league users can create through the guided wizard and land in league home", async ({
+    page,
+    baseURL,
+  }) => {
+    const email = `wizard-create-${Date.now()}@example.test`;
+    await prisma.user.create({
+      data: {
+        email,
+        name: "Wizard Create User",
+      },
+    });
+
+    await signInWithMagicLink({
+      page,
+      baseURL: baseURL as string,
+      email,
+      returnTo: "/",
+    });
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId("league-entry-empty-state")).toBeVisible();
+
+    await page.getByTestId("no-league-create-button").click();
+    await expect(page.getByTestId("league-create-wizard")).toBeVisible();
+
+    await page.getByTestId("no-league-create-name").fill(`Wizard League ${Date.now()}`);
+    await page.getByTestId("no-league-create-season-year").fill("2026");
+    await page.getByTestId("league-create-next-options").click();
+
+    await page.getByTestId("no-league-create-description").fill("Wizard setup flow test");
+    await page.getByTestId("league-create-next-review").click();
+    await expect(page.getByTestId("league-create-review-step")).toBeVisible();
+
+    await page.getByTestId("league-create-submit-button").click();
+
+    await expect(page).toHaveURL(/\/league\/[^/]+$/);
+    await expect(page.getByTestId("role-context-role")).toHaveText("Commissioner");
+    await expect(page.getByTestId("shell-top-bar")).toBeVisible();
   });
 
   test("revoked sessions redirect to login with a recovery message", async ({

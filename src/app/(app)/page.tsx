@@ -440,6 +440,241 @@ export default function LeagueDirectoryPage() {
         ? "You only have one accessible league, so we’re routing you straight into that workspace."
         : "Authentication identifies you. League choice is separate, so pick the workspace you want to open.";
 
+  function renderCreateLeagueWizard(input: {
+    allowClose: boolean;
+    closeTestId: string;
+  }) {
+    const currentStepIndex = CREATE_LEAGUE_WIZARD_STEPS.findIndex(
+      (step) => step.id === createLeagueWizardStep,
+    );
+
+    return (
+      <section
+        className="space-y-4 rounded-lg border p-4"
+        style={{
+          borderColor: "var(--brand-structure-muted)",
+          backgroundColor: "var(--brand-surface-elevated)",
+        }}
+        data-testid="league-create-wizard"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p
+              className="text-[11px] uppercase tracking-[0.2em]"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              Guided Setup
+            </p>
+            <h3 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+              Create League
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+              Move step-by-step through league basics, optional settings, then review before create.
+            </p>
+          </div>
+          {input.allowClose ? (
+            <button
+              type="button"
+              onClick={() => setCreateLeagueWizardOpen(false)}
+              className="rounded-md border border-[var(--brand-structure-muted)] px-3 py-1.5 text-xs transition hover:border-[var(--brand-structure)]"
+              style={{ color: "var(--foreground)" }}
+              data-testid={input.closeTestId}
+            >
+              Hide Wizard
+            </button>
+          ) : null}
+        </div>
+
+        <ol className="flex flex-wrap gap-2" data-testid="league-create-wizard-steps">
+          {CREATE_LEAGUE_WIZARD_STEPS.map((step, index) => {
+            const isCurrent = step.id === createLeagueWizardStep;
+            const isComplete = currentStepIndex > index;
+
+            return (
+              <li
+                key={step.id}
+                className={`rounded-full border px-2.5 py-1 text-xs ${
+                  isCurrent
+                    ? "border-sky-600 bg-sky-950/40 text-sky-100"
+                    : isComplete
+                      ? "border-emerald-700/60 bg-emerald-950/30 text-emerald-100"
+                      : "border-slate-700 bg-slate-900 text-slate-300"
+                }`}
+                data-testid={`league-create-step-${step.id}`}
+              >
+                {index + 1}. {step.label}
+              </li>
+            );
+          })}
+        </ol>
+
+        {createLeagueWizardStep === "basics" ? (
+          <div className="space-y-3" data-testid="league-create-wizard-basics">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
+                  League Name
+                </span>
+                <input
+                  type="text"
+                  value={createLeagueName}
+                  onChange={(event) => setCreateLeagueName(event.target.value)}
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  style={{
+                    borderColor: "var(--brand-structure-muted)",
+                    color: "var(--foreground)",
+                  }}
+                  placeholder="Sunday Empire League"
+                  data-testid="no-league-create-name"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
+                  Season Year
+                </span>
+                <input
+                  type="number"
+                  value={createLeagueSeasonYear}
+                  onChange={(event) => setCreateLeagueSeasonYear(event.target.value)}
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  style={{
+                    borderColor: "var(--brand-structure-muted)",
+                    color: "var(--foreground)",
+                  }}
+                  data-testid="no-league-create-season-year"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={continueCreateLeagueWizardToOptions}
+                className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                data-testid="league-create-next-options"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {createLeagueWizardStep === "options" ? (
+          <div className="space-y-3" data-testid="league-create-wizard-options">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
+                  Description
+                </span>
+                <input
+                  type="text"
+                  value={createLeagueDescription}
+                  onChange={(event) => setCreateLeagueDescription(event.target.value)}
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  style={{
+                    borderColor: "var(--brand-structure-muted)",
+                    color: "var(--foreground)",
+                  }}
+                  placeholder="Optional"
+                  data-testid="no-league-create-description"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
+                  Alternate Commissioner (Optional)
+                </span>
+                <input
+                  type="email"
+                  value={designatedCommissionerEmail}
+                  onChange={(event) => setDesignatedCommissionerEmail(event.target.value)}
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  style={{
+                    borderColor: "var(--brand-structure-muted)",
+                    color: "var(--foreground)",
+                  }}
+                  placeholder="commissioner@example.com"
+                  data-testid="no-league-create-designated-commissioner-email"
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCreateLeagueWizardStep("basics")}
+                className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)]"
+                style={{ color: "var(--foreground)" }}
+                data-testid="league-create-back-basics"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={continueCreateLeagueWizardToReview}
+                className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                data-testid="league-create-next-review"
+              >
+                Review
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {createLeagueWizardStep === "review" ? (
+          <div className="space-y-3" data-testid="league-create-wizard-review">
+            <div
+              className="grid grid-cols-1 gap-2 rounded-md border p-3 text-sm"
+              style={{
+                borderColor: "var(--brand-structure-muted)",
+                color: "var(--foreground)",
+              }}
+              data-testid="league-create-review-step"
+            >
+              <p>
+                <span style={{ color: "var(--muted-foreground)" }}>League Name:</span>{" "}
+                {createLeagueName.trim() || "Not set"}
+              </p>
+              <p>
+                <span style={{ color: "var(--muted-foreground)" }}>Season Year:</span>{" "}
+                {createLeagueSeasonYear.trim() || "Not set"}
+              </p>
+              <p>
+                <span style={{ color: "var(--muted-foreground)" }}>Description:</span>{" "}
+                {createLeagueDescription.trim() || "Not provided"}
+              </p>
+              <p>
+                <span style={{ color: "var(--muted-foreground)" }}>Commissioner:</span>{" "}
+                {designatedCommissionerEmail.trim()
+                  ? `${designatedCommissionerEmail.trim()} (designated)`
+                  : "Creator account (default)"}
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCreateLeagueWizardStep("options")}
+                className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)]"
+                style={{ color: "var(--foreground)" }}
+                data-testid="league-create-back-options"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleCreateLeague();
+                }}
+                disabled={creatingLeague}
+                className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                data-testid="league-create-submit-button"
+              >
+                {creatingLeague ? "Creating League..." : "Create League"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="league-directory-page">
       <header className="space-y-1">
@@ -497,93 +732,21 @@ export default function LeagueDirectoryPage() {
           }}
           data-testid="league-entry-empty-state"
         >
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-sm" style={{ color: "var(--foreground)" }}>
               No league memberships are attached to this signed-in account.
             </p>
             <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
               Create a league now, or join an existing league with an invite link.
             </p>
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
-                  League Name
-                </span>
-                <input
-                  type="text"
-                  value={createLeagueName}
-                  onChange={(event) => setCreateLeagueName(event.target.value)}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                  style={{
-                    borderColor: "var(--brand-structure-muted)",
-                    color: "var(--foreground)",
-                  }}
-                  placeholder="Sunday Empire League"
-                  data-testid="no-league-create-name"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
-                  Season Year
-                </span>
-                <input
-                  type="number"
-                  value={createLeagueSeasonYear}
-                  onChange={(event) => setCreateLeagueSeasonYear(event.target.value)}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                  style={{
-                    borderColor: "var(--brand-structure-muted)",
-                    color: "var(--foreground)",
-                  }}
-                  data-testid="no-league-create-season-year"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
-                  Description
-                </span>
-                <input
-                  type="text"
-                  value={createLeagueDescription}
-                  onChange={(event) => setCreateLeagueDescription(event.target.value)}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                  style={{
-                    borderColor: "var(--brand-structure-muted)",
-                    color: "var(--foreground)",
-                  }}
-                  placeholder="Optional"
-                  data-testid="no-league-create-description"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
-                  Alternate Commissioner (Optional)
-                </span>
-                <input
-                  type="email"
-                  value={designatedCommissionerEmail}
-                  onChange={(event) => setDesignatedCommissionerEmail(event.target.value)}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                  style={{
-                    borderColor: "var(--brand-structure-muted)",
-                    color: "var(--foreground)",
-                  }}
-                  placeholder="commissioner@example.com"
-                  data-testid="no-league-create-designated-commissioner-email"
-                />
-              </label>
-            </div>
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  void handleCreateLeague();
-                }}
-                disabled={creatingLeague}
+                onClick={openCreateLeagueWizard}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 data-testid="no-league-create-button"
               >
-                {creatingLeague ? "Creating League..." : "Create League"}
+                {createLeagueWizardOpen ? "Continue Create League" : "Create League"}
               </button>
               <div className="flex min-w-[320px] flex-1 flex-wrap gap-2">
                 <input
@@ -622,12 +785,18 @@ export default function LeagueDirectoryPage() {
                 }}
                 disabled={signingOut}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                data-testid="no-league-sign-out"
-              >
-                {signingOut ? "Signing Out..." : "Sign Out"}
-              </button>
+                  data-testid="no-league-sign-out"
+                >
+                  {signingOut ? "Signing Out..." : "Sign Out"}
+                </button>
+              </div>
+              {createLeagueWizardOpen ? (
+                renderCreateLeagueWizard({
+                  allowClose: false,
+                  closeTestId: "league-create-wizard-close-no-league",
+                })
+              ) : null}
             </div>
-          </div>
         </section>
       ) : null}
 
@@ -646,75 +815,107 @@ export default function LeagueDirectoryPage() {
       ) : null}
 
       {!isLoading && orderedLeagues.length > 1 ? (
-        <section className="grid grid-cols-1 gap-3 lg:grid-cols-2" data-testid="league-directory-grid">
-          {orderedLeagues.map((league) => {
-            const urgency = urgencyForPhase(league.season?.phase);
-            return (
-              <Link
-                key={league.id}
-                href={`/league/${league.id}`}
-                onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-                  event.preventDefault();
-                  void activateLeague(league, "directory");
-                }}
-                className={`rounded-lg p-4 transition ${
-                  activatingLeagueId === league.id ? "opacity-75" : ""
-                }`}
-                style={{
-                  border: "1px solid var(--brand-structure-muted)",
-                  backgroundColor: "var(--brand-surface-elevated)",
-                }}
-                onMouseEnter={(event) => {
-                  if (activatingLeagueId !== league.id) {
-                    event.currentTarget.style.borderColor = "rgba(14, 165, 233, 0.7)";
-                    event.currentTarget.style.backgroundColor = "var(--brand-surface-card)";
-                  }
-                }}
-                onMouseLeave={(event) => {
-                  if (activatingLeagueId !== league.id) {
-                    event.currentTarget.style.borderColor = "var(--brand-structure-muted)";
-                    event.currentTarget.style.backgroundColor = "var(--brand-surface-elevated)";
-                  }
-                }}
-                data-testid="league-directory-card"
+        <section className="space-y-3" data-testid="league-directory-multi-state">
+          <div
+            className="rounded-lg border p-4"
+            style={{
+              borderColor: "var(--brand-structure-muted)",
+              backgroundColor: "var(--brand-surface-card)",
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                Need a fresh workspace for another season or group?
+              </p>
+              <button
+                type="button"
+                onClick={openCreateLeagueWizard}
+                className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                data-testid="league-directory-open-create-wizard"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3
-                    className="text-base font-semibold"
+                {createLeagueWizardOpen ? "Continue Create League" : "Create League"}
+              </button>
+            </div>
+            {createLeagueWizardOpen ? (
+              <div className="mt-4">
+                {renderCreateLeagueWizard({
+                  allowClose: true,
+                  closeTestId: "league-create-wizard-close-directory",
+                })}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2" data-testid="league-directory-grid">
+            {orderedLeagues.map((league) => {
+              const urgency = urgencyForPhase(league.season?.phase);
+              return (
+                <Link
+                  key={league.id}
+                  href={`/league/${league.id}`}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                    event.preventDefault();
+                    void activateLeague(league, "directory");
+                  }}
+                  className={`rounded-lg p-4 transition ${
+                    activatingLeagueId === league.id ? "opacity-75" : ""
+                  }`}
+                  style={{
+                    border: "1px solid var(--brand-structure-muted)",
+                    backgroundColor: "var(--brand-surface-elevated)",
+                  }}
+                  onMouseEnter={(event) => {
+                    if (activatingLeagueId !== league.id) {
+                      event.currentTarget.style.borderColor = "rgba(14, 165, 233, 0.7)";
+                      event.currentTarget.style.backgroundColor = "var(--brand-surface-card)";
+                    }
+                  }}
+                  onMouseLeave={(event) => {
+                    if (activatingLeagueId !== league.id) {
+                      event.currentTarget.style.borderColor = "var(--brand-structure-muted)";
+                      event.currentTarget.style.backgroundColor = "var(--brand-surface-elevated)";
+                    }
+                  }}
+                  data-testid="league-directory-card"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3
+                      className="text-base font-semibold"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      {league.name}
+                    </h3>
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] ${urgency.className}`}>
+                      {urgency.label}
+                    </span>
+                  </div>
+                  <p
+                    className="mt-1 text-xs"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    {formatMembershipContext(league)}
+                  </p>
+                  <p
+                    className="mt-2 text-sm"
                     style={{ color: "var(--foreground)" }}
                   >
-                    {league.name}
-                  </h3>
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] ${urgency.className}`}>
-                    {urgency.label}
-                  </span>
-                </div>
-                <p
-                  className="mt-1 text-xs"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
-                  {formatMembershipContext(league)}
-                </p>
-                <p
-                  className="mt-2 text-sm"
-                  style={{ color: "var(--foreground)" }}
-                >
-                  {league.description || "No description provided for this league workspace."}
-                </p>
-                <div
-                  className="mt-3 flex flex-wrap gap-2 text-xs"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
-                  <span>Season {league.season?.year ?? "-"}</span>
-                  <span>Current phase: {formatLeaguePhaseLabel(league.season?.phase)}</span>
-                  <span>{league.counts.teams} teams</span>
-                </div>
-                {activatingLeagueId === league.id ? (
-                  <p className="mt-2 text-xs text-sky-200">Activating league workspace...</p>
-                ) : null}
-              </Link>
-            );
-          })}
+                    {league.description || "No description provided for this league workspace."}
+                  </p>
+                  <div
+                    className="mt-3 flex flex-wrap gap-2 text-xs"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    <span>Season {league.season?.year ?? "-"}</span>
+                    <span>Current phase: {formatLeaguePhaseLabel(league.season?.phase)}</span>
+                    <span>{league.counts.teams} teams</span>
+                  </div>
+                  {activatingLeagueId === league.id ? (
+                    <p className="mt-2 text-xs text-sky-200">Activating league workspace...</p>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
         </section>
       ) : null}
     </div>

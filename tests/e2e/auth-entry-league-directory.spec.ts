@@ -33,6 +33,7 @@ test.describe("Auth Entry and League Directory", () => {
     await page.goto("/");
 
     await expect(page.getByTestId("league-directory-page")).toBeVisible();
+    await expect(page.getByTestId("league-directory-open-create-wizard")).toBeVisible();
     const targetCard = page
       .getByTestId("league-directory-card")
       .filter({ hasText: leagueName })
