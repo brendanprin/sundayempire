@@ -150,6 +150,7 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
   actor: AuthActor;
   leagueId: string;
   seasonId: string;
+  now: Date;
 }): Promise<LeagueSetupChecklistProjection> {
   if (input.actor.leagueRole !== "COMMISSIONER") {
     return {
@@ -166,7 +167,7 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
   }
 
   const seasonPhase = input.leagueDashboard.season?.currentPhase ?? null;
-  const [founderSkipMarker, rookieDraft] = await Promise.all([
+  const [founderSkipMarker, rookieDraft, pendingInviteCount] = await Promise.all([
     input.actor.teamId
       ? Promise.resolve(null)
       : client.transaction.findFirst({
@@ -194,6 +195,16 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
         id: true,
       },
     }),
+    client.leagueInvite.count({
+      where: {
+        leagueId: input.leagueId,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gt: input.now,
+        },
+      },
+    }),
   ]);
 
   const rookieDraftBoardEntryCount = rookieDraft
@@ -214,7 +225,8 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
 
   const founderTeamComplete = Boolean(input.actor.teamId);
   const addTeamsComplete = input.leagueDashboard.summary.teamCount >= 2;
-  const inviteMembersComplete = input.leagueDashboard.summary.membershipCount >= 2;
+  const inviteMembersComplete =
+    input.leagueDashboard.summary.membershipCount >= 2 || pendingInviteCount > 0;
   const reviewSettingsComplete =
     (input.leagueDashboard.summary.activeRulesetVersion ?? 1) > 1 || seasonPhase !== "PRESEASON_SETUP";
   const draftPrepRequired = seasonPhase === "PRESEASON_SETUP";
@@ -247,7 +259,7 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
         ? `${input.leagueDashboard.summary.teamCount} teams are already created.`
         : `Only ${input.leagueDashboard.summary.teamCount} team${input.leagueDashboard.summary.teamCount === 1 ? "" : "s"} found. Add at least one more team to start league play.`,
       status: addTeamsComplete ? "COMPLETE" : "INCOMPLETE",
-      href: addTeamsComplete ? null : "/teams",
+      href: addTeamsComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
       ctaLabel: addTeamsComplete ? null : "Add Teams",
       commissionerOnly: true,
     },
@@ -255,10 +267,12 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
       id: "invite-members",
       title: "Invite members",
       description: inviteMembersComplete
-        ? `${input.leagueDashboard.summary.membershipCount} league memberships are active.`
+        ? pendingInviteCount > 0
+          ? `${pendingInviteCount} pending invite${pendingInviteCount === 1 ? "" : "s"} sent and setup is moving.`
+          : `${input.leagueDashboard.summary.membershipCount} league memberships are active.`
         : "No owner/member has joined yet beyond the founder. Send your first invite.",
       status: inviteMembersComplete ? "COMPLETE" : "INCOMPLETE",
-      href: inviteMembersComplete ? null : "/commissioner",
+      href: inviteMembersComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
       ctaLabel: inviteMembersComplete ? null : "Invite Members",
       commissionerOnly: true,
     },
@@ -494,6 +508,7 @@ export function createLeagueLandingDashboardService(client: DashboardProjectionD
         actor: input.actor,
         leagueId: input.leagueId,
         seasonId: input.seasonId,
+        now,
       });
 
       return {

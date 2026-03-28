@@ -152,6 +152,34 @@ export async function POST(request: NextRequest) {
     return apiError(400, "INVALID_REQUEST", "Team abbreviation must be 8 characters or fewer.");
   }
 
+  const duplicateTeam = await prisma.team.findFirst({
+    where: {
+      leagueId: context.leagueId,
+      OR: [
+        { name },
+        ...(abbreviation ? [{ abbreviation }] : []),
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      abbreviation: true,
+    },
+  });
+
+  if (duplicateTeam) {
+    return apiError(
+      409,
+      "TEAM_ALREADY_EXISTS",
+      "A team with the same name or abbreviation already exists in this league.",
+      {
+        teamId: duplicateTeam.id,
+        existingTeamName: duplicateTeam.name,
+        existingTeamAbbreviation: duplicateTeam.abbreviation,
+      },
+    );
+  }
+
   const ownerIdFromBody =
     typeof body.ownerId === "string" && body.ownerId.trim() ? body.ownerId : null;
   const hasNewOwner = Boolean(body.newOwner);

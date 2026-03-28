@@ -343,6 +343,11 @@ test("league landing dashboard stays safe for commissioner without a team", asyn
         return 0;
       },
     },
+    leagueInvite: {
+      async count() {
+        return 0;
+      },
+    },
     commissionerOverride: {
       async findFirst() {
         return null;

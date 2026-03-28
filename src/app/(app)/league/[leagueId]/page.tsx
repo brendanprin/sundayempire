@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import {
+  InviteManagementPanel,
+  type CommissionerInviteRow,
+} from "@/components/commissioner/invite-management-panel";
 import { DashboardActionCenter } from "@/components/dashboard/dashboard-action-center";
 import { DashboardHealthSummaryRow } from "@/components/dashboard/dashboard-health-summary-row";
 import { PhaseBadge } from "@/components/dashboard/phase-badge";
@@ -55,6 +59,15 @@ type FounderSetupPayload = {
   }[];
 };
 
+type LeagueInvitesPayload = {
+  invites: CommissionerInviteRow[];
+  capabilities: {
+    copyFreshLink: boolean;
+  };
+};
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function LeagueLandingDashboardPage() {
   const params = useParams<{ leagueId: string }>();
   const leagueId = params.leagueId;
@@ -77,6 +90,20 @@ export default function LeagueLandingDashboardPage() {
   const [founderCreateTeamAbbreviation, setFounderCreateTeamAbbreviation] = useState("");
   const [founderCreateTeamDivisionLabel, setFounderCreateTeamDivisionLabel] = useState("");
   const [founderClaimTeamId, setFounderClaimTeamId] = useState("");
+  const [setupTeamName, setSetupTeamName] = useState("");
+  const [setupTeamAbbreviation, setSetupTeamAbbreviation] = useState("");
+  const [setupTeamDivisionLabel, setSetupTeamDivisionLabel] = useState("");
+  const [setupInviteOwnerName, setSetupInviteOwnerName] = useState("");
+  const [setupInviteOwnerEmail, setSetupInviteOwnerEmail] = useState("");
+  const [setupInviteTeamName, setSetupInviteTeamName] = useState("");
+  const [setupInviteTeamAbbreviation, setSetupInviteTeamAbbreviation] = useState("");
+  const [setupInviteDivisionLabel, setSetupInviteDivisionLabel] = useState("");
+  const [setupInvites, setSetupInvites] = useState<CommissionerInviteRow[]>([]);
+  const [setupInviteCopyFreshLinkEnabled, setSetupInviteCopyFreshLinkEnabled] = useState(false);
+  const [setupOpsLoading, setSetupOpsLoading] = useState(false);
+  const [setupOpsBusyAction, setSetupOpsBusyAction] = useState<string | null>(null);
+  const [setupOpsError, setSetupOpsError] = useState<string | null>(null);
+  const [setupOpsMessage, setSetupOpsMessage] = useState<string | null>(null);
   const dashboardViewTracked = useRef(false);
   const firstActionTracked = useRef(false);
 
@@ -101,6 +128,20 @@ export default function LeagueLandingDashboardPage() {
     setFounderCreateTeamAbbreviation("");
     setFounderCreateTeamDivisionLabel("");
     setFounderClaimTeamId("");
+    setSetupTeamName("");
+    setSetupTeamAbbreviation("");
+    setSetupTeamDivisionLabel("");
+    setSetupInviteOwnerName("");
+    setSetupInviteOwnerEmail("");
+    setSetupInviteTeamName("");
+    setSetupInviteTeamAbbreviation("");
+    setSetupInviteDivisionLabel("");
+    setSetupInvites([]);
+    setSetupInviteCopyFreshLinkEnabled(false);
+    setSetupOpsLoading(false);
+    setSetupOpsBusyAction(null);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
     dashboardViewTracked.current = false;
     firstActionTracked.current = false;
 
@@ -281,6 +322,56 @@ export default function LeagueLandingDashboardPage() {
     });
   }, [founderSetup]);
 
+  async function loadSetupInvites() {
+    const payload = await requestJson<LeagueInvitesPayload>(
+      "/api/league/invites",
+      { cache: "no-store" },
+      "Failed to load setup invites.",
+    );
+
+    setSetupInvites(payload.invites);
+    setSetupInviteCopyFreshLinkEnabled(payload.capabilities.copyFreshLink);
+  }
+
+  useEffect(() => {
+    if (!leagueContextReady || !dashboard || dashboard.viewer.leagueRole !== "COMMISSIONER") {
+      setSetupInvites([]);
+      setSetupInviteCopyFreshLinkEnabled(false);
+      setSetupOpsLoading(false);
+      setSetupOpsError(null);
+      return;
+    }
+
+    let mounted = true;
+    setSetupOpsLoading(true);
+    setSetupOpsError(null);
+
+    loadSetupInvites()
+      .catch((requestError) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+          setSetupInvites([]);
+          setSetupInviteCopyFreshLinkEnabled(false);
+          setSetupOpsError(null);
+          return;
+        }
+
+        setSetupOpsError(requestError instanceof Error ? requestError.message : "Failed to load setup invites.");
+      })
+      .finally(() => {
+        if (mounted) {
+          setSetupOpsLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [dashboard, leagueContextReady]);
+
   async function refreshDashboardSurfaces() {
     const [dashboardPayload, tradesHomePayload, draftsHomePayload] = await Promise.all([
       requestJson<LeagueLandingDashboardProjection>(
@@ -380,6 +471,222 @@ export default function LeagueLandingDashboardPage() {
 
   async function handleFounderSkip() {
     await submitFounderSetupAction("skip");
+  }
+
+  async function handleSetupCreateTeamSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const name = setupTeamName.trim();
+    if (name.length < 2) {
+      setSetupOpsError("Team name must be at least 2 characters.");
+      return;
+    }
+
+    const abbreviation = setupTeamAbbreviation.trim().toUpperCase();
+    if (abbreviation.length > 8) {
+      setSetupOpsError("Team abbreviation must be 8 characters or fewer.");
+      return;
+    }
+
+    setSetupOpsBusyAction("setup:team:create");
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{ team: { name: string } }>(
+        "/api/teams",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            name,
+            abbreviation: abbreviation || null,
+            divisionLabel: setupTeamDivisionLabel.trim() || null,
+          }),
+        },
+        "Failed to create team from setup flow.",
+      );
+
+      setSetupTeamName("");
+      setSetupTeamAbbreviation("");
+      setSetupOpsMessage(`Created team ${payload.team.name}.`);
+      await refreshDashboardSurfaces();
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to create team from setup flow.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSetupInviteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const ownerName = setupInviteOwnerName.trim();
+    const ownerEmail = setupInviteOwnerEmail.trim().toLowerCase();
+    const teamName = setupInviteTeamName.trim();
+    const teamAbbreviation = setupInviteTeamAbbreviation.trim().toUpperCase();
+    const divisionLabel = setupInviteDivisionLabel.trim();
+
+    if (ownerName.length < 2) {
+      setSetupOpsError("Owner name must be at least 2 characters.");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(ownerEmail)) {
+      setSetupOpsError("Owner email must be a valid email address.");
+      return;
+    }
+    if (teamName.length < 2) {
+      setSetupOpsError("Team name must be at least 2 characters.");
+      return;
+    }
+    if (teamAbbreviation.length > 8) {
+      setSetupOpsError("Team abbreviation must be 8 characters or fewer.");
+      return;
+    }
+
+    setSetupOpsBusyAction("setup:invite:create");
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{
+        owner: { name: string };
+        team: { name: string };
+        delivery: { label: string; detail: string };
+      }>(
+        "/api/league/invites",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            ownerName,
+            ownerEmail,
+            teamName,
+            teamAbbreviation: teamAbbreviation || null,
+            divisionLabel: divisionLabel || null,
+          }),
+        },
+        "Failed to invite member from setup flow.",
+      );
+
+      setSetupInviteOwnerName("");
+      setSetupInviteOwnerEmail("");
+      setSetupInviteTeamName("");
+      setSetupInviteTeamAbbreviation("");
+      setSetupOpsMessage(
+        `Invited ${payload.owner.name} and created ${payload.team.name}. ${payload.delivery.label}: ${payload.delivery.detail}`,
+      );
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to invite member from setup flow.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSetupInviteResend(invite: CommissionerInviteRow) {
+    setSetupOpsBusyAction(`invite:resend:${invite.id}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      await requestJson(
+        `/api/league/invites/${invite.id}/resend`,
+        {
+          method: "POST",
+        },
+        "Failed to resend invite.",
+      );
+
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+      setSetupOpsMessage(`Reissued invite for ${invite.email}.`);
+    } catch (requestError) {
+      setSetupOpsError(requestError instanceof Error ? requestError.message : "Failed to resend invite.");
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSetupInviteRevoke(invite: CommissionerInviteRow) {
+    const confirmed = window.confirm(
+      `Revoke invite for ${invite.email}? They will need a new link to join.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setSetupOpsBusyAction(`invite:revoke:${invite.id}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      await requestJson(
+        `/api/league/invites/${invite.id}/revoke`,
+        {
+          method: "POST",
+        },
+        "Failed to revoke invite.",
+      );
+
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+      setSetupOpsMessage(`Revoked invite for ${invite.email}.`);
+    } catch (requestError) {
+      setSetupOpsError(requestError instanceof Error ? requestError.message : "Failed to revoke invite.");
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSetupCopyFreshInviteLink(invite: CommissionerInviteRow) {
+    setSetupOpsBusyAction(`invite:copy:${invite.id}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{
+        inviteUrl: string;
+      }>(
+        `/api/league/invites/${invite.id}/copy-link`,
+        {
+          method: "POST",
+        },
+        "Failed to copy fresh invite link.",
+      );
+
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload.inviteUrl);
+        setSetupOpsMessage(`Copied fresh invite link for ${invite.email}.`);
+      } else {
+        window.prompt("Copy invite link", payload.inviteUrl);
+        setSetupOpsMessage(`Generated fresh invite link for ${invite.email}.`);
+      }
+
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+    } catch (requestError) {
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to copy fresh invite link.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
   }
 
   const mirrorOnly = dashboard?.leagueDashboard.status.mirrorOnly ?? false;
@@ -563,6 +870,7 @@ export default function LeagueLandingDashboardPage() {
           {dashboard.viewer.leagueRole === "COMMISSIONER" &&
           (founderSetupLoading || founderSetupError || !founderSetup || !founderSetup.isComplete) ? (
             <section
+              id="founder-team-setup"
               className="space-y-4 rounded-2xl border border-amber-700/40 bg-amber-950/10 p-5"
               data-testid="founder-team-setup-panel"
             >
@@ -711,6 +1019,175 @@ export default function LeagueLandingDashboardPage() {
                   </div>
                 </div>
               ) : null}
+            </section>
+          ) : null}
+
+          {dashboard.viewer.leagueRole === "COMMISSIONER" &&
+          (setupOpsLoading ||
+            !dashboard.setupChecklist.isComplete ||
+            setupInvites.some((invite) => invite.status === "pending")) ? (
+            <section
+              id="setup-bootstrap-panel"
+              className="space-y-4 rounded-2xl border border-sky-700/35 bg-sky-950/10 p-5"
+              data-testid="setup-bootstrap-panel"
+            >
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-sky-300/80">League Bootstrap</p>
+                <h2 className="mt-1 text-base font-medium text-sky-100">Add teams and send invites from setup</h2>
+                <p className="mt-1 text-sm text-sky-50/80">
+                  Keep setup momentum in league home without detouring into legacy commissioner pages.
+                </p>
+              </div>
+
+              {setupOpsError ? (
+                <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100">
+                  {setupOpsError}
+                </div>
+              ) : null}
+              {setupOpsMessage ? (
+                <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100">
+                  {setupOpsMessage}
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <form
+                  className="space-y-3 rounded-xl border border-sky-800/40 bg-black/20 p-4"
+                  onSubmit={handleSetupCreateTeamSubmit}
+                  data-testid="setup-create-team-form"
+                >
+                  <h3 className="text-sm font-medium text-sky-100">Create Team</h3>
+                  <label className="block text-xs text-sky-100/90">
+                    Team name
+                    <input
+                      value={setupTeamName}
+                      onChange={(event) => setSetupTeamName(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                      placeholder="Expansion Club"
+                      data-testid="setup-create-team-name"
+                    />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs text-sky-100/90">
+                      Abbreviation
+                      <input
+                        value={setupTeamAbbreviation}
+                        onChange={(event) => setSetupTeamAbbreviation(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm uppercase text-slate-100"
+                        placeholder="EXP"
+                        data-testid="setup-create-team-abbr"
+                      />
+                    </label>
+                    <label className="block text-xs text-sky-100/90">
+                      Division
+                      <input
+                        value={setupTeamDivisionLabel}
+                        onChange={(event) => setSetupTeamDivisionLabel(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                        placeholder="North"
+                        data-testid="setup-create-team-division"
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="submit"
+                    className="rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={Boolean(setupOpsBusyAction)}
+                    data-testid="setup-create-team-submit"
+                  >
+                    {setupOpsBusyAction === "setup:team:create" ? "Creating..." : "Create Team"}
+                  </button>
+                </form>
+
+                <form
+                  className="space-y-3 rounded-xl border border-sky-800/40 bg-black/20 p-4"
+                  onSubmit={handleSetupInviteSubmit}
+                  data-testid="setup-invite-form"
+                >
+                  <h3 className="text-sm font-medium text-sky-100">Invite Member + Team</h3>
+                  <label className="block text-xs text-sky-100/90">
+                    Owner name
+                    <input
+                      value={setupInviteOwnerName}
+                      onChange={(event) => setSetupInviteOwnerName(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                      placeholder="Alex Owner"
+                      data-testid="setup-invite-owner-name"
+                    />
+                  </label>
+                  <label className="block text-xs text-sky-100/90">
+                    Owner email
+                    <input
+                      value={setupInviteOwnerEmail}
+                      onChange={(event) => setSetupInviteOwnerEmail(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                      placeholder="alex@example.com"
+                      data-testid="setup-invite-owner-email"
+                    />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs text-sky-100/90">
+                      Team name
+                      <input
+                        value={setupInviteTeamName}
+                        onChange={(event) => setSetupInviteTeamName(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                        placeholder="Gridiron Ghosts"
+                        data-testid="setup-invite-team-name"
+                      />
+                    </label>
+                    <label className="block text-xs text-sky-100/90">
+                      Team abbr
+                      <input
+                        value={setupInviteTeamAbbreviation}
+                        onChange={(event) => setSetupInviteTeamAbbreviation(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm uppercase text-slate-100"
+                        placeholder="GGH"
+                        data-testid="setup-invite-team-abbr"
+                      />
+                    </label>
+                  </div>
+                  <label className="block text-xs text-sky-100/90">
+                    Division
+                    <input
+                      value={setupInviteDivisionLabel}
+                      onChange={(event) => setSetupInviteDivisionLabel(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                      placeholder="South"
+                      data-testid="setup-invite-division"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={Boolean(setupOpsBusyAction)}
+                    data-testid="setup-invite-submit"
+                  >
+                    {setupOpsBusyAction === "setup:invite:create" ? "Inviting..." : "Invite Member + Team"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="rounded-xl border border-sky-800/35 bg-slate-950/40 p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium text-sky-100">Pending Invites</h3>
+                  <span className="rounded-full border border-sky-700/50 px-2 py-0.5 text-[11px] text-sky-200">
+                    {setupInvites.filter((invite) => invite.status === "pending").length} pending
+                  </span>
+                </div>
+                {setupOpsLoading ? (
+                  <p className="text-xs text-slate-300">Loading invite state...</p>
+                ) : (
+                  <InviteManagementPanel
+                    invites={setupInvites}
+                    copyFreshLinkEnabled={setupInviteCopyFreshLinkEnabled}
+                    busyAction={setupOpsBusyAction}
+                    onResend={(invite) => void handleSetupInviteResend(invite)}
+                    onRevoke={(invite) => void handleSetupInviteRevoke(invite)}
+                    onCopyFreshLink={(invite) => void handleSetupCopyFreshInviteLink(invite)}
+                  />
+                )}
+              </div>
             </section>
           ) : null}
 
