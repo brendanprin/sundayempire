@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { DashboardActionCenter } from "@/components/dashboard/dashboard-action-center";
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { DashboardHealthSummaryRow } from "@/components/dashboard/dashboard-health-summary-row";
 import { PhaseBadge } from "@/components/dashboard/phase-badge";
 import {
@@ -35,6 +34,27 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+type FounderSetupStatus = "COMPLETE" | "INCOMPLETE_REQUIRED" | "INCOMPLETE_POSTPONED";
+type FounderSetupAction = "create" | "claim" | "skip";
+
+type FounderSetupPayload = {
+  leagueId: string;
+  isComplete: boolean;
+  status: FounderSetupStatus;
+  hasPostponed: boolean;
+  currentTeam: {
+    id: string;
+    name: string;
+    abbreviation: string | null;
+  } | null;
+  claimableTeams: {
+    id: string;
+    name: string;
+    abbreviation: string | null;
+    ownerName: string | null;
+  }[];
+};
+
 export default function LeagueLandingDashboardPage() {
   const params = useParams<{ leagueId: string }>();
   const leagueId = params.leagueId;
@@ -47,6 +67,16 @@ export default function LeagueLandingDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [leagueContextReady, setLeagueContextReady] = useState(false);
+  const [founderSetup, setFounderSetup] = useState<FounderSetupPayload | null>(null);
+  const [founderSetupLoading, setFounderSetupLoading] = useState(false);
+  const [founderSetupError, setFounderSetupError] = useState<string | null>(null);
+  const [founderSetupPendingAction, setFounderSetupPendingAction] = useState<FounderSetupAction | null>(
+    null,
+  );
+  const [founderCreateTeamName, setFounderCreateTeamName] = useState("");
+  const [founderCreateTeamAbbreviation, setFounderCreateTeamAbbreviation] = useState("");
+  const [founderCreateTeamDivisionLabel, setFounderCreateTeamDivisionLabel] = useState("");
+  const [founderClaimTeamId, setFounderClaimTeamId] = useState("");
   const dashboardViewTracked = useRef(false);
   const firstActionTracked = useRef(false);
 
@@ -63,6 +93,14 @@ export default function LeagueLandingDashboardPage() {
     setDashboard(null);
     setDraftsHome(null);
     setTradesHome(null);
+    setFounderSetup(null);
+    setFounderSetupLoading(false);
+    setFounderSetupError(null);
+    setFounderSetupPendingAction(null);
+    setFounderCreateTeamName("");
+    setFounderCreateTeamAbbreviation("");
+    setFounderCreateTeamDivisionLabel("");
+    setFounderClaimTeamId("");
     dashboardViewTracked.current = false;
     firstActionTracked.current = false;
 
@@ -179,6 +217,170 @@ export default function LeagueLandingDashboardPage() {
       },
     });
   }, [dashboard, leagueId]);
+
+  useEffect(() => {
+    if (!leagueContextReady || !dashboard || dashboard.viewer.leagueRole !== "COMMISSIONER") {
+      setFounderSetup(null);
+      setFounderSetupError(null);
+      setFounderSetupLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    setFounderSetupLoading(true);
+    setFounderSetupError(null);
+
+    requestJson<{ founderSetup: FounderSetupPayload }>(
+      "/api/league/founder-team",
+      { cache: "no-store" },
+      "Failed to load founder team setup status.",
+    )
+      .then((payload) => {
+        if (!mounted) {
+          return;
+        }
+        setFounderSetup(payload.founderSetup);
+      })
+      .catch((requestError) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+          setFounderSetup(null);
+          setFounderSetupError(null);
+          return;
+        }
+
+        setFounderSetupError(
+          requestError instanceof Error ? requestError.message : "Failed to load founder team setup status.",
+        );
+      })
+      .finally(() => {
+        if (mounted) {
+          setFounderSetupLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [dashboard, leagueContextReady]);
+
+  useEffect(() => {
+    if (!founderSetup || founderSetup.claimableTeams.length === 0) {
+      setFounderClaimTeamId("");
+      return;
+    }
+
+    setFounderClaimTeamId((current) => {
+      if (current && founderSetup.claimableTeams.some((team) => team.id === current)) {
+        return current;
+      }
+      return founderSetup.claimableTeams[0]?.id ?? "";
+    });
+  }, [founderSetup]);
+
+  async function refreshDashboardSurfaces() {
+    const [dashboardPayload, tradesHomePayload, draftsHomePayload] = await Promise.all([
+      requestJson<LeagueLandingDashboardProjection>(
+        "/api/league/dashboard",
+        undefined,
+        "Failed to reload the league landing dashboard.",
+      ),
+      requestJson<TradeHomeResponse>("/api/trades/home").catch(() => null),
+      requestJson<DraftHomeProjection>("/api/drafts/home").catch(() => null),
+    ]);
+
+    setDashboard(dashboardPayload);
+    setTradesHome(tradesHomePayload);
+    setDraftsHome(draftsHomePayload);
+  }
+
+  async function submitFounderSetupAction(
+    action: FounderSetupAction,
+    payload: Record<string, unknown> = {},
+  ) {
+    setFounderSetupPendingAction(action);
+    setFounderSetupError(null);
+
+    try {
+      const founderResponse = await requestJson<{ founderSetup: FounderSetupPayload }>(
+        "/api/league/founder-team",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action,
+            ...payload,
+          }),
+        },
+        "Founder team setup update failed.",
+      );
+
+      setFounderSetup(founderResponse.founderSetup);
+      await refreshDashboardSurfaces();
+      return true;
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+
+      setFounderSetupError(
+        requestError instanceof Error ? requestError.message : "Founder team setup update failed.",
+      );
+      return false;
+    } finally {
+      setFounderSetupPendingAction(null);
+    }
+  }
+
+  async function handleFounderCreateSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const teamName = founderCreateTeamName.trim();
+    if (teamName.length < 2) {
+      setFounderSetupError("Team name must be at least 2 characters.");
+      return;
+    }
+
+    const teamAbbreviation = founderCreateTeamAbbreviation.trim().toUpperCase();
+    if (teamAbbreviation.length > 8) {
+      setFounderSetupError("Team abbreviation must be 8 characters or fewer.");
+      return;
+    }
+
+    const success = await submitFounderSetupAction("create", {
+      teamName,
+      teamAbbreviation: teamAbbreviation || null,
+      divisionLabel: founderCreateTeamDivisionLabel.trim() || null,
+    });
+
+    if (success) {
+      setFounderCreateTeamName("");
+      setFounderCreateTeamAbbreviation("");
+      setFounderCreateTeamDivisionLabel("");
+    }
+  }
+
+  async function handleFounderClaimSubmit() {
+    if (!founderClaimTeamId) {
+      setFounderSetupError("Select a team to claim.");
+      return;
+    }
+
+    await submitFounderSetupAction("claim", {
+      teamId: founderClaimTeamId,
+    });
+  }
+
+  async function handleFounderSkip() {
+    await submitFounderSetupAction("skip");
+  }
 
   const mirrorOnly = dashboard?.leagueDashboard.status.mirrorOnly ?? false;
   const phaseTone =
@@ -356,6 +558,160 @@ export default function LeagueLandingDashboardPage() {
 
       {dashboard ? (
         <div className="space-y-6">
+          {dashboard.viewer.leagueRole === "COMMISSIONER" &&
+          (founderSetupLoading || founderSetupError || !founderSetup || !founderSetup.isComplete) ? (
+            <section
+              className="space-y-4 rounded-2xl border border-amber-700/40 bg-amber-950/10 p-5"
+              data-testid="founder-team-setup-panel"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/80">Founder Setup</p>
+                  <h2 className="mt-1 text-base font-medium text-amber-100">
+                    Complete commissioner + team-owner setup
+                  </h2>
+                  <p className="mt-1 text-sm text-amber-50/80">
+                    You still have full commissioner authority. Choose your franchise now or postpone and return later.
+                  </p>
+                </div>
+                <span
+                  className="rounded-full border border-amber-500/50 bg-amber-950/40 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-amber-100"
+                  data-testid="founder-team-setup-status"
+                >
+                  {founderSetupLoading
+                    ? "Checking"
+                    : founderSetup?.status === "INCOMPLETE_POSTPONED"
+                      ? "Postponed"
+                      : "Required"}
+                </span>
+              </div>
+
+              {founderSetup?.status === "INCOMPLETE_POSTPONED" ? (
+                <div
+                  className="rounded-lg border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100"
+                  data-testid="founder-team-postponed-note"
+                >
+                  Team setup is postponed and still incomplete.
+                </div>
+              ) : null}
+
+              {founderSetupError ? (
+                <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100">
+                  {founderSetupError}
+                </div>
+              ) : null}
+
+              {founderSetupLoading ? (
+                <p className="text-sm text-amber-100/80">Loading founder team options...</p>
+              ) : founderSetup ? (
+                <div className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <form
+                      className="space-y-3 rounded-xl border border-amber-800/40 bg-black/20 p-4"
+                      onSubmit={handleFounderCreateSubmit}
+                      data-testid="founder-team-create-form"
+                    >
+                      <h3 className="text-sm font-medium text-amber-100">Create Team</h3>
+                      <label className="block text-xs text-amber-100/90">
+                        Team name
+                        <input
+                          value={founderCreateTeamName}
+                          onChange={(event) => setFounderCreateTeamName(event.target.value)}
+                          className="mt-1 w-full rounded-md border border-amber-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                          placeholder="Empire Originals"
+                          data-testid="founder-team-create-name-input"
+                        />
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block text-xs text-amber-100/90">
+                          Abbreviation
+                          <input
+                            value={founderCreateTeamAbbreviation}
+                            onChange={(event) => setFounderCreateTeamAbbreviation(event.target.value)}
+                            className="mt-1 w-full rounded-md border border-amber-700/50 bg-slate-950/70 px-3 py-2 text-sm uppercase text-slate-100"
+                            placeholder="EOR"
+                            data-testid="founder-team-create-abbreviation-input"
+                          />
+                        </label>
+                        <label className="block text-xs text-amber-100/90">
+                          Division
+                          <input
+                            value={founderCreateTeamDivisionLabel}
+                            onChange={(event) => setFounderCreateTeamDivisionLabel(event.target.value)}
+                            className="mt-1 w-full rounded-md border border-amber-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                            placeholder="East"
+                            data-testid="founder-team-create-division-input"
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="submit"
+                        className="rounded-md border border-amber-500/70 bg-amber-950/50 px-3 py-2 text-xs font-medium text-amber-100 transition hover:border-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={Boolean(founderSetupPendingAction)}
+                        data-testid="founder-team-create-submit"
+                      >
+                        {founderSetupPendingAction === "create" ? "Creating..." : "Create Team"}
+                      </button>
+                    </form>
+
+                    <div className="space-y-3 rounded-xl border border-amber-800/40 bg-black/20 p-4">
+                      <h3 className="text-sm font-medium text-amber-100">Claim Existing Team</h3>
+                      {founderSetup.claimableTeams.length > 0 ? (
+                        <>
+                          <label className="block text-xs text-amber-100/90">
+                            Available teams
+                            <select
+                              value={founderClaimTeamId}
+                              onChange={(event) => setFounderClaimTeamId(event.target.value)}
+                              className="mt-1 w-full rounded-md border border-amber-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                              data-testid="founder-team-claim-select"
+                            >
+                              {founderSetup.claimableTeams.map((team) => (
+                                <option key={team.id} value={team.id}>
+                                  {team.name}
+                                  {team.abbreviation ? ` (${team.abbreviation})` : ""}
+                                  {team.ownerName ? ` · Owner: ${team.ownerName}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            type="button"
+                            className="rounded-md border border-amber-500/70 bg-amber-950/50 px-3 py-2 text-xs font-medium text-amber-100 transition hover:border-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void handleFounderClaimSubmit()}
+                            disabled={Boolean(founderSetupPendingAction) || !founderClaimTeamId}
+                            data-testid="founder-team-claim-submit"
+                          >
+                            {founderSetupPendingAction === "claim" ? "Claiming..." : "Claim Team"}
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-xs text-amber-100/80">
+                          No claimable team is available yet. Create one now, or return after you add more teams.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-800/40 bg-black/20 p-4">
+                    <p className="text-xs text-amber-100/80">
+                      Skip for now keeps your commissioner role active and marks this setup as incomplete.
+                    </p>
+                    <button
+                      type="button"
+                      className="rounded-md border border-amber-500/60 px-3 py-2 text-xs font-medium text-amber-100 transition hover:border-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleFounderSkip()}
+                      disabled={Boolean(founderSetupPendingAction)}
+                      data-testid="founder-team-skip"
+                    >
+                      {founderSetupPendingAction === "skip" ? "Saving..." : "Skip For Now"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           <DashboardActionCenter
             actions={buildDashboardActionItems({ dashboard, draftsHome, tradesHome })}
             deadlines={buildDashboardDeadlineCards(dashboard)}

@@ -86,6 +86,55 @@ test("actor context prefers TeamMembership over LeagueMembership teamId", async 
   assert.equal(actor?.resolutionSource, "TEAM_MEMBERSHIP");
 });
 
+test("actor context prioritizes PRIMARY_MANAGER over CO_MANAGER memberships", async () => {
+  const service = createActorContextService(
+    createStubClient({
+      userRecord: {
+        id: "user-priority",
+        email: "priority@example.com",
+        name: "Priority User",
+        memberships: [
+          {
+            leagueId: "league-1",
+            role: "MEMBER",
+            teamId: null,
+            team: null,
+          },
+        ],
+      },
+      teamMemberships: [
+        {
+          teamId: "co-team",
+          membershipType: "CO_MANAGER",
+          createdAt: new Date("2024-01-01T00:00:00.000Z"),
+          team: {
+            id: "co-team",
+            name: "Co Team",
+            leagueId: "league-1",
+          },
+        },
+        {
+          teamId: "primary-team",
+          membershipType: "PRIMARY_MANAGER",
+          createdAt: new Date("2025-01-01T00:00:00.000Z"),
+          team: {
+            id: "primary-team",
+            name: "Primary Team",
+            leagueId: "league-1",
+          },
+        },
+      ],
+    }) as never,
+  );
+
+  const actor = await service.resolveActorForUserId("user-priority", "league-1");
+  assert.ok(actor);
+  assert.equal(actor?.teamId, "primary-team");
+  assert.equal(actor?.teamName, "Primary Team");
+  assert.equal(actor?.teamMembershipType, "PRIMARY_MANAGER");
+  assert.equal(actor?.resolutionSource, "TEAM_MEMBERSHIP");
+});
+
 test("actor context falls back to LeagueMembership teamId when TeamMembership is absent", async () => {
   const service = createActorContextService(
     createStubClient({
