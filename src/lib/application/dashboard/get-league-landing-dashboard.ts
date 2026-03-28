@@ -1,4 +1,5 @@
 import type { AuthActor } from "@/lib/auth";
+import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import { createActivitySummaryProjection } from "@/lib/read-models/dashboard/activity-summary-projection";
 import { createDeadlineSummaryProjection } from "@/lib/read-models/dashboard/deadline-summary-projection";
 import { DashboardProjectionDbClient } from "@/lib/read-models/dashboard/shared";
@@ -7,6 +8,8 @@ import { createRookiePicksOwnedProjection } from "@/lib/read-models/dashboard/ro
 import { createTeamDashboardProjection } from "@/lib/read-models/dashboard/team-dashboard-projection";
 import {
   DashboardAlertItem,
+  LeagueSetupChecklistItem,
+  LeagueSetupChecklistProjection,
   LeagueLandingDashboardProjection,
   NotificationSummaryProjection,
   PendingTradeActionsSummary,
@@ -102,6 +105,227 @@ function buildAlerts(input: {
   }
 
   return alerts.slice(0, 4);
+}
+
+const FOUNDER_SETUP_SKIP_SUMMARY = "Founder postponed team setup.";
+
+function checklistCompletionPercent(completedItemCount: number, totalItemCount: number) {
+  if (totalItemCount <= 0) {
+    return 100;
+  }
+
+  return Math.round((completedItemCount / totalItemCount) * 100);
+}
+
+function derivePrimarySetupAction(input: {
+  items: LeagueSetupChecklistItem[];
+  seasonPhase: LeagueLandingDashboardProjection["leagueDashboard"]["season"]["currentPhase"] | null;
+}): LeagueSetupChecklistProjection["primaryAction"] {
+  const phaseLabel = formatLeaguePhaseLabel(input.seasonPhase);
+  const firstIncomplete = input.items.find((item) => item.status !== "COMPLETE");
+  if (!firstIncomplete || !firstIncomplete.href || !firstIncomplete.ctaLabel) {
+    return null;
+  }
+
+  const tone: "default" | "warning" | "critical" | "accent" =
+    input.seasonPhase === "PRESEASON_SETUP"
+      ? firstIncomplete.status === "INCOMPLETE_POSTPONED"
+        ? "warning"
+        : "critical"
+      : "warning";
+
+  return {
+    id: `setup-${firstIncomplete.id}`,
+    title: `Setup Next: ${firstIncomplete.title}`,
+    description: `${firstIncomplete.description} Current phase: ${phaseLabel}.`,
+    href: firstIncomplete.href,
+    ctaLabel: firstIncomplete.ctaLabel,
+    tone,
+    phaseLabel,
+  };
+}
+
+async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
+  leagueDashboard: LeagueLandingDashboardProjection["leagueDashboard"];
+  actor: AuthActor;
+  leagueId: string;
+  seasonId: string;
+  now: Date;
+}): Promise<LeagueSetupChecklistProjection> {
+  if (input.actor.leagueRole !== "COMMISSIONER") {
+    return {
+      available: false,
+      visibleItemCount: 0,
+      totalItemCount: 0,
+      completedItemCount: 0,
+      completionPercent: 100,
+      isComplete: true,
+      primaryIncompleteItemId: null,
+      primaryAction: null,
+      items: [],
+    };
+  }
+
+  const seasonPhase = input.leagueDashboard.season?.currentPhase ?? null;
+  const [founderSkipMarker, rookieDraft, pendingInviteCount] = await Promise.all([
+    input.actor.teamId
+      ? Promise.resolve(null)
+      : client.transaction.findFirst({
+          where: {
+            leagueId: input.leagueId,
+            seasonId: input.seasonId,
+            type: "COMMISSIONER_OVERRIDE",
+            summary: FOUNDER_SETUP_SKIP_SUMMARY,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            metadata: true,
+          },
+        }),
+    client.draft.findFirst({
+      where: {
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        type: "ROOKIE",
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+      },
+    }),
+    client.leagueInvite.count({
+      where: {
+        leagueId: input.leagueId,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gt: input.now,
+        },
+      },
+    }),
+  ]);
+
+  const rookieDraftBoardEntryCount = rookieDraft
+    ? await client.draftOrderEntry.count({
+        where: {
+          draftId: rookieDraft.id,
+        },
+      })
+    : 0;
+  const founderSkipMetadata =
+    founderSkipMarker?.metadata && typeof founderSkipMarker.metadata === "object" && !Array.isArray(founderSkipMarker.metadata)
+      ? (founderSkipMarker.metadata as { workflow?: unknown; action?: unknown; actorUserId?: unknown })
+      : null;
+  const founderSetupPostponed =
+    founderSkipMetadata?.workflow === "FOUNDER_TEAM_SETUP" &&
+    founderSkipMetadata?.action === "skip" &&
+    founderSkipMetadata?.actorUserId === input.actor.userId;
+
+  const founderTeamComplete = Boolean(input.actor.teamId);
+  const addTeamsComplete = input.leagueDashboard.summary.teamCount >= 2;
+  const inviteMembersComplete =
+    input.leagueDashboard.summary.membershipCount >= 2 || pendingInviteCount > 0;
+  const reviewSettingsComplete =
+    (input.leagueDashboard.summary.activeRulesetVersion ?? 1) > 1 || seasonPhase !== "PRESEASON_SETUP";
+  const draftPrepRequired = seasonPhase === "PRESEASON_SETUP";
+  const draftPrepComplete = draftPrepRequired
+    ? Boolean(rookieDraft) && rookieDraftBoardEntryCount > 0
+    : true;
+
+  const items: LeagueSetupChecklistItem[] = [
+    {
+      id: "founder-team-status",
+      title: "Founder team status",
+      description: founderTeamComplete
+        ? "Founder account is linked to a team while retaining commissioner authority."
+        : founderSetupPostponed
+          ? "Founder team setup is postponed and still incomplete."
+          : "Create or claim the founder team so commissioner + team-owner scope can coexist.",
+      status: founderTeamComplete
+        ? "COMPLETE"
+        : founderSetupPostponed
+          ? "INCOMPLETE_POSTPONED"
+          : "INCOMPLETE",
+      href: founderTeamComplete ? null : `/league/${input.leagueId}#founder-team-setup`,
+      ctaLabel: founderTeamComplete ? null : "Complete Founder Team Setup",
+      commissionerOnly: true,
+    },
+    {
+      id: "add-teams",
+      title: "Add teams",
+      description: addTeamsComplete
+        ? `${input.leagueDashboard.summary.teamCount} teams are already created.`
+        : `Only ${input.leagueDashboard.summary.teamCount} team${input.leagueDashboard.summary.teamCount === 1 ? "" : "s"} found. Add at least one more team to start league play.`,
+      status: addTeamsComplete ? "COMPLETE" : "INCOMPLETE",
+      href: addTeamsComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
+      ctaLabel: addTeamsComplete ? null : "Add Teams",
+      commissionerOnly: true,
+    },
+    {
+      id: "invite-members",
+      title: "Invite members",
+      description: inviteMembersComplete
+        ? pendingInviteCount > 0
+          ? `${pendingInviteCount} pending invite${pendingInviteCount === 1 ? "" : "s"} sent and setup is moving.`
+          : `${input.leagueDashboard.summary.membershipCount} league memberships are active.`
+        : "No owner/member has joined yet beyond the founder. Send your first invite.",
+      status: inviteMembersComplete ? "COMPLETE" : "INCOMPLETE",
+      href: inviteMembersComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
+      ctaLabel: inviteMembersComplete ? null : "Invite Members",
+      commissionerOnly: true,
+    },
+    {
+      id: "review-settings-rules",
+      title: "Review settings and rules",
+      description: reviewSettingsComplete
+        ? `Rules are reviewed for ${formatLeaguePhaseLabel(seasonPhase)}.`
+        : "Review league settings and rules before opening draft operations.",
+      status: reviewSettingsComplete ? "COMPLETE" : "INCOMPLETE",
+      href: reviewSettingsComplete ? null : "/rules",
+      ctaLabel: reviewSettingsComplete ? null : "Review Rules",
+      commissionerOnly: true,
+    },
+    {
+      id: "draft-prep-readiness",
+      title: "Draft prep readiness",
+      description: draftPrepComplete
+        ? draftPrepRequired
+          ? "Rookie draft context is created and board order is generated."
+          : `Draft prep is phase-complete for ${formatLeaguePhaseLabel(seasonPhase)}.`
+        : !rookieDraft
+          ? "Create the rookie draft workspace for this season."
+          : "Generate rookie draft board order before draft-day operations.",
+      status: draftPrepComplete ? "COMPLETE" : "INCOMPLETE",
+      href: draftPrepComplete ? null : "/draft",
+      ctaLabel: draftPrepComplete
+        ? null
+        : !rookieDraft
+          ? "Create Draft Setup"
+          : "Generate Draft Board",
+      commissionerOnly: true,
+    },
+  ];
+
+  const totalItemCount = items.length;
+  const completedItemCount = items.filter((item) => item.status === "COMPLETE").length;
+  const firstIncompleteItem = items.find((item) => item.status !== "COMPLETE") ?? null;
+
+  return {
+    available: true,
+    visibleItemCount: items.length,
+    totalItemCount,
+    completedItemCount,
+    completionPercent: checklistCompletionPercent(completedItemCount, totalItemCount),
+    isComplete: completedItemCount === totalItemCount,
+    primaryIncompleteItemId: firstIncompleteItem?.id ?? null,
+    primaryAction: derivePrimarySetupAction({
+      items,
+      seasonPhase,
+    }),
+    items,
+  };
 }
 
 async function readPendingTradeActions(
@@ -279,6 +503,14 @@ export function createLeagueLandingDashboardService(client: DashboardProjectionD
         return null;
       }
 
+      const setupChecklist = await readSetupChecklist(client, {
+        leagueDashboard,
+        actor: input.actor,
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        now,
+      });
+
       return {
         viewer: {
           leagueRole: input.actor.leagueRole,
@@ -300,6 +532,7 @@ export function createLeagueLandingDashboardService(client: DashboardProjectionD
           pendingTradeActions,
           notificationSummary,
         }),
+        setupChecklist,
         generatedAt: now.toISOString(),
       };
     },

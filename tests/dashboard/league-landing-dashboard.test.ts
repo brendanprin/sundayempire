@@ -37,6 +37,11 @@ test("league landing dashboard composes team, deadline, picks, activity, notific
         };
       },
     },
+    leagueMembership: {
+      async count() {
+        return 4;
+      },
+    },
     season: {
       async findUnique() {
         return {
@@ -53,6 +58,8 @@ test("league landing dashboard composes team, deadline, picks, activity, notific
     leagueRuleSet: {
       async findFirst() {
         return {
+          version: 2,
+          isActive: true,
           rosterSize: 17,
           salaryCapSoft: 245,
           salaryCapHard: 300,
@@ -259,6 +266,9 @@ test("league landing dashboard composes team, deadline, picks, activity, notific
   assert.equal(result.alerts[0]?.href, "/teams/team-1");
   assert.ok(result.alerts.some((alert) => alert.href === "/rules"));
   assert.ok(result.alerts.some((alert) => alert.href === "/trades"));
+  assert.equal(result.setupChecklist.available, false);
+  assert.equal(result.setupChecklist.totalItemCount, 0);
+  assert.equal(result.setupChecklist.primaryAction, null);
 });
 
 test("league landing dashboard stays safe for commissioner without a team", async () => {
@@ -287,6 +297,19 @@ test("league landing dashboard stays safe for commissioner without a team", asyn
         return 12;
       },
     },
+    leagueMembership: {
+      async count() {
+        return 1;
+      },
+    },
+    leagueRuleSet: {
+      async findFirst() {
+        return {
+          version: 1,
+          isActive: true,
+        };
+      },
+    },
     complianceIssue: {
       async findMany() {
         return [];
@@ -305,6 +328,24 @@ test("league landing dashboard stays safe for commissioner without a team", asyn
     transaction: {
       async findMany() {
         return [];
+      },
+      async findFirst() {
+        return null;
+      },
+    },
+    draft: {
+      async findFirst() {
+        return null;
+      },
+    },
+    draftOrderEntry: {
+      async count() {
+        return 0;
+      },
+    },
+    leagueInvite: {
+      async count() {
+        return 0;
       },
     },
     commissionerOverride: {
@@ -350,4 +391,10 @@ test("league landing dashboard stays safe for commissioner without a team", asyn
   assert.equal(result.teamDashboard, null);
   assert.equal(result.rookiePicksOwned, null);
   assert.equal(result.pendingTradeActions.available, false);
+  assert.equal(result.setupChecklist.available, true);
+  assert.equal(result.setupChecklist.totalItemCount, 5);
+  assert.equal(result.setupChecklist.completedItemCount, 1);
+  assert.equal(result.setupChecklist.primaryIncompleteItemId, "founder-team-status");
+  assert.equal(result.setupChecklist.primaryAction?.id, "setup-founder-team-status");
+  assert.equal(result.setupChecklist.items[0]?.status, "INCOMPLETE");
 });

@@ -28,6 +28,18 @@ test("league dashboard projection summarizes active season and open issue severi
         return 12;
       },
     },
+    leagueMembership: {
+      async count(args?: { where?: { role?: "COMMISSIONER" | "MEMBER" } }) {
+        return args?.where?.role === "COMMISSIONER" ? 1 : 12;
+      },
+    },
+    leagueRuleSet: {
+      async findFirst() {
+        return {
+          version: 2,
+        };
+      },
+    },
     complianceIssue: {
       async findMany() {
         return [
@@ -66,6 +78,9 @@ test("league dashboard projection summarizes active season and open issue severi
   assert.equal(result.status.alertLevel, "critical");
   assert.equal(result.status.mirrorOnly, false);
   assert.equal(result.summary.teamCount, 12);
+  assert.equal(result.summary.membershipCount, 12);
+  assert.equal(result.summary.commissionerCount, 1);
+  assert.equal(result.summary.activeRulesetVersion, 2);
   assert.equal(result.summary.openIssueCount, 2);
   assert.equal(result.summary.overdueIssueCount, 1);
   assert.equal(result.summary.criticalCount, 1);
@@ -106,6 +121,18 @@ test("league dashboard projection is empty-state safe when active season is unre
         return 10;
       },
     },
+    leagueMembership: {
+      async count(args?: { where?: { role?: "COMMISSIONER" | "MEMBER" } }) {
+        return args?.where?.role === "COMMISSIONER" ? 1 : 1;
+      },
+    },
+    leagueRuleSet: {
+      async findFirst() {
+        return {
+          version: 1,
+        };
+      },
+    },
   } as never);
 
   const result = await projection.read({
@@ -119,6 +146,9 @@ test("league dashboard projection is empty-state safe when active season is unre
   assert.equal(result.status.alertLevel, "setup_required");
   assert.equal(result.status.mirrorOnly, false);
   assert.equal(result.summary.teamCount, 10);
+  assert.equal(result.summary.membershipCount, 1);
+  assert.equal(result.summary.commissionerCount, 1);
+  assert.equal(result.summary.activeRulesetVersion, 1);
   assert.equal(result.summary.openIssueCount, 0);
   assert.equal(result.recentPhaseTransition, null);
 });

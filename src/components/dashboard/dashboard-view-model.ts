@@ -269,6 +269,23 @@ export function buildDashboardActionItems(input: {
   }
 
   if (viewerRole === "COMMISSIONER") {
+    if (dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete && dashboard.setupChecklist.primaryAction) {
+      actions.push({
+        id: dashboard.setupChecklist.primaryAction.id,
+        eyebrow: "League Setup",
+        title: dashboard.setupChecklist.primaryAction.title,
+        description: dashboard.setupChecklist.primaryAction.description,
+        href: dashboard.setupChecklist.primaryAction.href,
+        ctaLabel: dashboard.setupChecklist.primaryAction.ctaLabel,
+        tone: dashboard.setupChecklist.primaryAction.tone,
+        badge: `${dashboard.setupChecklist.completedItemCount}/${dashboard.setupChecklist.totalItemCount} complete`,
+        meta: `Setup checklist is ${dashboard.setupChecklist.completionPercent}% complete.`,
+        testId: "commissioner-action-setup-primary",
+        linkTestId: "commissioner-action-link-setup-primary",
+        mobileTestId: "dashboard-mobile-action-setup-primary",
+      });
+    }
+
     const reviewQueueCount = tradesHome?.summary.reviewQueue ?? 0;
     const settlementQueueCount = tradesHome?.summary.settlementQueue ?? 0;
     const activeDraft = activeDraftSummary(draftsHome);
