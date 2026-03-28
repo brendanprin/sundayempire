@@ -1,0 +1,1892 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum LeaguePhase {
+  PRESEASON_SETUP
+  ROOKIE_DRAFT
+  AUCTION_MAIN_DRAFT
+  REGULAR_SEASON
+  PLAYOFFS
+  OFFSEASON_ROLLOVER
+  TAG_OPTION_COMPLIANCE
+}
+
+enum SeasonStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TransitionStatus {
+  SUCCESS
+  FAILED
+  ROLLED_BACK
+}
+
+enum TeamSlotType {
+  STARTER
+  BENCH
+  IR
+  TAXI
+}
+
+enum Position {
+  QB
+  RB
+  WR
+  TE
+  K
+  DST
+}
+
+enum DraftType {
+  STARTUP
+  ROOKIE
+  VETERAN_AUCTION
+}
+
+enum DraftStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum DraftPickStatus {
+  PENDING
+  SELECTED
+  PASSED
+  FORFEITED
+}
+
+enum DraftOrderSourceType {
+  FUTURE_PICK
+  MANUAL
+  BONUS
+}
+
+enum DraftSelectionOutcome {
+  SELECTED
+  PASSED
+  FORFEITED
+}
+
+enum AuctionSessionMode {
+  STANDARD
+  EMERGENCY_FILL_IN
+}
+
+enum AuctionPlayerPoolEntryStatus {
+  ELIGIBLE
+  OPEN_BIDDING
+  BLIND_BIDDING
+  AWARDED
+  EXPIRED
+  WITHDRAWN
+  REOPENED
+}
+
+enum AuctionPoolReviewStatus {
+  PENDING_REVIEW
+  FINALIZED
+}
+
+enum AuctionPoolExclusionReason {
+  ACTIVE_CONTRACT
+  ROSTERED
+  RESTRICTED
+  ALREADY_AWARDED
+  NOT_REQUESTED_FOR_EMERGENCY_FILL_IN
+  EMERGENCY_POOL_LIMIT
+}
+
+enum AuctionBidType {
+  OPEN
+  BLIND
+}
+
+enum AuctionBidStatus {
+  ACTIVE
+  OUTBID
+  WON
+  LOST
+  CANCELED
+}
+
+enum AuctionAwardStatus {
+  FINALIZED
+  VOIDED
+}
+
+enum HostPlatformSyncJobType {
+  ROSTER_IMPORT
+  TRANSACTION_IMPORT
+  FULL_SYNC
+}
+
+enum HostPlatformSyncJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELED
+}
+
+enum HostPlatformSyncTrigger {
+  MANUAL
+  CSV_UPLOAD
+  ADAPTER_PULL
+}
+
+enum PlayerRefreshJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELED
+}
+
+enum PlayerRefreshChangeType {
+  NEW
+  UPDATED
+  UNCHANGED
+  INVALID
+  AMBIGUOUS
+  DUPLICATE_SUSPECT
+}
+
+enum PlayerRefreshChangeReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+}
+
+enum SyncMismatchType {
+  ROSTER_MISSING_IN_APP
+  ROSTER_MISSING_IN_HOST
+  ROSTER_TEAM_DIFFERENCE
+  ROSTER_STATUS_DIFFERENCE
+  TRANSACTION_MISSING_IN_APP
+  TRANSACTION_MISSING_IN_HOST
+  TRANSACTION_TEAM_DIFFERENCE
+  TRANSACTION_SUMMARY_DIFFERENCE
+}
+
+enum SyncMismatchSeverity {
+  INFO
+  WARNING
+  HIGH_IMPACT
+}
+
+enum SyncMismatchStatus {
+  OPEN
+  RESOLVED
+  ESCALATED
+}
+
+enum SyncMismatchResolutionType {
+  ACCEPT_HOST_PLATFORM
+  KEEP_DYNASTY_TRUTH
+  DISMISS_FALSE_POSITIVE
+  ESCALATE_TO_COMPLIANCE
+}
+
+enum TradeStatus {
+  PROPOSED
+  APPROVED
+  PROCESSED
+  REJECTED
+  CANCELED
+}
+
+enum TradeAssetType {
+  PLAYER
+  PICK
+}
+
+enum TradeProposalStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  DECLINED
+  REVIEW_PENDING
+  REVIEW_APPROVED
+  REVIEW_REJECTED
+  PROCESSED
+  CANCELED
+}
+
+enum TradeEvaluationOutcome {
+  PASS
+  PASS_WITH_WARNING
+  FAIL_HARD_BLOCK
+  FAIL_REQUIRES_COMMISSIONER
+}
+
+enum TradeEvaluationTrigger {
+  BUILDER_VALIDATE
+  SUBMIT
+  COUNTERPARTY_RESPONSE
+  COMMISSIONER_REVIEW
+}
+
+enum PlatformRole {
+  ADMIN
+  USER
+}
+
+enum LeagueRole {
+  COMMISSIONER
+  MEMBER
+}
+
+enum InviteDeliveryState {
+  SENT
+  CAPTURED
+  LOGGED
+  FAILED
+  NOT_CONFIGURED
+}
+
+enum TeamMembershipType {
+  PRIMARY_MANAGER
+  CO_MANAGER
+}
+
+enum RosterStatus {
+  ACTIVE
+  IR
+  RELEASED
+  MIRRORED_ONLY
+}
+
+enum AcquisitionType {
+  AUCTION
+  ROOKIE_DRAFT
+  WAIVER
+  TRADE
+  TAG
+  MANUAL
+  EMERGENCY_FILL_IN
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  TERMINATED
+  TAGGED
+}
+
+enum ContractOptionDecisionType {
+  EXERCISE
+  DECLINE
+  EXPIRED_UNRESOLVED
+}
+
+enum DeadCapSourceEventType {
+  CUT
+  OVERRIDE_ADJUSTMENT
+}
+
+enum ComplianceIssueSource {
+  RULE_ENGINE
+  DEADLINE
+  MANUAL
+  SYNC
+}
+
+enum ComplianceIssueType {
+  ROSTER
+  LINEUP
+  CAP
+  CONTRACT
+  FRANCHISE_TAG
+  IR
+  DEADLINE
+  LIFECYCLE
+  MANUAL
+  SYNC
+}
+
+enum ComplianceIssueSeverity {
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum ComplianceIssueStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  WAIVED
+}
+
+enum ComplianceDueAtBasis {
+  PHASE_WINDOW
+  DEADLINE
+  SCORING_WINDOW
+  MANUAL
+}
+
+enum ComplianceActionType {
+  CREATED
+  STATUS_CHANGED
+  NOTE_ADDED
+  REMEDIATION_APPLIED
+  REMEDIATION_SUBMITTED
+  REMEDIATION_REVIEWED
+  RESOLVED
+  NOTIFICATION_TRIGGERED
+}
+
+enum CommissionerOverrideType {
+  PHASE_TRANSITION
+  EMERGENCY_FIX
+  CONTRACT_CREATE
+  CONTRACT_UPDATE
+  ISSUE_WAIVER
+  MANUAL_RULING
+}
+
+enum CommissionerOverrideStatus {
+  APPLIED
+  REVERSED
+}
+
+enum TransactionType {
+  ADD
+  DROP
+  WAIVER_ADD
+  WAIVER_DROP
+  TRADE_IN
+  TRADE_OUT
+  CONTRACT_CREATE
+  CONTRACT_UPDATE
+  CONTRACT_OPTION_EXERCISED
+  FRANCHISE_TAG_APPLIED
+  ROSTER_MOVE
+  PICK_TRANSFER
+  COMMISSIONER_OVERRIDE
+  OFFSEASON_ROLLOVER
+}
+
+model League {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seasons                  Season[]                 @relation("LeagueSeasons")
+  teams                    Team[]
+  memberships              LeagueMembership[]
+  invites                  LeagueInvite[]
+  rulesets                 LeagueRuleSet[]
+  drafts                   Draft[]
+  picks                    FuturePick[]
+  auctionPlayerPoolEntries AuctionPlayerPoolEntry[] @relation("LeagueAuctionPlayerPoolEntries")
+  auctionPlayerPoolExclusions AuctionPlayerPoolExclusion[] @relation("LeagueAuctionPlayerPoolExclusions")
+  auctionBids              AuctionBid[]             @relation("LeagueAuctionBids")
+  auctionAwards            AuctionAward[]           @relation("LeagueAuctionAwards")
+  blindTieResolutions      AuctionBlindTieResolution[] @relation("LeagueBlindTieResolutions")
+  hostPlatformSyncJobs     HostPlatformSyncJob[]    @relation("LeagueHostPlatformSyncJobs")
+  playerRefreshJobs        PlayerRefreshJob[]
+  playerRefreshChanges     PlayerRefreshChange[]
+  playerSeasonSnapshots    PlayerSeasonSnapshot[]
+  syncMismatches           SyncMismatch[]           @relation("LeagueSyncMismatches")
+  trades                   Trade[]
+  tradeProposals           TradeProposal[]          @relation("LeagueTradeProposals")
+  tradeEvaluations         TradeEvaluation[]        @relation("LeagueTradeEvaluations")
+  activityEvents           ActivityEvent[]          @relation("LeagueActivityEvents")
+  transactions             Transaction[]
+  deadlines                LeagueDeadline[]
+  phaseTransitions         LeaguePhaseTransition[]
+  deadCapCharges           DeadCapCharge[]
+  complianceIssues         ComplianceIssue[]        @relation("LeagueComplianceIssues")
+  commissionerOverrides    CommissionerOverride[]   @relation("LeagueCommissionerOverrides")
+  notifications            Notification[]           @relation("LeagueNotifications")
+  pilotEvents              PilotEvent[]
+  pilotFeedback            PilotFeedback[]
+  notificationReadStates   NotificationReadState[]
+}
+
+model Season {
+  id                 String       @id @default(cuid())
+  leagueId           String
+  year               Int
+  status             SeasonStatus @default(ACTIVE)
+  phase              LeaguePhase  @default(PRESEASON_SETUP)
+  openedAt           DateTime?
+  closedAt           DateTime?
+  sourceSeasonId     String?
+  regularSeasonWeeks Int          @default(13)
+  playoffStartWeek   Int          @default(14)
+  playoffEndWeek     Int          @default(16)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  league                           League                   @relation("LeagueSeasons", fields: [leagueId], references: [id], onDelete: Cascade)
+  sourceSeason                     Season?                  @relation("SeasonLineage", fields: [sourceSeasonId], references: [id], onDelete: SetNull)
+  derivedSeasons                   Season[]                 @relation("SeasonLineage")
+  deadlines                        LeagueDeadline[]
+  phaseTransitions                 LeaguePhaseTransition[]
+  teamStates                       TeamSeasonState[]
+  rosters                          RosterSlot[]
+  rosterAssignments                RosterAssignment[]
+  draftOrderEntries                DraftOrderEntry[]        @relation("SeasonDraftOrderEntries")
+  draftPicks                       DraftPick[]              @relation("SeasonDraftPicks")
+  auctionPlayerPoolEntries         AuctionPlayerPoolEntry[] @relation("SeasonAuctionPlayerPoolEntries")
+  auctionPlayerPoolExclusions      AuctionPlayerPoolExclusion[] @relation("SeasonAuctionPlayerPoolExclusions")
+  auctionBids                      AuctionBid[]             @relation("SeasonAuctionBids")
+  auctionAwards                    AuctionAward[]           @relation("SeasonAuctionAwards")
+  blindTieResolutions              AuctionBlindTieResolution[] @relation("SeasonBlindTieResolutions")
+  hostPlatformSyncJobs             HostPlatformSyncJob[]    @relation("SeasonHostPlatformSyncJobs")
+  playerRefreshJobs                PlayerRefreshJob[]
+  playerRefreshChanges             PlayerRefreshChange[]
+  playerSeasonSnapshots            PlayerSeasonSnapshot[]
+  syncMismatches                   SyncMismatch[]           @relation("SeasonSyncMismatches")
+  contractSeasonLedgers            ContractSeasonLedger[]   @relation("SeasonContractSeasonLedgers")
+  franchiseTagUsages               FranchiseTagUsage[]      @relation("SeasonFranchiseTagUsages")
+  frozenSnapshotFranchiseTagUsages FranchiseTagUsage[]      @relation("FrozenSnapshotSeasonFranchiseTagUsages")
+  contractOptionDecisions          ContractOptionDecision[] @relation("SeasonContractOptionDecisions")
+  deadCapCharges                   DeadCapCharge[]          @relation("AppliesToSeasonDeadCapCharges")
+  complianceIssues                 ComplianceIssue[]        @relation("SeasonComplianceIssues")
+  commissionerOverrides            CommissionerOverride[]   @relation("SeasonCommissionerOverrides")
+  notifications                    Notification[]           @relation("SeasonNotifications")
+  contracts                        Contract[]
+  capPenalties                     CapPenalty[]
+  drafts                           Draft[]
+  trades                           Trade[]
+  tradeProposals                   TradeProposal[]          @relation("SeasonTradeProposals")
+  tradeEvaluations                 TradeEvaluation[]        @relation("SeasonTradeEvaluations")
+  activityEvents                   ActivityEvent[]          @relation("SeasonActivityEvents")
+  transactions                     Transaction[]
+  pilotEvents                      PilotEvent[]
+  pilotFeedback                    PilotFeedback[]
+
+  @@unique([leagueId, year])
+  @@index([leagueId, status])
+  @@index([sourceSeasonId])
+}
+
+model Owner {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  name      String
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  teams        Team[]
+  leagueInvites LeagueInvite[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  platformRole PlatformRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerProfile                  Owner?
+  authSessions                  AuthSession[]
+  memberships                   LeagueMembership[]
+  createdLeagueInvites          LeagueInvite[]         @relation("LeagueInviteInvitedByUser")
+  initiatedPhaseTransitions     LeaguePhaseTransition[]  @relation("LeaguePhaseTransitionInitiator")
+  teamMemberships               TeamMembership[]
+  createdFranchiseTagUsages     FranchiseTagUsage[]      @relation("UserCreatedFranchiseTagUsages")
+  decidedContractOptions        ContractOptionDecision[] @relation("UserDecidedContractOptions")
+  createdDeadCapCharges         DeadCapCharge[]          @relation("UserCreatedDeadCapCharges")
+  createdComplianceIssues       ComplianceIssue[]        @relation("UserCreatedComplianceIssues")
+  complianceActions             ComplianceAction[]       @relation("UserComplianceActions")
+  commissionerOverrides         CommissionerOverride[]   @relation("UserCommissionerOverrides")
+  notifications                 Notification[]           @relation("UserNotifications")
+  createdTradeProposals         TradeProposal[]          @relation("UserCreatedTradeProposals")
+  submittedTradeProposals       TradeProposal[]          @relation("UserSubmittedTradeProposals")
+  respondedTradeProposals       TradeProposal[]          @relation("UserRespondedTradeProposals")
+  reviewedTradeProposals        TradeProposal[]          @relation("UserReviewedTradeProposals")
+  createdTradeEvaluations       TradeEvaluation[]        @relation("UserCreatedTradeEvaluations")
+  activityEvents                ActivityEvent[]          @relation("UserActivityEvents")
+  createdDraftOrderEntries      DraftOrderEntry[]        @relation("UserCreatedDraftOrderEntries")
+  actedDraftSelections          DraftSelection[]         @relation("UserActedDraftSelections")
+  openedAuctionPoolEntries      AuctionPlayerPoolEntry[] @relation("UserOpenedAuctionPoolEntries")
+  reopenedAuctionPoolEntries    AuctionPlayerPoolEntry[] @relation("UserReopenedAuctionPoolEntries")
+  auctionBids                   AuctionBid[]             @relation("UserAuctionBids")
+  createdAuctionAwards          AuctionAward[]           @relation("UserCreatedAuctionAwards")
+  blindTieResolutions           AuctionBlindTieResolution[] @relation("UserBlindTieResolutions")
+  requestedHostPlatformSyncJobs HostPlatformSyncJob[]    @relation("UserRequestedHostPlatformSyncJobs")
+  requestedPlayerRefreshJobs    PlayerRefreshJob[]
+  reviewedPlayerRefreshChanges  PlayerRefreshChange[]
+  approvedPlayerIdentityMappings PlayerIdentityMapping[]
+  resolvedSyncMismatches        SyncMismatch[]           @relation("UserResolvedSyncMismatches")
+}
+
+model AuthSession {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  userAgent  String?
+  ipAddress  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([revokedAt, expiresAt])
+}
+
+model AuthMagicLink {
+  id                   String   @id @default(cuid())
+  email                String
+  tokenHash            String   @unique
+  purpose              String   @default("SIGN_IN")
+  createdAt            DateTime @default(now())
+  expiresAt            DateTime
+  consumedAt           DateTime?
+  requestedByIp        String?
+  requestedByUserAgent String?
+
+  @@index([email, expiresAt])
+  @@index([consumedAt, expiresAt])
+}
+
+model LeagueInvite {
+  id                    String              @id @default(cuid())
+  leagueId              String
+  email                 String
+  intendedRole          LeagueRole
+  teamId                String?
+  ownerId               String?
+  tokenHash             String              @unique
+  createdAt             DateTime            @default(now())
+  expiresAt             DateTime
+  acceptedAt            DateTime?
+  revokedAt             DateTime?
+  invitedByUserId       String?
+  lastDeliveryAttemptedAt DateTime?
+  lastDeliveryState     InviteDeliveryState?
+  lastDeliveryErrorCode String?
+
+  league        League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team          Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  owner         Owner? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  invitedByUser User?  @relation("LeagueInviteInvitedByUser", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, email])
+  @@index([acceptedAt, revokedAt, expiresAt])
+  @@index([teamId])
+  @@index([ownerId])
+  @@index([invitedByUserId])
+  @@index([lastDeliveryState, lastDeliveryAttemptedAt])
+}
+
+model LeagueDeadline {
+  id                  String      @id @default(cuid())
+  leagueId            String
+  seasonId            String
+  phase               LeaguePhase
+  deadlineType        String
+  scheduledAt         DateTime
+  sourceType          String
+  reminderOffsetsJson Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  league           League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season           Season            @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  complianceIssues ComplianceIssue[] @relation("DeadlineComplianceIssues")
+
+  @@index([leagueId, seasonId, phase])
+  @@index([scheduledAt])
+}
+
+model LeaguePhaseTransition {
+  id                String           @id @default(cuid())
+  leagueId          String
+  seasonId          String
+  fromPhase         LeaguePhase
+  toPhase           LeaguePhase
+  initiatedByUserId String?
+  initiatedByType   String
+  reason            String?
+  transitionStatus  TransitionStatus @default(SUCCESS)
+  occurredAt        DateTime         @default(now())
+  createdAt         DateTime         @default(now())
+
+  league          League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season          Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  initiatedByUser User?  @relation("LeaguePhaseTransitionInitiator", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, seasonId])
+  @@index([occurredAt])
+  @@index([initiatedByUserId])
+}
+
+model LeagueMembership {
+  id        String     @id @default(cuid())
+  userId    String
+  leagueId  String
+  teamId    String?
+  role      LeagueRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team   Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, leagueId])
+  @@index([leagueId, role])
+  @@index([teamId])
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  leagueId      String
+  ownerId       String?
+  name          String
+  abbreviation  String?
+  divisionLabel String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  league                      League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  owner                       Owner?                   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  leagueInvites               LeagueInvite[]
+  memberships                 LeagueMembership[]
+  teamMemberships             TeamMembership[]
+  seasonStates                TeamSeasonState[]
+  rosterSlots                 RosterSlot[]
+  rosterAssignments           RosterAssignment[]
+  contracts                   Contract[]
+  capPenalties                CapPenalty[]
+  franchiseTagUsages          FranchiseTagUsage[]
+  contractOptionDecisions     ContractOptionDecision[]
+  deadCapCharges              DeadCapCharge[]
+  complianceIssues            ComplianceIssue[]        @relation("TeamComplianceIssues")
+  commissionerOverrides       CommissionerOverride[]   @relation("TeamCommissionerOverrides")
+  notifications               Notification[]           @relation("TeamNotifications")
+  outgoingPicks               FuturePick[]             @relation("PickOriginalTeam")
+  currentPicks                FuturePick[]             @relation("PickCurrentTeam")
+  sentTrades                  Trade[]                  @relation("TradeTeamA")
+  recvTrades                  Trade[]                  @relation("TradeTeamB")
+  proposedTradeProposals      TradeProposal[]          @relation("TradeProposalProposerTeam")
+  counterpartyTradeProposals  TradeProposal[]          @relation("TradeProposalCounterpartyTeam")
+  draftOrderEntriesOwned      DraftOrderEntry[]        @relation("DraftOrderEntryOwningTeam")
+  draftOrderEntriesSelecting  DraftOrderEntry[]        @relation("DraftOrderEntrySelectingTeam")
+  draftOrderEntriesOriginal   DraftOrderEntry[]        @relation("DraftOrderEntryOriginalTeam")
+  draftPicks                  DraftPick[]              @relation("DraftPickSelectingTeam")
+  draftSelections             DraftSelection[]         @relation("DraftSelectionTeam")
+  nominatedAuctionPoolEntries AuctionPlayerPoolEntry[] @relation("AuctionPoolEntryNominatingTeam")
+  leadingAuctionPoolEntries   AuctionPlayerPoolEntry[] @relation("AuctionPoolEntryLeadingTeam")
+  auctionBids                 AuctionBid[]             @relation("AuctionBidTeam")
+  auctionAwards               AuctionAward[]           @relation("AuctionAwardTeam")
+  syncMismatches              SyncMismatch[]           @relation("TeamSyncMismatches")
+  tradeAssetsSent             TradeAsset[]             @relation("TradeAssetFromTeam")
+  tradeAssetsReceived         TradeAsset[]             @relation("TradeAssetToTeam")
+  activityEvents              ActivityEvent[]          @relation("PrimaryTeamActivityEvents")
+  relatedActivityEvents       ActivityEvent[]          @relation("RelatedTeamActivityEvents")
+  transactions                Transaction[]
+}
+
+model Player {
+  id             String   @id @default(cuid())
+  externalId     String?  @unique
+  sourceKey      String?
+  sourcePlayerId String?
+  name           String
+  displayName    String   @default("")
+  searchName     String   @default("")
+  position       Position
+  nflTeam        String?
+  age            Int?
+  yearsPro       Int?
+  injuryStatus   String?
+  statusCode     String?
+  statusText     String?
+  isRestricted   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rosterSlots              RosterSlot[]
+  rosterAssignments        RosterAssignment[]
+  contracts                Contract[]
+  capPenalties             CapPenalty[]
+  franchiseTagUsages       FranchiseTagUsage[]
+  contractOptionDecisions  ContractOptionDecision[]
+  deadCapCharges           DeadCapCharge[]
+  complianceIssues         ComplianceIssue[]        @relation("PlayerComplianceIssues")
+  draftSelections          DraftSelection[]
+  auctionPlayerPoolEntries AuctionPlayerPoolEntry[] @relation("PlayerAuctionPlayerPoolEntries")
+  auctionPlayerPoolExclusions AuctionPlayerPoolExclusion[] @relation("PlayerAuctionPlayerPoolExclusions")
+  auctionAwards            AuctionAward[]           @relation("AuctionAwardPlayer")
+  syncMismatches           SyncMismatch[]           @relation("PlayerSyncMismatches")
+  refreshChanges           PlayerRefreshChange[]
+  seasonSnapshots          PlayerSeasonSnapshot[]
+  identityMappings         PlayerIdentityMapping[]
+  tradeAssets              TradeAsset[]
+  activityEvents           ActivityEvent[]          @relation("PlayerActivityEvents")
+  transactions             Transaction[]
+
+  @@unique([sourceKey, sourcePlayerId])
+  @@index([searchName])
+}
+
+model PlayerIdentityMapping {
+  id               String   @id @default(cuid())
+  playerId         String
+  sourceKey        String
+  sourcePlayerId   String
+  approvedByUserId String?
+  notes            String?
+  approvedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  player         Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  approvedByUser User?  @relation(fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceKey, sourcePlayerId])
+  @@index([playerId])
+  @@index([approvedByUserId])
+}
+
+model PlayerRefreshJob {
+  id                String                 @id @default(cuid())
+  leagueId          String
+  seasonId          String
+  requestedByUserId String?
+  adapterKey        String
+  sourceLabel       String?
+  status            PlayerRefreshJobStatus @default(PENDING)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  payloadDigest     String?
+  inputJson         Json?
+  summaryJson       Json?
+  errorJson         Json?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  league          League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season          Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  requestedByUser User?                 @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  changes         PlayerRefreshChange[]
+  snapshots       PlayerSeasonSnapshot[]
+
+  @@index([leagueId, seasonId, status])
+  @@index([requestedByUserId])
+  @@index([createdAt])
+}
+
+model PlayerSeasonSnapshot {
+  id             String   @id @default(cuid())
+  playerId       String
+  leagueId       String
+  seasonId       String
+  refreshJobId   String?
+  sourceKey      String?
+  sourcePlayerId String?
+  externalId     String?
+  name           String
+  displayName    String
+  searchName     String
+  position       Position
+  nflTeam        String?
+  age            Int?
+  yearsPro       Int?
+  injuryStatus   String?
+  statusCode     String?
+  statusText     String?
+  isRestricted   Boolean  @default(false)
+  capturedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  player         Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  league         League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season         Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  refreshJob     PlayerRefreshJob?     @relation(fields: [refreshJobId], references: [id], onDelete: SetNull)
+  refreshChanges PlayerRefreshChange[]
+
+  @@unique([refreshJobId, playerId])
+  @@index([leagueId, seasonId, playerId])
+  @@index([playerId, capturedAt])
+  @@index([refreshJobId])
+}
+
+model PlayerRefreshChange {
+  id               String                         @id @default(cuid())
+  leagueId         String
+  seasonId         String
+  jobId            String
+  playerId         String?
+  snapshotId       String?
+  changeType       PlayerRefreshChangeType
+  reviewStatus     PlayerRefreshChangeReviewStatus @default(PENDING)
+  fieldMaskJson    Json?
+  previousValuesJson Json?
+  incomingValuesJson Json?
+  appliedValuesJson Json?
+  notes            String?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+
+  league         League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season         Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  job            PlayerRefreshJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  player         Player?               @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  snapshot       PlayerSeasonSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  reviewedByUser User?                 @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, seasonId, reviewStatus])
+  @@index([jobId, changeType])
+  @@index([playerId])
+  @@index([snapshotId])
+  @@index([reviewedByUserId])
+}
+
+model LeagueRuleSet {
+  id          String   @id @default(cuid())
+  leagueId    String
+  isActive    Boolean  @default(true)
+  version     Int
+  effectiveAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rosterSize    Int @default(17)
+  starterQb     Int @default(1)
+  starterQbFlex Int @default(1)
+  starterRb     Int @default(2)
+  starterWr     Int @default(3)
+  starterTe     Int @default(1)
+  starterFlex   Int @default(1)
+  starterDst    Int @default(1)
+  irSlots       Int @default(2)
+
+  salaryCapSoft                Int @default(245)
+  salaryCapHard                Int @default(300)
+  waiverBidMaxAtOrAboveSoftCap Int @default(0)
+
+  minContractYears                 Int @default(1)
+  maxContractYears                 Int @default(4)
+  minSalary                        Int @default(1)
+  maxContractYearsIfSalaryBelowTen Int @default(3)
+  rookieBaseYears                  Int @default(1)
+  rookieOptionYears                Int @default(2)
+  franchiseTagsPerTeam             Int @default(1)
+
+  tradeDeadlineWeek  Int @default(11)
+  regularSeasonWeeks Int @default(13)
+  playoffStartWeek   Int @default(14)
+  playoffEndWeek     Int @default(16)
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, version])
+}
+
+model RosterSlot {
+  id        String       @id @default(cuid())
+  seasonId  String
+  teamId    String
+  playerId  String
+  slotType  TeamSlotType
+  slotLabel String?
+  week      Int?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([seasonId, teamId])
+  @@index([teamId, slotType])
+  @@index([playerId])
+}
+
+model TeamMembership {
+  id             String             @id @default(cuid())
+  teamId         String
+  userId         String
+  membershipType TeamMembershipType
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId, membershipType])
+  @@index([teamId, isActive])
+  @@index([userId, isActive])
+}
+
+model TeamSeasonState {
+  id                 String    @id @default(cuid())
+  teamId             String
+  seasonId           String
+  rosterCount        Int       @default(0)
+  activeCapTotal     Int       @default(0)
+  deadCapTotal       Int       @default(0)
+  hardCapTotal       Int       @default(0)
+  complianceStatus   String?
+  lastRecalculatedAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, seasonId])
+  @@index([seasonId])
+}
+
+model RosterAssignment {
+  id                      String          @id @default(cuid())
+  teamId                  String
+  seasonId                String
+  playerId                String
+  contractId              String?
+  acquisitionType         AcquisitionType @default(MANUAL)
+  rosterStatus            RosterStatus    @default(ACTIVE)
+  hostPlatformReferenceId String?
+  effectiveAt             DateTime
+  endedAt                 DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season          Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player          Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  contract        Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  draftSelections DraftSelection[] @relation("DraftSelectionRosterAssignment")
+  auctionAwards   AuctionAward[]   @relation("AuctionAwardRosterAssignment")
+  syncMismatches  SyncMismatch[]   @relation("RosterAssignmentSyncMismatches")
+
+  @@index([teamId, seasonId, endedAt])
+  @@index([playerId, seasonId])
+  @@index([contractId])
+}
+
+model Contract {
+  id                    String         @id @default(cuid())
+  seasonId              String
+  teamId                String
+  playerId              String
+  salary                Int
+  yearsTotal            Int
+  yearsRemaining        Int
+  startYear             Int
+  endYear               Int
+  isRookieContract      Boolean        @default(false)
+  rookieOptionEligible  Boolean        @default(false)
+  rookieOptionExercised Boolean        @default(false)
+  isFranchiseTag        Boolean        @default(false)
+  status                ContractStatus @default(ACTIVE)
+  endedAt               DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  season             Season                   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team               Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player             Player                   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  rosterAssignments  RosterAssignment[]
+  draftSelections    DraftSelection[]         @relation("DraftSelectionContract")
+  auctionAwards      AuctionAward[]           @relation("AuctionAwardContract")
+  seasonLedgers      ContractSeasonLedger[]   @relation("ContractSeasonLedgerEntries")
+  franchiseTagUsages FranchiseTagUsage[]      @relation("ContractFranchiseTagUsages")
+  optionDecisions    ContractOptionDecision[] @relation("ContractOptionDecisionEntries")
+  deadCapCharges     DeadCapCharge[]          @relation("ContractDeadCapCharges")
+  complianceIssues   ComplianceIssue[]        @relation("ContractComplianceIssues")
+  tradeAssets        TradeAsset[]             @relation("TradeAssetContract")
+
+  @@index([teamId, yearsRemaining])
+  @@index([seasonId, status])
+  @@index([teamId, status])
+  @@index([playerId])
+}
+
+model ContractSeasonLedger {
+  id                    String         @id @default(cuid())
+  contractId            String
+  seasonId              String
+  annualSalary          Int
+  yearsRemainingAtStart Int
+  ledgerStatus          ContractStatus
+  createdAt             DateTime       @default(now())
+
+  contract Contract @relation("ContractSeasonLedgerEntries", fields: [contractId], references: [id], onDelete: Cascade)
+  season   Season   @relation("SeasonContractSeasonLedgers", fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, seasonId])
+  @@index([seasonId])
+}
+
+model FranchiseTagUsage {
+  id                         String   @id @default(cuid())
+  seasonId                   String
+  teamId                     String
+  playerId                   String
+  contractId                 String
+  priorSalary                Int
+  calculatedTopTierAverage   Int
+  calculated120PercentSalary Int
+  finalTagSalary             Int
+  frozenSnapshotSeasonId     String
+  createdByUserId            String?
+  createdAt                  DateTime @default(now())
+
+  season               Season   @relation("SeasonFranchiseTagUsages", fields: [seasonId], references: [id], onDelete: Cascade)
+  team                 Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player               Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  contract             Contract @relation("ContractFranchiseTagUsages", fields: [contractId], references: [id], onDelete: Cascade)
+  frozenSnapshotSeason Season   @relation("FrozenSnapshotSeasonFranchiseTagUsages", fields: [frozenSnapshotSeasonId], references: [id], onDelete: Restrict)
+  createdByUser        User?    @relation("UserCreatedFranchiseTagUsages", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([seasonId, teamId])
+  @@unique([seasonId, contractId])
+  @@index([playerId, seasonId])
+}
+
+model ContractOptionDecision {
+  id                          String                     @id @default(cuid())
+  seasonId                    String
+  teamId                      String
+  playerId                    String
+  contractId                  String
+  decisionType                ContractOptionDecisionType
+  decidedByUserId             String?
+  decidedAt                   DateTime?
+  effectiveContractYearsAdded Int                        @default(0)
+  createdAt                   DateTime                   @default(now())
+
+  season        Season   @relation("SeasonContractOptionDecisions", fields: [seasonId], references: [id], onDelete: Cascade)
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  contract      Contract @relation("ContractOptionDecisionEntries", fields: [contractId], references: [id], onDelete: Cascade)
+  decidedByUser User?    @relation("UserDecidedContractOptions", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([seasonId, contractId])
+  @@index([teamId, seasonId])
+}
+
+model DeadCapCharge {
+  id                     String                 @id @default(cuid())
+  leagueId               String
+  teamId                 String
+  playerId               String
+  sourceContractId       String
+  sourceEventType        DeadCapSourceEventType
+  appliesToSeasonId      String
+  systemCalculatedAmount Int
+  adjustedAmount         Int?
+  isOverride             Boolean                @default(false)
+  overrideReason         String?
+  createdByUserId        String?
+  createdAt              DateTime               @default(now())
+
+  league          League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  sourceContract  Contract @relation("ContractDeadCapCharges", fields: [sourceContractId], references: [id], onDelete: Cascade)
+  appliesToSeason Season   @relation("AppliesToSeasonDeadCapCharges", fields: [appliesToSeasonId], references: [id], onDelete: Cascade)
+  createdByUser   User?    @relation("UserCreatedDeadCapCharges", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceContractId, appliesToSeasonId, sourceEventType])
+  @@index([teamId, appliesToSeasonId])
+  @@index([leagueId, appliesToSeasonId])
+}
+
+model ComplianceIssue {
+  id               String                  @id @default(cuid())
+  leagueId         String
+  seasonId         String
+  teamId           String?
+  playerId         String?
+  contractId       String?
+  leagueDeadlineId String?
+  createdByUserId  String?
+  source           ComplianceIssueSource
+  issueType        ComplianceIssueType
+  severity         ComplianceIssueSeverity
+  status           ComplianceIssueStatus   @default(OPEN)
+  code             String
+  ruleCode         String?
+  title            String
+  message          String
+  fingerprint      String
+  dueAt            DateTime?
+  dueAtBasis       ComplianceDueAtBasis?
+  dueAtReason      String?
+  resolvedAt       DateTime?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  league        League          @relation("LeagueComplianceIssues", fields: [leagueId], references: [id], onDelete: Cascade)
+  season        Season          @relation("SeasonComplianceIssues", fields: [seasonId], references: [id], onDelete: Cascade)
+  team          Team?           @relation("TeamComplianceIssues", fields: [teamId], references: [id], onDelete: SetNull)
+  player        Player?         @relation("PlayerComplianceIssues", fields: [playerId], references: [id], onDelete: SetNull)
+  contract      Contract?       @relation("ContractComplianceIssues", fields: [contractId], references: [id], onDelete: SetNull)
+  deadline      LeagueDeadline? @relation("DeadlineComplianceIssues", fields: [leagueDeadlineId], references: [id], onDelete: SetNull)
+  createdByUser User?           @relation("UserCreatedComplianceIssues", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  actions        ComplianceAction[]     @relation("ComplianceIssueActions")
+  overrides      CommissionerOverride[] @relation("ComplianceIssueOverrides")
+  notifications  Notification[]         @relation("NotificationIssue")
+  syncMismatches SyncMismatch[]         @relation("ComplianceIssueSyncMismatches")
+
+  @@index([leagueId, seasonId, status, severity])
+  @@index([teamId, status, dueAt])
+  @@index([fingerprint, status])
+  @@index([leagueDeadlineId])
+}
+
+model ComplianceAction {
+  id                String                 @id @default(cuid())
+  issueId           String
+  actorUserId       String?
+  actorRoleSnapshot LeagueRole?
+  actionType        ComplianceActionType
+  toStatus          ComplianceIssueStatus?
+  summary           String
+  notes             String?
+  metadata          Json?
+  createdAt         DateTime               @default(now())
+
+  issue         ComplianceIssue       @relation("ComplianceIssueActions", fields: [issueId], references: [id], onDelete: Cascade)
+  actorUser     User?                 @relation("UserComplianceActions", fields: [actorUserId], references: [id], onDelete: SetNull)
+  override      CommissionerOverride? @relation("OverrideLinkedAction")
+  notifications Notification[]        @relation("NotificationAction")
+
+  @@index([issueId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model CommissionerOverride {
+  id                 String                     @id @default(cuid())
+  leagueId           String
+  seasonId           String
+  teamId             String?
+  issueId            String?
+  complianceActionId String?                    @unique
+  actorUserId        String?
+  actorRoleSnapshot  LeagueRole?
+  overrideType       CommissionerOverrideType
+  status             CommissionerOverrideStatus @default(APPLIED)
+  reason             String
+  entityType         String
+  entityId           String
+  beforeJson         Json?
+  afterJson          Json?
+  metadata           Json?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  league           League            @relation("LeagueCommissionerOverrides", fields: [leagueId], references: [id], onDelete: Cascade)
+  season           Season            @relation("SeasonCommissionerOverrides", fields: [seasonId], references: [id], onDelete: Cascade)
+  team             Team?             @relation("TeamCommissionerOverrides", fields: [teamId], references: [id], onDelete: SetNull)
+  issue            ComplianceIssue?  @relation("ComplianceIssueOverrides", fields: [issueId], references: [id], onDelete: SetNull)
+  complianceAction ComplianceAction? @relation("OverrideLinkedAction", fields: [complianceActionId], references: [id], onDelete: SetNull)
+  actorUser        User?             @relation("UserCommissionerOverrides", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  notifications Notification[] @relation("NotificationOverride")
+
+  @@index([leagueId, seasonId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([issueId])
+  @@index([overrideType, createdAt])
+}
+
+model Notification {
+  id              String    @id @default(cuid())
+  leagueId        String
+  seasonId        String?
+  recipientUserId String
+  teamId          String?
+  issueId         String?
+  actionId        String?
+  overrideId      String?
+  eventType       String
+  title           String
+  body            String
+  dedupeKey       String?
+  readAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  league        League                @relation("LeagueNotifications", fields: [leagueId], references: [id], onDelete: Cascade)
+  season        Season?               @relation("SeasonNotifications", fields: [seasonId], references: [id], onDelete: SetNull)
+  recipientUser User                  @relation("UserNotifications", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  team          Team?                 @relation("TeamNotifications", fields: [teamId], references: [id], onDelete: SetNull)
+  issue         ComplianceIssue?      @relation("NotificationIssue", fields: [issueId], references: [id], onDelete: SetNull)
+  action        ComplianceAction?     @relation("NotificationAction", fields: [actionId], references: [id], onDelete: SetNull)
+  override      CommissionerOverride? @relation("NotificationOverride", fields: [overrideId], references: [id], onDelete: SetNull)
+
+  @@index([recipientUserId, readAt, createdAt])
+  @@index([leagueId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([issueId])
+  @@index([overrideId])
+}
+
+model CapPenalty {
+  id        String   @id @default(cuid())
+  seasonId  String
+  teamId    String
+  playerId  String?
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  season Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, seasonId])
+}
+
+model Draft {
+  id                          String              @id @default(cuid())
+  leagueId                    String
+  seasonId                    String
+  type                        DraftType
+  status                      DraftStatus         @default(NOT_STARTED)
+  title                       String
+  currentPickIndex            Int                 @default(0)
+  auctionMode                 AuctionSessionMode?
+  auctionEndsAt               DateTime?
+  auctionOpenBidWindowSeconds Int?
+  auctionBidResetSeconds      Int?
+  auctionPoolReviewStatus     AuctionPoolReviewStatus?
+  auctionPoolGeneratedAt      DateTime?
+  auctionPoolGeneratedByUserId String?
+  auctionPoolFinalizedAt      DateTime?
+  auctionPoolFinalizedByUserId String?
+  startedAt                   DateTime?
+  completedAt                 DateTime?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+
+  league                   League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season                   Season                   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  picks                    DraftSelection[]
+  orderEntries             DraftOrderEntry[]        @relation("DraftOrderEntries")
+  draftPicks               DraftPick[]              @relation("DraftBoardPicks")
+  auctionPlayerPoolEntries AuctionPlayerPoolEntry[] @relation("DraftAuctionPlayerPoolEntries")
+  auctionPlayerPoolExclusions AuctionPlayerPoolExclusion[] @relation("DraftAuctionPlayerPoolExclusions")
+  auctionBids              AuctionBid[]             @relation("DraftAuctionBids")
+  auctionAwards            AuctionAward[]           @relation("DraftAuctionAwards")
+  blindTieResolutions      AuctionBlindTieResolution[] @relation("DraftBlindTieResolutions")
+}
+
+model FuturePick {
+  id             String   @id @default(cuid())
+  leagueId       String
+  seasonYear     Int
+  round          Int
+  overall        Int?
+  originalTeamId String
+  currentTeamId  String
+  isUsed         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  league            League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  originalTeam      Team              @relation("PickOriginalTeam", fields: [originalTeamId], references: [id], onDelete: Cascade)
+  currentTeam       Team              @relation("PickCurrentTeam", fields: [currentTeamId], references: [id], onDelete: Cascade)
+  selections        DraftSelection[]
+  draftOrderEntries DraftOrderEntry[] @relation("DraftOrderEntryFuturePick")
+  draftPicks        DraftPick[]       @relation("DraftPickFuturePick")
+  tradeAssets       TradeAsset[]
+
+  @@unique([leagueId, seasonYear, round, originalTeamId])
+  @@index([currentTeamId, seasonYear])
+}
+
+model DraftOrderEntry {
+  id               String               @id @default(cuid())
+  draftId          String
+  seasonId         String
+  pickNumber       Int
+  round            Int
+  sourceType       DraftOrderSourceType
+  futurePickId     String?
+  originalTeamId   String?
+  owningTeamId     String
+  selectingTeamId  String
+  isBonus          Boolean              @default(false)
+  isManualOverride Boolean              @default(false)
+  overrideReason   String?
+  createdByUserId  String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  draft         Draft       @relation("DraftOrderEntries", fields: [draftId], references: [id], onDelete: Cascade)
+  season        Season      @relation("SeasonDraftOrderEntries", fields: [seasonId], references: [id], onDelete: Cascade)
+  futurePick    FuturePick? @relation("DraftOrderEntryFuturePick", fields: [futurePickId], references: [id], onDelete: SetNull)
+  originalTeam  Team?       @relation("DraftOrderEntryOriginalTeam", fields: [originalTeamId], references: [id], onDelete: SetNull)
+  owningTeam    Team        @relation("DraftOrderEntryOwningTeam", fields: [owningTeamId], references: [id], onDelete: Cascade)
+  selectingTeam Team        @relation("DraftOrderEntrySelectingTeam", fields: [selectingTeamId], references: [id], onDelete: Cascade)
+  createdByUser User?       @relation("UserCreatedDraftOrderEntries", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  draftPick     DraftPick?  @relation("DraftOrderEntryDraftPick")
+
+  @@unique([draftId, pickNumber])
+  @@index([seasonId, selectingTeamId])
+  @@index([owningTeamId, draftId])
+  @@index([futurePickId])
+}
+
+model DraftPick {
+  id                String          @id @default(cuid())
+  draftId           String
+  seasonId          String
+  draftOrderEntryId String
+  futurePickId      String?
+  selectingTeamId   String
+  pickNumber        Int
+  round             Int
+  status            DraftPickStatus @default(PENDING)
+  openedAt          DateTime?
+  resolvedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  draft         Draft           @relation("DraftBoardPicks", fields: [draftId], references: [id], onDelete: Cascade)
+  season        Season          @relation("SeasonDraftPicks", fields: [seasonId], references: [id], onDelete: Cascade)
+  orderEntry    DraftOrderEntry @relation("DraftOrderEntryDraftPick", fields: [draftOrderEntryId], references: [id], onDelete: Cascade)
+  futurePick    FuturePick?     @relation("DraftPickFuturePick", fields: [futurePickId], references: [id], onDelete: SetNull)
+  selectingTeam Team            @relation("DraftPickSelectingTeam", fields: [selectingTeamId], references: [id], onDelete: Cascade)
+  selection     DraftSelection? @relation("DraftPickSelection")
+
+  @@unique([draftId, pickNumber])
+  @@unique([draftOrderEntryId])
+  @@index([draftId, status, pickNumber])
+  @@index([selectingTeamId, status])
+  @@index([futurePickId])
+}
+
+model DraftSelection {
+  id                 String                @id @default(cuid())
+  draftId            String
+  draftPickId        String?
+  pickId             String?
+  selectingTeamId    String
+  playerId           String?
+  actedByUserId      String?
+  contractId         String?
+  rosterAssignmentId String?
+  round              Int
+  pickNumber         Int
+  salary             Int?
+  contractYears      Int?
+  outcome            DraftSelectionOutcome @default(SELECTED)
+  isPassed           Boolean               @default(false)
+  madeAt             DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  draft            Draft             @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  draftPick        DraftPick?        @relation("DraftPickSelection", fields: [draftPickId], references: [id], onDelete: SetNull)
+  pick             FuturePick?       @relation(fields: [pickId], references: [id], onDelete: SetNull)
+  selectingTeam    Team              @relation("DraftSelectionTeam", fields: [selectingTeamId], references: [id], onDelete: Cascade)
+  player           Player?           @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  actedByUser      User?             @relation("UserActedDraftSelections", fields: [actedByUserId], references: [id], onDelete: SetNull)
+  contract         Contract?         @relation("DraftSelectionContract", fields: [contractId], references: [id], onDelete: SetNull)
+  rosterAssignment RosterAssignment? @relation("DraftSelectionRosterAssignment", fields: [rosterAssignmentId], references: [id], onDelete: SetNull)
+
+  @@unique([draftId, pickNumber])
+  @@unique([draftPickId])
+  @@index([selectingTeamId])
+  @@index([pickId])
+  @@index([actedByUserId])
+  @@index([contractId])
+  @@index([rosterAssignmentId])
+  @@index([playerId])
+}
+
+model AuctionPlayerPoolEntry {
+  id                      String                       @id @default(cuid())
+  draftId                 String
+  leagueId                String
+  seasonId                String
+  playerId                String
+  nominatedByTeamId       String?
+  openedByUserId          String?
+  status                  AuctionPlayerPoolEntryStatus @default(ELIGIBLE)
+  blindEligibleAt         DateTime?
+  blindConvertedAt        DateTime?
+  openBiddingOpenedAt     DateTime?
+  openBidClosesAt         DateTime?
+  blindBiddingOpenedAt    DateTime?
+  blindBidClosesAt        DateTime?
+  currentLeadingBidAmount Int?
+  currentLeadingTeamId    String?
+  awardedAt               DateTime?
+  // New fields for constitutional alignment
+  blindEligibleTeamIds    String?  // JSON array of team IDs eligible for blind bidding
+  leadHistoryJson         String?  // JSON of lead changes during final 24 hours
+  reopenedAt              DateTime?
+  reopenedByUserId        String?
+  reopenReason            String?
+  previousStatus          AuctionPlayerPoolEntryStatus?
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+
+  draft              Draft         @relation("DraftAuctionPlayerPoolEntries", fields: [draftId], references: [id], onDelete: Cascade)
+  league             League        @relation("LeagueAuctionPlayerPoolEntries", fields: [leagueId], references: [id], onDelete: Cascade)
+  season             Season        @relation("SeasonAuctionPlayerPoolEntries", fields: [seasonId], references: [id], onDelete: Cascade)
+  player             Player        @relation("PlayerAuctionPlayerPoolEntries", fields: [playerId], references: [id], onDelete: Cascade)
+  nominatedByTeam    Team?         @relation("AuctionPoolEntryNominatingTeam", fields: [nominatedByTeamId], references: [id], onDelete: SetNull)
+  openedByUser       User?         @relation("UserOpenedAuctionPoolEntries", fields: [openedByUserId], references: [id], onDelete: SetNull)
+  currentLeadingTeam Team?         @relation("AuctionPoolEntryLeadingTeam", fields: [currentLeadingTeamId], references: [id], onDelete: SetNull)
+  reopenedByUser     User?         @relation("UserReopenedAuctionPoolEntries", fields: [reopenedByUserId], references: [id], onDelete: SetNull)
+  bids               AuctionBid[]  @relation("AuctionPlayerPoolEntryBids")
+  award              AuctionAward? @relation("AuctionPlayerPoolEntryAward")
+  blindTieResolution AuctionBlindTieResolution? @relation("PoolEntryBlindTieResolutions")
+
+  @@unique([draftId, playerId])
+  @@index([draftId, status, openBidClosesAt])
+  @@index([draftId, status, blindBidClosesAt])
+  @@index([currentLeadingTeamId])
+}
+
+model AuctionPlayerPoolExclusion {
+  id                String                    @id @default(cuid())
+  draftId           String
+  leagueId          String
+  seasonId          String
+  playerId          String
+  reason            AuctionPoolExclusionReason
+  reasonDetailsJson Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  draft   Draft  @relation("DraftAuctionPlayerPoolExclusions", fields: [draftId], references: [id], onDelete: Cascade)
+  league  League @relation("LeagueAuctionPlayerPoolExclusions", fields: [leagueId], references: [id], onDelete: Cascade)
+  season  Season @relation("SeasonAuctionPlayerPoolExclusions", fields: [seasonId], references: [id], onDelete: Cascade)
+  player  Player @relation("PlayerAuctionPlayerPoolExclusions", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([draftId, playerId])
+  @@index([draftId, reason])
+  @@index([playerId])
+}
+
+model AuctionBid {
+  id            String           @id @default(cuid())
+  draftId       String
+  leagueId      String
+  seasonId      String
+  poolEntryId   String
+  biddingTeamId String
+  bidderUserId  String?
+  bidType       AuctionBidType
+  salaryAmount  Int
+  contractYears Int
+  status        AuctionBidStatus @default(ACTIVE)
+  submittedAt   DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  draft       Draft                  @relation("DraftAuctionBids", fields: [draftId], references: [id], onDelete: Cascade)
+  league      League                 @relation("LeagueAuctionBids", fields: [leagueId], references: [id], onDelete: Cascade)
+  season      Season                 @relation("SeasonAuctionBids", fields: [seasonId], references: [id], onDelete: Cascade)
+  poolEntry   AuctionPlayerPoolEntry @relation("AuctionPlayerPoolEntryBids", fields: [poolEntryId], references: [id], onDelete: Cascade)
+  biddingTeam Team                   @relation("AuctionBidTeam", fields: [biddingTeamId], references: [id], onDelete: Cascade)
+  bidderUser  User?                  @relation("UserAuctionBids", fields: [bidderUserId], references: [id], onDelete: SetNull)
+  award       AuctionAward?          @relation("AuctionAwardWinningBid")
+  blindTieResolution AuctionBlindTieResolution? @relation("BlindTieResolutionWinningBid")
+
+  @@index([poolEntryId, bidType, status, submittedAt])
+  @@index([biddingTeamId, submittedAt])
+  @@index([draftId, submittedAt])
+}
+
+model AuctionAward {
+  id                 String             @id @default(cuid())
+  draftId            String
+  leagueId           String
+  seasonId           String
+  poolEntryId        String
+  winningBidId       String?
+  awardedTeamId      String
+  playerId           String
+  contractId         String?
+  rosterAssignmentId String?
+  salaryAmount       Int
+  contractYears      Int
+  acquisitionType    AcquisitionType    @default(AUCTION)
+  status             AuctionAwardStatus @default(FINALIZED)
+  createdByUserId    String?
+  awardedAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  draft            Draft                  @relation("DraftAuctionAwards", fields: [draftId], references: [id], onDelete: Cascade)
+  league           League                 @relation("LeagueAuctionAwards", fields: [leagueId], references: [id], onDelete: Cascade)
+  season           Season                 @relation("SeasonAuctionAwards", fields: [seasonId], references: [id], onDelete: Cascade)
+  poolEntry        AuctionPlayerPoolEntry @relation("AuctionPlayerPoolEntryAward", fields: [poolEntryId], references: [id], onDelete: Cascade)
+  winningBid       AuctionBid?            @relation("AuctionAwardWinningBid", fields: [winningBidId], references: [id], onDelete: SetNull)
+  awardedTeam      Team                   @relation("AuctionAwardTeam", fields: [awardedTeamId], references: [id], onDelete: Cascade)
+  player           Player                 @relation("AuctionAwardPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+  contract         Contract?              @relation("AuctionAwardContract", fields: [contractId], references: [id], onDelete: SetNull)
+  rosterAssignment RosterAssignment?      @relation("AuctionAwardRosterAssignment", fields: [rosterAssignmentId], references: [id], onDelete: SetNull)
+  createdByUser    User?                  @relation("UserCreatedAuctionAwards", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([poolEntryId])
+  @@unique([winningBidId])
+  @@index([draftId, awardedAt])
+  @@index([awardedTeamId, awardedAt])
+  @@index([playerId])
+}
+
+model AuctionBlindTieResolution {
+  id              String   @id @default(cuid())
+  draftId         String
+  leagueId        String
+  seasonId        String
+  poolEntryId     String
+  tiedBidIds      String   // JSON array of tied bid IDs
+  drawSeed        String   // Random seed used for draw
+  drawResult      String   // JSON with draw details
+  winningBidId    String   @unique
+  resolvedAt      DateTime @default(now())
+  resolvedByUserId String?
+
+  draft         Draft                  @relation("DraftBlindTieResolutions", fields: [draftId], references: [id], onDelete: Cascade)
+  league        League                 @relation("LeagueBlindTieResolutions", fields: [leagueId], references: [id], onDelete: Cascade)
+  season        Season                 @relation("SeasonBlindTieResolutions", fields: [seasonId], references: [id], onDelete: Cascade)
+  poolEntry     AuctionPlayerPoolEntry @relation("PoolEntryBlindTieResolutions", fields: [poolEntryId], references: [id], onDelete: Cascade)
+  winningBid    AuctionBid             @relation("BlindTieResolutionWinningBid", fields: [winningBidId], references: [id], onDelete: Cascade)
+  resolvedByUser User?                  @relation("UserBlindTieResolutions", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([poolEntryId])
+  @@index([draftId, resolvedAt])
+}
+
+model HostPlatformSyncJob {
+  id                String                    @id @default(cuid())
+  leagueId          String
+  seasonId          String
+  requestedByUserId String?
+  jobType           HostPlatformSyncJobType
+  status            HostPlatformSyncJobStatus @default(PENDING)
+  trigger           HostPlatformSyncTrigger
+  adapterKey        String
+  sourceLabel       String?
+  sourceSnapshotAt  DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  payloadDigest     String?
+  inputJson         Json?
+  summaryJson       Json?
+  errorJson         Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  league          League         @relation("LeagueHostPlatformSyncJobs", fields: [leagueId], references: [id], onDelete: Cascade)
+  season          Season         @relation("SeasonHostPlatformSyncJobs", fields: [seasonId], references: [id], onDelete: Cascade)
+  requestedByUser User?          @relation("UserRequestedHostPlatformSyncJobs", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  mismatches      SyncMismatch[] @relation("HostPlatformSyncJobMismatches")
+
+  @@index([leagueId, seasonId, jobType, status, createdAt])
+  @@index([requestedByUserId, createdAt])
+  @@index([status, createdAt])
+  @@index([adapterKey, createdAt])
+}
+
+model SyncMismatch {
+  id                      String                      @id @default(cuid())
+  leagueId                String
+  seasonId                String
+  jobId                   String
+  teamId                  String?
+  playerId                String?
+  rosterAssignmentId      String?
+  complianceIssueId       String?
+  mismatchType            SyncMismatchType
+  severity                SyncMismatchSeverity
+  status                  SyncMismatchStatus          @default(OPEN)
+  resolutionType          SyncMismatchResolutionType?
+  fingerprint             String
+  title                   String
+  message                 String
+  hostPlatformReferenceId String?
+  hostValueJson           Json?
+  dynastyValueJson        Json?
+  metadataJson            Json?
+  detectionCount          Int                         @default(1)
+  firstDetectedAt         DateTime                    @default(now())
+  lastDetectedAt          DateTime                    @default(now())
+  resolvedAt              DateTime?
+  resolvedByUserId        String?
+  resolutionReason        String?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+
+  league           League              @relation("LeagueSyncMismatches", fields: [leagueId], references: [id], onDelete: Cascade)
+  season           Season              @relation("SeasonSyncMismatches", fields: [seasonId], references: [id], onDelete: Cascade)
+  job              HostPlatformSyncJob @relation("HostPlatformSyncJobMismatches", fields: [jobId], references: [id], onDelete: Cascade)
+  team             Team?               @relation("TeamSyncMismatches", fields: [teamId], references: [id], onDelete: SetNull)
+  player           Player?             @relation("PlayerSyncMismatches", fields: [playerId], references: [id], onDelete: SetNull)
+  rosterAssignment RosterAssignment?   @relation("RosterAssignmentSyncMismatches", fields: [rosterAssignmentId], references: [id], onDelete: SetNull)
+  complianceIssue  ComplianceIssue?    @relation("ComplianceIssueSyncMismatches", fields: [complianceIssueId], references: [id], onDelete: SetNull)
+  resolvedByUser   User?               @relation("UserResolvedSyncMismatches", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, seasonId, status, severity, lastDetectedAt])
+  @@index([jobId, severity])
+  @@index([teamId, status, severity])
+  @@index([playerId, status, severity])
+  @@index([fingerprint, status])
+  @@index([rosterAssignmentId])
+  @@index([complianceIssueId])
+}
+
+model Trade {
+  id          String      @id @default(cuid())
+  leagueId    String
+  seasonId    String
+  teamAId     String
+  teamBId     String
+  status      TradeStatus @default(PROPOSED)
+  proposedAt  DateTime    @default(now())
+  processedAt DateTime?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  league League       @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  teamA  Team         @relation("TradeTeamA", fields: [teamAId], references: [id], onDelete: Cascade)
+  teamB  Team         @relation("TradeTeamB", fields: [teamBId], references: [id], onDelete: Cascade)
+  assets TradeAsset[] @relation("LegacyTradeAssets")
+
+  @@index([seasonId, status])
+}
+
+model TradeProposal {
+  id                            String              @id @default(cuid())
+  leagueId                      String
+  seasonId                      String
+  proposerTeamId                String
+  counterpartyTeamId            String
+  createdByUserId               String
+  submittedByUserId             String?
+  counterpartyRespondedByUserId String?
+  reviewedByUserId              String?
+  status                        TradeProposalStatus @default(DRAFT)
+  submittedAt                   DateTime?
+  counterpartyRespondedAt       DateTime?
+  reviewedAt                    DateTime?
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
+
+  league           League            @relation("LeagueTradeProposals", fields: [leagueId], references: [id], onDelete: Cascade)
+  season           Season            @relation("SeasonTradeProposals", fields: [seasonId], references: [id], onDelete: Cascade)
+  proposerTeam     Team              @relation("TradeProposalProposerTeam", fields: [proposerTeamId], references: [id], onDelete: Cascade)
+  counterpartyTeam Team              @relation("TradeProposalCounterpartyTeam", fields: [counterpartyTeamId], references: [id], onDelete: Cascade)
+  createdByUser    User              @relation("UserCreatedTradeProposals", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  submittedByUser  User?             @relation("UserSubmittedTradeProposals", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  respondedByUser  User?             @relation("UserRespondedTradeProposals", fields: [counterpartyRespondedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser   User?             @relation("UserReviewedTradeProposals", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  assets           TradeAsset[]      @relation("TradeProposalAssets")
+  evaluations      TradeEvaluation[] @relation("TradeProposalEvaluations")
+
+  @@index([leagueId, seasonId, status])
+  @@index([proposerTeamId, updatedAt])
+  @@index([counterpartyTeamId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model TradeAsset {
+  id              String         @id @default(cuid())
+  tradeId         String?
+  tradeProposalId String?
+  fromTeamId      String
+  toTeamId        String
+  assetType       TradeAssetType
+  playerId        String?
+  futurePickId    String?
+  contractId      String?
+  assetOrder      Int            @default(0)
+  snapshotLabel   String?
+  createdAt       DateTime       @default(now())
+
+  trade         Trade?         @relation("LegacyTradeAssets", fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeProposal TradeProposal? @relation("TradeProposalAssets", fields: [tradeProposalId], references: [id], onDelete: Cascade)
+  fromTeam      Team           @relation("TradeAssetFromTeam", fields: [fromTeamId], references: [id], onDelete: Cascade)
+  toTeam        Team           @relation("TradeAssetToTeam", fields: [toTeamId], references: [id], onDelete: Cascade)
+  player        Player?        @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  futurePick    FuturePick?    @relation(fields: [futurePickId], references: [id], onDelete: SetNull)
+  contract      Contract?      @relation("TradeAssetContract", fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([tradeId, assetOrder])
+  @@index([tradeProposalId, assetOrder])
+  @@index([fromTeamId, toTeamId])
+  @@index([playerId])
+  @@index([futurePickId])
+  @@index([contractId])
+}
+
+model TradeEvaluation {
+  id                      String                 @id @default(cuid())
+  proposalId              String
+  leagueId                String
+  seasonId                String
+  createdByUserId         String?
+  trigger                 TradeEvaluationTrigger
+  outcome                 TradeEvaluationOutcome
+  isCurrent               Boolean                @default(true)
+  isSubmissionSnapshot    Boolean                @default(false)
+  assetFingerprint        String
+  findingsJson            Json
+  remediationJson         Json?
+  postTradeProjectionJson Json
+  evaluatedAt             DateTime               @default(now())
+  createdAt               DateTime               @default(now())
+
+  proposal      TradeProposal @relation("TradeProposalEvaluations", fields: [proposalId], references: [id], onDelete: Cascade)
+  league        League        @relation("LeagueTradeEvaluations", fields: [leagueId], references: [id], onDelete: Cascade)
+  season        Season        @relation("SeasonTradeEvaluations", fields: [seasonId], references: [id], onDelete: Cascade)
+  createdByUser User?         @relation("UserCreatedTradeEvaluations", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId, isCurrent])
+  @@index([leagueId, seasonId, outcome])
+  @@index([evaluatedAt])
+}
+
+model Transaction {
+  id        String          @id @default(cuid())
+  leagueId  String
+  seasonId  String
+  teamId    String?
+  playerId  String?
+  type      TransactionType
+  summary   String
+  metadata  Json?
+  createdAt DateTime        @default(now())
+
+  league League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  player Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([seasonId, createdAt])
+}
+
+model ActivityEvent {
+  id               String   @id @default(cuid())
+  leagueId         String
+  seasonId         String
+  actorUserId      String?
+  teamId           String?
+  relatedTeamId    String?
+  playerId         String?
+  eventType        String
+  title            String
+  body             String
+  sourceEntityType String?
+  sourceEntityId   String?
+  dedupeKey        String?  @unique
+  payload          Json?
+  occurredAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  league      League  @relation("LeagueActivityEvents", fields: [leagueId], references: [id], onDelete: Cascade)
+  season      Season  @relation("SeasonActivityEvents", fields: [seasonId], references: [id], onDelete: Cascade)
+  actorUser   User?   @relation("UserActivityEvents", fields: [actorUserId], references: [id], onDelete: SetNull)
+  team        Team?   @relation("PrimaryTeamActivityEvents", fields: [teamId], references: [id], onDelete: SetNull)
+  relatedTeam Team?   @relation("RelatedTeamActivityEvents", fields: [relatedTeamId], references: [id], onDelete: SetNull)
+  player      Player? @relation("PlayerActivityEvents", fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, seasonId, occurredAt])
+  @@index([leagueId, eventType, occurredAt])
+  @@index([teamId, occurredAt])
+  @@index([relatedTeamId, occurredAt])
+  @@index([playerId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([sourceEntityType, sourceEntityId])
+}
+
+model PilotEvent {
+  id            String      @id @default(cuid())
+  leagueId      String
+  seasonId      String?
+  actorEmail    String?
+  actorRole     LeagueRole?
+  actorTeamId   String?
+  eventType     String
+  eventCategory String
+  eventStep     String?
+  status        String?
+  entityType    String?
+  entityId      String?
+  pagePath      String?
+  requestPath   String?
+  requestMethod String?
+  context       Json?
+  createdAt     DateTime    @default(now())
+
+  league League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, createdAt])
+  @@index([leagueId, eventCategory, createdAt])
+  @@index([leagueId, eventType, createdAt])
+}
+
+model PilotFeedback {
+  id               String      @id @default(cuid())
+  leagueId         String
+  seasonId         String?
+  actorEmail       String?
+  actorRole        LeagueRole?
+  actorTeamId      String?
+  category         String
+  severity         String
+  pagePath         String
+  pageTitle        String?
+  message          String
+  stepsToReproduce String?
+  status           String      @default("NEW")
+  metadata         Json?
+  createdAt        DateTime    @default(now())
+
+  league League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, status, createdAt])
+  @@index([leagueId, category, createdAt])
+  @@index([actorEmail, createdAt])
+}
+
+model NotificationReadState {
+  id         String   @id @default(cuid())
+  leagueId   String
+  actorEmail String
+  lastReadAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, actorEmail])
+  @@index([actorEmail, leagueId])
+}

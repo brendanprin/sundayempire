@@ -6,21 +6,55 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:init": "RUST_BACKTRACE=1 RUST_LOG=info prisma migrate dev --name init",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed",
+    "db:backfill:s1-lifecycle": "tsx scripts/backfill-s1-lifecycle.ts",
+    "db:backfill:s2-team-state": "node --import tsx scripts/backfill-s2-team-state.ts",
+    "db:backfill:s3-contract-financial-state": "node --import tsx scripts/backfill-s3-contract-financial-state.ts",
+    "db:reset": "prisma migrate reset --force --skip-seed && npm run db:seed",
+    "test:suite": "node scripts/run-test-suite.mjs",
+    "smoke:phase": "node scripts/run-smoke-phase.mjs",
+    "smoke:mvp": "node --import tsx scripts/mvp-dress-rehearsal.ts",
+    "verify:hygiene": "node --import tsx scripts/verify-hygiene.ts",
+    "verify:migrations": "prisma migrate status",
+    "verify:mvp-regression": "node scripts/run-test-suite.mjs all",
+    "verify:release-readiness": "npm run verify:migrations && npm run verify:hygiene && npm run build && npm run verify:mvp-regression",
+    "verify:mvp-shadow": "playwright test --grep @mvp-shadow",
+    "fixtures:demo": "node --import tsx scripts/mvp-demo-fixtures.ts",
+    "capture:evidence": "node scripts/capture-evidence.mjs",
+    "capture:evidence:sprint16": "EVIDENCE_SLUG=sprint-16 EVIDENCE_TITLE='Sprint 16 Evidence Pack' node scripts/capture-evidence.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:smoke": "playwright test --project smoke",
+    "test:smoke:headed": "playwright test --project smoke --headed",
+    "test:smoke:update": "playwright test --project smoke --update-snapshots",
+    "test:smoke:debug": "playwright test --project smoke --debug"
   },
   "dependencies": {
+    "@prisma/client": "^6.11.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "prisma": "^6.11.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
