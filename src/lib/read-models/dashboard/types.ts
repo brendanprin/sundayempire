@@ -74,6 +74,9 @@ export type LeagueDashboardProjection = {
   season: DashboardSeasonSummary | null;
   summary: {
     teamCount: number;
+    membershipCount: number;
+    commissionerCount: number;
+    activeRulesetVersion: number | null;
     openIssueCount: number;
     overdueIssueCount: number;
     warningCount: number;
@@ -236,6 +239,45 @@ export type DashboardAlertItem = {
   href: string | null;
 };
 
+export type LeagueSetupChecklistItemId =
+  | "founder-team-status"
+  | "add-teams"
+  | "invite-members"
+  | "review-settings-rules"
+  | "draft-prep-readiness";
+
+export type LeagueSetupChecklistItemStatus = "COMPLETE" | "INCOMPLETE" | "INCOMPLETE_POSTPONED";
+
+export type LeagueSetupChecklistItem = {
+  id: LeagueSetupChecklistItemId;
+  title: string;
+  description: string;
+  status: LeagueSetupChecklistItemStatus;
+  href: string | null;
+  ctaLabel: string | null;
+  commissionerOnly: boolean;
+};
+
+export type LeagueSetupChecklistProjection = {
+  available: boolean;
+  visibleItemCount: number;
+  totalItemCount: number;
+  completedItemCount: number;
+  completionPercent: number;
+  isComplete: boolean;
+  primaryIncompleteItemId: LeagueSetupChecklistItemId | null;
+  primaryAction: {
+    id: string;
+    title: string;
+    description: string;
+    href: string;
+    ctaLabel: string;
+    tone: "default" | "warning" | "critical" | "accent";
+    phaseLabel: string | null;
+  } | null;
+  items: LeagueSetupChecklistItem[];
+};
+
 export type LeagueLandingDashboardProjection = {
   viewer: {
     leagueRole: "COMMISSIONER" | "MEMBER";
@@ -251,5 +293,6 @@ export type LeagueLandingDashboardProjection = {
   pendingTradeActions: PendingTradeActionsSummary;
   notificationSummary: NotificationSummaryProjection;
   alerts: DashboardAlertItem[];
+  setupChecklist: LeagueSetupChecklistProjection;
   generatedAt: string;
 };

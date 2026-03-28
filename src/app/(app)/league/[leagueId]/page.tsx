@@ -448,7 +448,9 @@ export default function LeagueLandingDashboardPage() {
           dashboard
             ? dashboard.viewer.teamName
               ? `${dashboard.viewer.teamName} is in Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Start with the highest-pressure action, then scan what changed and the next deadline.`
-              : `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Start with urgent work before diving into neutral status.`
+              : dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete
+                ? `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Setup progress is ${dashboard.setupChecklist.completedItemCount}/${dashboard.setupChecklist.totalItemCount}; complete the next checklist action first.`
+                : `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Start with urgent work before diving into neutral status.`
             : "Resolving current season, urgent work, deadlines, and recent change across the active league workspace."
         }
         supportingContent={
@@ -716,6 +718,7 @@ export default function LeagueLandingDashboardPage() {
             actions={buildDashboardActionItems({ dashboard, draftsHome, tradesHome })}
             deadlines={buildDashboardDeadlineCards(dashboard)}
             changeItems={buildDashboardChangeItems(dashboard)}
+            setupChecklist={dashboard.setupChecklist}
             actionQueueTestId={
               dashboard.viewer.leagueRole === "MEMBER" && dashboard.viewer.hasTeamAccess
                 ? "owner-action-queue"

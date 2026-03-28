@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { DashboardChangeFeed, type DashboardChangeFeedItem } from "@/components/dashboard/dashboard-change-feed";
+import type { LeagueSetupChecklistProjection } from "@/lib/read-models/dashboard/types";
 
 export type DashboardActionItem = {
   id: string;
@@ -62,6 +63,7 @@ export function DashboardActionCenter(props: {
   actions: DashboardActionItem[];
   deadlines: DashboardDeadlineCardItem[];
   changeItems: DashboardChangeFeedItem[];
+  setupChecklist?: LeagueSetupChecklistProjection | null;
   actionQueueTestId?: string;
   onActionSelect: (actionId: string, source: "action-center" | "mobile-rail") => void;
 }) {
@@ -80,6 +82,76 @@ export function DashboardActionCenter(props: {
           Start with the highest-pressure workflow, scan what changed, and move into the next canonical screen without hunting through utility pages.
         </p>
       </div>
+
+      {props.setupChecklist?.available ? (
+        <DashboardCard
+          title="New League Checklist"
+          eyebrow="Setup Progress"
+          description="Commissioner-first setup items with explicit completion state and a single next action."
+          className="border-amber-700/40 bg-[linear-gradient(160deg,rgba(120,53,15,0.2),rgba(15,23,42,0.94)_40%,rgba(2,6,23,0.96))] shadow-[0_18px_48px_rgba(120,53,15,0.2)]"
+          testId="dashboard-setup-checklist"
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p
+                className="text-xs text-amber-100/90"
+                data-testid="dashboard-setup-checklist-progress"
+              >
+                {props.setupChecklist.completedItemCount} / {props.setupChecklist.totalItemCount} complete
+              </p>
+              <span className="rounded-full border border-amber-600/60 bg-amber-950/40 px-2.5 py-1 text-[11px] font-medium text-amber-100">
+                {props.setupChecklist.completionPercent}% complete
+              </span>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {props.setupChecklist.items.map((item) => {
+                const itemTone =
+                  item.status === "COMPLETE"
+                    ? "border-emerald-700/40 bg-emerald-950/20 text-emerald-100"
+                    : item.status === "INCOMPLETE_POSTPONED"
+                      ? "border-amber-700/40 bg-amber-950/20 text-amber-100"
+                      : "border-slate-700/50 bg-slate-900/60 text-slate-100";
+                const statusLabel =
+                  item.status === "COMPLETE"
+                    ? "Complete"
+                    : item.status === "INCOMPLETE_POSTPONED"
+                      ? "Postponed"
+                      : "Incomplete";
+
+                return (
+                  <article
+                    key={item.id}
+                    className={`rounded-xl border px-3 py-3 text-sm ${itemTone}`}
+                    data-testid={`dashboard-setup-checklist-item-${item.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-medium">{item.title}</p>
+                      <span
+                        className="rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide"
+                        data-testid={`dashboard-setup-checklist-status-${item.id}`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs opacity-90">{item.description}</p>
+                    {item.href && item.ctaLabel ? (
+                      <Link
+                        href={item.href}
+                        className="mt-3 inline-flex rounded-md border border-current/50 px-2.5 py-1.5 text-xs font-medium transition hover:border-current"
+                        data-testid={`dashboard-setup-checklist-link-${item.id}`}
+                        onClick={() => props.onActionSelect(`setup-${item.id}`, "action-center")}
+                      >
+                        {item.ctaLabel}
+                      </Link>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </DashboardCard>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.95fr)]" data-testid="dashboard-priority-cards">
         <DashboardCard

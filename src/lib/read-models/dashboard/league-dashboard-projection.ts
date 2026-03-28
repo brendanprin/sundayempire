@@ -17,6 +17,31 @@ export function createLeagueDashboardProjection(client: DashboardProjectionDbCli
           leagueId: context.league.id,
         },
       });
+      const [membershipCount, commissionerCount, activeRuleset] = await Promise.all([
+        client.leagueMembership.count({
+          where: {
+            leagueId: context.league.id,
+          },
+        }),
+        client.leagueMembership.count({
+          where: {
+            leagueId: context.league.id,
+            role: "COMMISSIONER",
+          },
+        }),
+        client.leagueRuleSet.findFirst({
+          where: {
+            leagueId: context.league.id,
+            isActive: true,
+          },
+          orderBy: {
+            version: "desc",
+          },
+          select: {
+            version: true,
+          },
+        }),
+      ]);
 
       if (!context.season) {
         const status = deriveLeagueAlertStatus({
@@ -36,6 +61,9 @@ export function createLeagueDashboardProjection(client: DashboardProjectionDbCli
           season: null,
           summary: {
             teamCount,
+            membershipCount,
+            commissionerCount,
+            activeRulesetVersion: activeRuleset?.version ?? null,
             openIssueCount: 0,
             overdueIssueCount: 0,
             warningCount: 0,
@@ -107,6 +135,9 @@ export function createLeagueDashboardProjection(client: DashboardProjectionDbCli
         season: buildDashboardSeasonSummary(context.season),
         summary: {
           teamCount,
+          membershipCount,
+          commissionerCount,
+          activeRulesetVersion: activeRuleset?.version ?? null,
           openIssueCount: issueSummary.openIssueCount,
           overdueIssueCount: issueSummary.overdueCount,
           warningCount: issueSummary.warningCount,

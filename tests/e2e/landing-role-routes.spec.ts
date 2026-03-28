@@ -7,6 +7,36 @@ import {
 } from "./helpers/api";
 
 test.describe("Role-Aware Landing Routes", () => {
+  test("new-league commissioner sees setup checklist and setup primary action", async ({
+    page,
+    baseURL,
+  }) => {
+    const founderEmail = "noleague@local.league";
+    const founderApi = await apiContext(baseURL as string, founderEmail);
+    const createLeagueResponse = await founderApi.post("/api/leagues", {
+      data: {
+        name: `Landing Setup Checklist ${Date.now()}`,
+        description: "Checklist-first league home coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+    await founderApi.dispose();
+
+    await page.setExtraHTTPHeaders({
+      "x-dynasty-user-email": founderEmail,
+      "x-dynasty-league-id": leagueId,
+    });
+    await page.goto(`/league/${leagueId}`);
+
+    await expect(page.getByTestId("dashboard-setup-checklist")).toBeVisible();
+    await expect(page.getByTestId("dashboard-setup-checklist-progress")).toContainText("0 / 5 complete");
+    await expect(page.getByTestId("dashboard-setup-checklist-item-founder-team-status")).toBeVisible();
+    await expect(page.getByTestId("commissioner-action-link-setup-primary")).toBeVisible();
+  });
+
   test("commissioner root reflects zero/one/many league entry behavior", async ({
     page,
     baseURL,
@@ -43,6 +73,7 @@ test.describe("Role-Aware Landing Routes", () => {
     await expect(page).toHaveURL(/\/league\/[^/]+$/);
     await expect(page.getByTestId("dashboard-page-eyebrow")).toHaveText("Dashboard");
     await expect(page.getByTestId("owner-action-queue")).toBeVisible();
+    await expect(page.getByTestId("dashboard-setup-checklist")).toHaveCount(0);
   });
 
   test("read-only can access league home without owner or commissioner action queues", async ({
@@ -60,5 +91,6 @@ test.describe("Role-Aware Landing Routes", () => {
     await expect(page).toHaveURL(/\/league\/[^/]+$/);
     await expect(page.getByTestId("owner-action-queue")).toHaveCount(0);
     await expect(page.getByTestId("commissioner-action-queue")).toHaveCount(0);
+    await expect(page.getByTestId("dashboard-setup-checklist")).toHaveCount(0);
   });
 });
