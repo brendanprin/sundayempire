@@ -134,6 +134,148 @@ test.describe("Role Model Foundation", () => {
     await designatedContext.dispose();
   });
 
+  test("founder can create a team and remain commissioner with team scope", async ({
+    baseURL,
+  }) => {
+    const founderContext = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL);
+    const createLeagueResponse = await founderContext.post("/api/leagues", {
+      data: {
+        name: `Founder Team Create ${Date.now()}`,
+        description: "Founder team setup create path coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedFounder = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL, leagueId);
+    const founderCreateResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "create",
+        teamName: `Founder Franchise ${Date.now()}`,
+        teamAbbreviation: `FF${Math.floor(Math.random() * 90 + 10)}`,
+        divisionLabel: "Founders",
+      },
+    });
+    expect(founderCreateResponse.ok()).toBeTruthy();
+    const founderCreatePayload = await founderCreateResponse.json();
+    expect(founderCreatePayload.founderSetup.isComplete).toBeTruthy();
+    expect(founderCreatePayload.founderSetup.status).toBe("COMPLETE");
+    expect(founderCreatePayload.founderSetup.currentTeam?.id).toBeTruthy();
+
+    const authMeResponse = await scopedFounder.get("/api/auth/me");
+    expect(authMeResponse.ok()).toBeTruthy();
+    const authMePayload = await authMeResponse.json();
+    expect(authMePayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authMePayload.actor?.teamId).toBe(founderCreatePayload.founderSetup.currentTeam.id);
+
+    const governanceResponse = await scopedFounder.get("/api/league/commissioner");
+    expect(governanceResponse.ok()).toBeTruthy();
+
+    await scopedFounder.dispose();
+    await founderContext.dispose();
+  });
+
+  test("founder can claim an existing team and keep commissioner authority", async ({
+    baseURL,
+  }) => {
+    const founderContext = await apiContext(baseURL as string, COMMISSIONER_EMAIL);
+    const createLeagueResponse = await founderContext.post("/api/leagues", {
+      data: {
+        name: `Founder Team Claim ${Date.now()}`,
+        description: "Founder team setup claim path coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedFounder = await apiContext(baseURL as string, COMMISSIONER_EMAIL, leagueId);
+    const seedTeamResponse = await scopedFounder.post("/api/teams", {
+      data: {
+        name: `Claimable Team ${Date.now()}`,
+        abbreviation: `CL${Math.floor(Math.random() * 90 + 10)}`,
+      },
+    });
+    expect(seedTeamResponse.ok()).toBeTruthy();
+    const seedTeamPayload = await seedTeamResponse.json();
+    const claimableTeamId = seedTeamPayload.team.id as string;
+
+    const founderClaimResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "claim",
+        teamId: claimableTeamId,
+      },
+    });
+    expect(founderClaimResponse.ok()).toBeTruthy();
+    const founderClaimPayload = await founderClaimResponse.json();
+    expect(founderClaimPayload.founderSetup.isComplete).toBeTruthy();
+    expect(founderClaimPayload.founderSetup.currentTeam?.id).toBe(claimableTeamId);
+
+    const authMeResponse = await scopedFounder.get("/api/auth/me");
+    expect(authMeResponse.ok()).toBeTruthy();
+    const authMePayload = await authMeResponse.json();
+    expect(authMePayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authMePayload.actor?.teamId).toBe(claimableTeamId);
+
+    const governanceResponse = await scopedFounder.get("/api/league/commissioner");
+    expect(governanceResponse.ok()).toBeTruthy();
+
+    await scopedFounder.dispose();
+    await founderContext.dispose();
+  });
+
+  test("founder can skip team setup and incomplete state remains visible", async ({
+    baseURL,
+  }) => {
+    const founderContext = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL);
+    const createLeagueResponse = await founderContext.post("/api/leagues", {
+      data: {
+        name: `Founder Team Skip ${Date.now()}`,
+        description: "Founder team setup skip path coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedFounder = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL, leagueId);
+    const initialSetupResponse = await scopedFounder.get("/api/league/founder-team");
+    expect(initialSetupResponse.ok()).toBeTruthy();
+    const initialSetupPayload = await initialSetupResponse.json();
+    expect(initialSetupPayload.founderSetup.isComplete).toBeFalsy();
+    expect(initialSetupPayload.founderSetup.status).toBe("INCOMPLETE_REQUIRED");
+
+    const skipResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "skip",
+      },
+    });
+    expect(skipResponse.ok()).toBeTruthy();
+    const skipPayload = await skipResponse.json();
+    expect(skipPayload.founderSetup.isComplete).toBeFalsy();
+    expect(skipPayload.founderSetup.hasPostponed).toBeTruthy();
+    expect(skipPayload.founderSetup.status).toBe("INCOMPLETE_POSTPONED");
+
+    const setupAfterSkipResponse = await scopedFounder.get("/api/league/founder-team");
+    expect(setupAfterSkipResponse.ok()).toBeTruthy();
+    const setupAfterSkipPayload = await setupAfterSkipResponse.json();
+    expect(setupAfterSkipPayload.founderSetup.isComplete).toBeFalsy();
+    expect(setupAfterSkipPayload.founderSetup.status).toBe("INCOMPLETE_POSTPONED");
+
+    const authMeResponse = await scopedFounder.get("/api/auth/me");
+    expect(authMeResponse.ok()).toBeTruthy();
+    const authMePayload = await authMeResponse.json();
+    expect(authMePayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authMePayload.actor?.teamId).toBeNull();
+
+    await scopedFounder.dispose();
+    await founderContext.dispose();
+  });
+
   test("commissioner authority and team ownership can coexist for the same user", async ({
     baseURL,
   }) => {
