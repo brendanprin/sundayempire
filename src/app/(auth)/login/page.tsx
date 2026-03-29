@@ -431,6 +431,65 @@ export default function LoginPage() {
       ? "Accept League Invite"
       : "Sign In";
 
+  const confirmationHeading = requestedEmail ? "Check Your Email" : heading;
+  const confirmationDescription = requestedEmail
+    ? `We sent a secure sign-in link to ${requestedEmail}. Click the link in your email to continue.`
+    : (switchRequested
+        ? "Request a fresh sign-in link for yourself, or use the demo switcher only when local/test mode enables it."
+        : returnTo.startsWith("/invite")
+          ? "Enter the invited email address and we'll send a one-time sign-in link so you can accept the league invite."
+          : "We'll email you a secure sign-in link. Works for new accounts and existing users.");
+
+  // Handle resending magic link
+  async function handleResendMagicLink() {
+    if (!requestedEmail) return;
+    
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await requestJson(
+        "/api/auth/session",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            email: requestedEmail,
+            returnTo,
+          }),
+        },
+        "Could not send a sign-in link.",
+      );
+
+      trackUiEvent({
+        eventType: PILOT_EVENT_TYPES.UI_AUTH_MAGIC_LINK_REQUESTED,
+        pagePath: "/login",
+        eventStep: "resend",
+        status: "success",
+        entityType: "auth_email",
+        entityId: requestedEmail,
+        context: {
+          returnTo,
+          switchRequested,
+          action: "resend"
+        },
+      });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Could not resend sign-in link.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // Handle changing email
+  function handleChangeEmail() {
+    setRequestedEmail(null);
+    setError(null);
+    setEmail("");
+  }
+
   return (
     <section className="space-y-6">
       <header className="space-y-2">
@@ -438,71 +497,70 @@ export default function LoginPage() {
           Authentication
         </p>
         <h2 className="text-2xl font-semibold" style={{ color: "var(--foreground)" }}>
-          {heading}
+          {confirmationHeading}
         </h2>
         <p className="text-sm" style={{ color: "var(--shell-text-secondary)" }}>
-          {switchRequested
-            ? "Request a fresh sign-in link for yourself, or use the demo switcher only when local/test mode enables it."
-            : returnTo.startsWith("/invite")
-              ? "Enter the invited email address and we’ll send a one-time sign-in link so you can accept the league invite."
-              : "We'll email you a secure sign-in link. Works for new accounts and existing users."}
+          {confirmationDescription}
         </p>
       </header>
 
-      <div
-        className="rounded-lg border border-[var(--brand-structure-muted)] p-4"
-        style={{ backgroundColor: "var(--brand-surface-muted)" }}
-      >
-        <div className="space-y-5">
-          <form className="space-y-4" onSubmit={handleMagicLinkRequest} data-testid="magic-link-form">
-            <div className="space-y-2">
-              <span
-                className="text-xs uppercase tracking-wide"
-                style={{ color: "var(--shell-text-muted)" }}
+      {requestedEmail ? (
+        // Confirmation State
+        <div
+          className="rounded-lg border border-emerald-600/30 p-6"
+          style={{ backgroundColor: "var(--brand-success-surface)", borderColor: "var(--brand-success-border)" }}
+          data-testid="login-confirmation-state"
+        >
+          <div className="space-y-4">
+            {/* Email icon and confirmation */}
+            <div className="flex items-start gap-3">
+              <div 
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: "var(--brand-success-soft)" }}
               >
-                Email Address
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="w-full rounded-md border border-[var(--brand-structure-muted)] px-3 py-2 text-sm focus:border-[var(--brand-accent-primary)] focus:outline-none"
-                style={{
-                  backgroundColor: "var(--brand-surface-card)",
-                  color: "var(--foreground)",
-                }}
-                disabled={isSubmitting}
-                data-testid="login-email-input"
-              />
+                <svg className="h-6 w-6" style={{ color: "var(--brand-success-primary)" }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium" style={{ color: "var(--brand-success-primary)" }}>
+                  Sign-in link sent!
+                </p>
+                <p className="text-sm" style={{ color: "var(--shell-text-secondary)" }}>
+                  Check your email for a secure sign-in link. It may take a few minutes to arrive.
+                </p>
+                <p className="text-xs" style={{ color: "var(--shell-text-muted)" }}>
+                  <span className="font-medium">Email:</span> {requestedEmail}
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Actions */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                type="submit"
-                disabled={isSubmitting || email.trim().length === 0}
+                type="button"
+                onClick={handleResendMagicLink}
+                disabled={isSubmitting}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                data-testid="login-submit"
+                data-testid="login-resend-link"
               >
-                {isSubmitting ? "Sending Link..." : "Email Me a Sign-In Link"}
+                {isSubmitting ? "Resending..." : "Resend Link"}
               </button>
-              {switchRequested ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleSignOut();
-                  }}
-                  disabled={isSubmitting}
-                  className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)] disabled:cursor-not-allowed disabled:opacity-60"
-                  style={{
-                    color: "var(--shell-text-secondary)",
-                  }}
-                  data-testid="login-sign-out"
-                >
-                  Sign Out
-                </button>
-              ) : null}
+              
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                disabled={isSubmitting}
+                className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)] disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  color: "var(--shell-text-secondary)",
+                }}
+                data-testid="login-change-email"
+              >
+                Use Different Email
+              </button>
+              
               <Link
                 href={returnTo}
                 className="text-sm underline decoration-dotted underline-offset-4 transition"
@@ -519,23 +577,101 @@ export default function LoginPage() {
                 {returnTo === "/" ? "Back to home" : "Back to app"}
               </Link>
             </div>
-          </form>
-
-          {requestedEmail ? (
-            <div
-              className="rounded-md border border-emerald-700/40 px-3 py-3 text-sm"
-              style={{ backgroundColor: "rgba(5, 46, 22, 0.35)", color: "rgb(209, 250, 229)" }}
-              data-testid="login-magic-link-confirmation"
+            
+            {/* Next steps */}
+            <div 
+              className="rounded-md border border-[var(--brand-structure-muted)] p-3 text-xs"
+              style={{ backgroundColor: "var(--brand-surface-card)" }}
             >
-              Check your email for a one-time sign-in link for {requestedEmail}.
+              <p className="font-medium" style={{ color: "var(--foreground)" }}>What happens next?</p>
+              <ul className="mt-1 space-y-1" style={{ color: "var(--shell-text-muted)" }}>
+                <li>• Check your email inbox (and spam folder)</li>
+                <li>• Click the secure sign-in link</li>
+                <li>• You'll be automatically signed in and redirected</li>
+              </ul>
             </div>
-          ) : (
+          </div>
+        </div>
+      ) : (
+        // Initial Email Form State
+        <div
+          className="rounded-lg border border-[var(--brand-structure-muted)] p-4"
+          style={{ backgroundColor: "var(--brand-surface-muted)" }}
+        >
+          <div className="space-y-5">
+            <form className="space-y-4" onSubmit={handleMagicLinkRequest} data-testid="magic-link-form">
+              <div className="space-y-2">
+                <span
+                  className="text-xs uppercase tracking-wide"
+                  style={{ color: "var(--shell-text-muted)" }}
+                >
+                  Email Address
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className="w-full rounded-md border border-[var(--brand-structure-muted)] px-3 py-2 text-sm focus:border-[var(--brand-accent-primary)] focus:outline-none"
+                  style={{
+                    backgroundColor: "var(--brand-surface-card)",
+                    color: "var(--foreground)",
+                  }}
+                  disabled={isSubmitting}
+                  data-testid="login-email-input"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || email.trim().length === 0}
+                  className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="login-submit"
+                >
+                  {isSubmitting ? "Sending Link..." : "Email Me a Sign-In Link"}
+                </button>
+                {switchRequested ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSignOut();
+                    }}
+                    disabled={isSubmitting}
+                    className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)] disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      color: "var(--shell-text-secondary)",
+                    }}
+                    data-testid="login-sign-out"
+                  >
+                    Sign Out
+                  </button>
+                ) : null}
+                <Link
+                  href={returnTo}
+                  className="text-sm underline decoration-dotted underline-offset-4 transition"
+                  style={{
+                    color: "var(--shell-text-secondary)",
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.color = "var(--foreground)";
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.color = "var(--shell-text-secondary)";
+                  }}
+                >
+                  {returnTo === "/" ? "Back to home" : "Back to app"}
+                </Link>
+              </div>
+            </form>
+
             <p className="text-xs" style={{ color: "var(--shell-text-muted)" }}>
               Magic-link authentication • No passwords needed • Works for new and returning users
             </p>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {demoAuthEnabled ? (
         <div
