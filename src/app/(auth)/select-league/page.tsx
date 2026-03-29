@@ -27,6 +27,13 @@ type EntryResolverResponse = {
   };
 };
 
+type UserProfileSummary = {
+  id: string;
+  email: string;
+  name: string | null;
+  accountRole: string;
+};
+
 type LeagueWorkspace = {
   id: string;
   name: string;
@@ -93,12 +100,14 @@ function urgencyForPhase(phase: LeagueSummaryPayload["season"]["phase"] | null |
   };
 }
 
-export default function LeagueSelectionPage() {
+export default function MyLeaguesDirectoryPage() {
   const router = useRouter();
   
   const [leagues, setLeagues] = useState<LeagueWorkspace[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfileSummary | null>(null);
   const [leaguesLoading, setLeaguesLoading] = useState(true);
   const [activatingLeagueId, setActivatingLeagueId] = useState<string | null>(null);
+  const [creatingLeague, setCreatingLeague] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolverChecked, setResolverChecked] = useState(false);
   
@@ -141,6 +150,14 @@ export default function LeagueSelectionPage() {
           return;
         }
 
+        // Store user profile for directory display
+        setUserProfile({
+          id: response.user.id,
+          email: response.user.email,
+          name: response.user.name,
+          accountRole: "USER", // Could be enhanced with actual account role
+        });
+
         // No league access - stay on page to show empty state
         if (response.resolution.kind === "no_league_access") {
           setResolverChecked(true);
@@ -148,7 +165,7 @@ export default function LeagueSelectionPage() {
           return;
         }
 
-        // Multiple leagues - stay on page to show selection
+        // Multiple leagues - stay on page to show directory
         if (response.resolution.kind === "multiple_league_choice") {
           setResolverChecked(true);
           await loadLeagues();
@@ -205,6 +222,19 @@ export default function LeagueSelectionPage() {
       );
     } finally {
       setLeaguesLoading(false);
+    }
+  }
+
+  async function createNewLeague() {
+    setCreatingLeague(true);
+    setError(null);
+    
+    try {
+      // Route to dashboard for league creation wizard
+      router.push("/dashboard");
+    } catch (requestError) {
+      setError("Failed to navigate to league creation.");
+      setCreatingLeague(false);
     }
   }
 
@@ -301,7 +331,7 @@ export default function LeagueSelectionPage() {
   if (!resolverChecked) {
     return (
       <div className="min-h-screen bg-[var(--brand-midnight-navy)] text-[var(--foreground)]">
-        <div className="mx-auto max-w-4xl px-6 py-12">
+        <div className="mx-auto max-w-5xl px-6 py-12">
           <div className="space-y-6">
             <header className="space-y-3">
               <p
@@ -314,13 +344,13 @@ export default function LeagueSelectionPage() {
                 className="text-3xl font-bold"
                 style={{ color: "var(--foreground)" }}
               >
-                Loading League Access
+                Loading Your Leagues
               </h1>
               <p
                 className="text-lg"
                 style={{ color: "var(--muted-foreground)" }}
               >
-                Checking your league memberships and context...
+                Checking your league memberships and access...
               </p>
             </header>
 
@@ -333,7 +363,7 @@ export default function LeagueSelectionPage() {
             >
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent"></div>
               <p className="mt-4 text-sm text-sky-200">
-                Determining your role, team assignment, and current phase...
+                Determining your league access and context...
               </p>
             </div>
           </div>
@@ -344,37 +374,87 @@ export default function LeagueSelectionPage() {
 
   const heading =
     orderedLeagues.length === 0
-      ? "No League Access"
-      : "Select a League";
+      ? "My Leagues"
+      : "My Leagues";
   
   const description =
     orderedLeagues.length === 0
-      ? "Your account is authenticated but not attached to any leagues yet. Contact a commissioner or create a new league to get started."
-      : "Choose a league workspace to continue into the app.";
+      ? "You're signed in but don't have access to any leagues yet. Create a new league or contact a commissioner to get started."
+      : `Manage your ${orderedLeagues.length} league${orderedLeagues.length === 1 ? "" : "s"} and open the workspace you want to use.`;
 
   return (
     <div className="min-h-screen bg-[var(--brand-midnight-navy)] text-[var(--foreground)]">
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <div className="space-y-8" data-testid="league-selection-page">
-          <header className="space-y-3">
+      <div className="mx-auto max-w-5xl px-6 py-12">
+        <div className="space-y-8" data-testid="league-directory-page">
+          <header className="space-y-4">
             <p
               className="text-xs uppercase tracking-[0.2em]"
               style={{ color: "var(--muted-foreground)" }}
             >
               SundayEmpire
             </p>
-            <h1
-              className="text-3xl font-bold"
-              style={{ color: "var(--foreground)" }}
-            >
-              {heading}
-            </h1>
-            <p
-              className="text-lg"
-              style={{ color: "var(--muted-foreground)" }}
-            >
-              {description}
-            </p>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1
+                  className="text-3xl font-bold"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  {heading}
+                </h1>
+                <p
+                  className="mt-2 text-lg"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
+                  {description}
+                </p>
+              </div>
+              {orderedLeagues.length > 0 && (
+                <button
+                  type="button"
+                  onClick={createNewLeague}
+                  disabled={creatingLeague}
+                  className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
+                  data-testid="create-league-button"
+                >
+                  {creatingLeague ? "Creating..." : "Create League"}
+                </button>
+              )}
+            </div>
+            
+            {/* Signed-in Identity Summary */}
+            {userProfile && (
+              <div
+                className="rounded-lg p-4 text-sm"
+                style={{
+                  border: "1px solid var(--brand-structure-muted)",
+                  backgroundColor: "var(--brand-surface-elevated)",
+                }}
+                data-testid="user-identity-summary"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p
+                      className="font-medium"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      Signed in as {userProfile.name || userProfile.email}
+                    </p>
+                    <p
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      {userProfile.email}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.location.assign("/api/auth/session?action=sign-out")}
+                    className="text-xs text-sky-400 hover:text-sky-300 transition"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
           </header>
 
           {error ? (
@@ -385,7 +465,7 @@ export default function LeagueSelectionPage() {
                 backgroundColor: "var(--destructive-background)",
                 color: "var(--destructive-foreground)",
               }}
-              data-testid="league-selection-error"
+              data-testid="league-directory-error"
             >
               <p className="font-medium">League Loading Error</p>
               <p className="mt-1 text-sm">{error}</p>
@@ -409,7 +489,7 @@ export default function LeagueSelectionPage() {
                 border: "1px solid var(--brand-structure-muted)",
                 backgroundColor: "var(--brand-surface-card)",
               }}
-              data-testid="league-selection-empty-state"
+              data-testid="league-directory-empty-state"
             >
               <div className="space-y-4">
                 <div className="mx-auto h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center">
@@ -429,10 +509,11 @@ export default function LeagueSelectionPage() {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                   <button
                     type="button"
-                    onClick={() => router.push("/dashboard")}
-                    className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                    onClick={createNewLeague}
+                    disabled={creatingLeague}
+                    className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
                   >
-                    Create League
+                    {creatingLeague ? "Creating..." : "Create League"}
                   </button>
                   <button
                     type="button"
@@ -446,82 +527,82 @@ export default function LeagueSelectionPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" data-testid="league-selection-grid">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="league-directory-grid">
               {orderedLeagues.map((league) => {
                 const urgency = urgencyForPhase(league.season?.phase);
                 return (
-                  <button
+                  <div
                     key={league.id}
-                    type="button"
-                    onClick={() => selectLeague(league)}
-                    disabled={activatingLeagueId === league.id}
-                    className={`rounded-lg p-6 text-left transition ${
-                      activatingLeagueId === league.id 
-                        ? "opacity-75 cursor-not-allowed" 
-                        : "hover:border-sky-500"
-                    }`}
+                    className="rounded-lg p-6 transition"
                     style={{
                       border: "1px solid var(--brand-structure-muted)",
                       backgroundColor: "var(--brand-surface-elevated)",
                     }}
-                    onMouseEnter={(event) => {
-                      if (activatingLeagueId !== league.id) {
-                        event.currentTarget.style.borderColor = "rgba(14, 165, 233, 0.7)";
-                        event.currentTarget.style.backgroundColor = "var(--brand-surface-card)";
-                      }
-                    }}
-                    onMouseLeave={(event) => {
-                      if (activatingLeagueId !== league.id) {
-                        event.currentTarget.style.borderColor = "var(--brand-structure-muted)";
-                        event.currentTarget.style.backgroundColor = "var(--brand-surface-elevated)";
-                      }
-                    }}
-                    data-testid="league-selection-card"
+                    data-testid="league-card"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3
-                        className="text-lg font-semibold"
-                        style={{ color: "var(--foreground)" }}
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3
+                            className="text-lg font-semibold truncate"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            {league.name}
+                          </h3>
+                          <p
+                            className="mt-1 text-sm"
+                            style={{ color: "var(--muted-foreground)" }}
+                          >
+                            {formatMembershipContext(league)}
+                          </p>
+                        </div>
+                        <span className={`flex-shrink-0 rounded-full border px-3 py-1 text-xs ${urgency.className}`}>
+                          {urgency.label}
+                        </span>
+                      </div>
+
+                      {league.description && (
+                        <p
+                          className="text-sm"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {league.description}
+                        </p>
+                      )}
+
+                      <div
+                        className="flex flex-wrap gap-3 text-xs"
+                        style={{ color: "var(--muted-foreground)" }}
                       >
-                        {league.name}
-                      </h3>
-                      <span className={`rounded-full border px-3 py-1 text-xs ${urgency.className}`}>
-                        {urgency.label}
-                      </span>
+                        <span>Season {league.season?.year ?? "-"}</span>
+                        <span>Phase: {formatLeaguePhaseLabel(league.season?.phase)}</span>
+                        <span>{league.counts.teams} teams</span>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => selectLeague(league)}
+                          disabled={activatingLeagueId === league.id}
+                          className={`w-full rounded-md px-4 py-2 text-sm font-medium transition ${
+                            activatingLeagueId === league.id
+                              ? "opacity-75 cursor-not-allowed bg-gray-600 text-gray-300"
+                              : "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)] hover:bg-[var(--brand-accent-hover)]"
+                          }`}
+                          data-testid="open-league-button"
+                        >
+                          {activatingLeagueId === league.id ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
+                              Opening...
+                            </span>
+                          ) : (
+                            "Open League"
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <p
-                      className="mt-2 text-sm"
-                      style={{ color: "var(--muted-foreground)" }}
-                    >
-                      {formatMembershipContext(league)}
-                    </p>
-                    {league.description ? (
-                      <p
-                        className="mt-2 text-sm"
-                        style={{ color: "var(--foreground)" }}
-                      >
-                        {league.description}
-                      </p>
-                    ) : null}
-                    <div
-                      className="mt-4 flex flex-wrap gap-3 text-xs"
-                      style={{ color: "var(--muted-foreground)" }}
-                    >
-                      <span>Season {league.season?.year ?? "-"}</span>
-                      <span>Phase: {formatLeaguePhaseLabel(league.season?.phase)}</span>
-                      <span>{league.counts.teams} teams</span>
-                    </div>
-                    {activatingLeagueId === league.id ? (
-                      <p className="mt-3 text-xs text-sky-200 flex items-center gap-2">
-                        <div className="h-3 w-3 animate-spin rounded-full border border-sky-500 border-t-transparent"></div>
-                        Opening league workspace...
-                      </p>
-                    ) : (
-                      <p className="mt-3 text-xs text-sky-400">
-                        Click to open league →
-                      </p>
-                    )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
