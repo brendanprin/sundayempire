@@ -2,7 +2,7 @@ import { TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { createLeagueInviteService } from "@/lib/domain/auth/LeagueInviteService";
+import { createLeagueInviteService, deriveLeagueInviteStatus } from "@/lib/domain/auth/LeagueInviteService";
 import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
 
@@ -468,7 +468,7 @@ async function applyValidatedRow(input: {
       teamId: team.id,
       teamName: team.name,
       inviteId: invite.invite.id,
-      inviteStatus: invite.invite.status,
+      inviteStatus: deriveLeagueInviteStatus(invite.invite, new Date()),
     };
   });
 }

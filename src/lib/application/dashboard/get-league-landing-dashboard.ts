@@ -1,4 +1,5 @@
 import type { AuthActor } from "@/lib/auth";
+import type { LeaguePhase } from "@prisma/client";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import { createActivitySummaryProjection } from "@/lib/read-models/dashboard/activity-summary-projection";
 import { createDeadlineSummaryProjection } from "@/lib/read-models/dashboard/deadline-summary-projection";
@@ -119,7 +120,7 @@ function checklistCompletionPercent(completedItemCount: number, totalItemCount: 
 
 function derivePrimarySetupAction(input: {
   items: LeagueSetupChecklistItem[];
-  seasonPhase: LeagueLandingDashboardProjection["leagueDashboard"]["season"]["currentPhase"] | null;
+  seasonPhase: LeaguePhase | null;
 }): LeagueSetupChecklistProjection["primaryAction"] {
   const phaseLabel = formatLeaguePhaseLabel(input.seasonPhase);
   const firstIncomplete = input.items.find((item) => item.status !== "COMPLETE");
