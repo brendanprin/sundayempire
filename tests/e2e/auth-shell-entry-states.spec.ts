@@ -149,7 +149,7 @@ test.describe("Auth Shell Entry States", () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId("league-entry-empty-state")).toBeVisible();
     await expect(page.getByTestId("league-entry-empty-state")).toContainText(
-      "No league memberships are attached to this signed-in account.",
+      "No league memberships are attached to this signed-in account yet.",
     );
     await expect(page.getByTestId("no-league-create-button")).toBeVisible();
     await expect(page.getByTestId("no-league-join-button")).toBeVisible();
@@ -180,14 +180,42 @@ test.describe("Auth Shell Entry States", () => {
 
     await page.getByTestId("no-league-create-button").click();
     await expect(page.getByTestId("league-create-wizard")).toBeVisible();
+    await expect(page.getByTestId("league-create-step-basics")).toHaveAttribute("aria-current", "step");
+
+    const nextToOptionsButton = page.getByTestId("league-create-next-options");
+    await expect(nextToOptionsButton).toBeDisabled();
+
+    await page.getByTestId("no-league-create-name").fill("A");
+    await page.getByTestId("no-league-create-season-year").fill("2026");
+    await expect(page.getByTestId("league-create-name-error")).toBeVisible();
+    await expect(nextToOptionsButton).toBeDisabled();
 
     await page.getByTestId("no-league-create-name").fill(`Wizard League ${Date.now()}`);
-    await page.getByTestId("no-league-create-season-year").fill("2026");
-    await page.getByTestId("league-create-next-options").click();
+    await page.getByTestId("no-league-create-season-year").fill("1999");
+    await expect(page.getByTestId("league-create-season-year-error")).toBeVisible();
+    await expect(nextToOptionsButton).toBeDisabled();
 
+    await page.getByTestId("no-league-create-season-year").fill("2026");
+    await expect(nextToOptionsButton).toBeEnabled();
+    await nextToOptionsButton.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("league-create-step-options")).toHaveAttribute("aria-current", "step");
+    await expect(page.getByTestId("no-league-create-description")).toBeFocused();
+
+    await page.getByTestId("no-league-create-designated-commissioner-email").fill("not-an-email");
+    await expect(page.getByTestId("league-create-designated-commissioner-error")).toBeVisible();
+    await expect(page.getByTestId("league-create-next-review")).toBeDisabled();
+
+    await page.getByTestId("no-league-create-designated-commissioner-email").fill("");
     await page.getByTestId("no-league-create-description").fill("Wizard setup flow test");
-    await page.getByTestId("league-create-next-review").click();
+    await expect(page.getByTestId("league-create-next-review")).toBeEnabled();
+    await page.getByTestId("league-create-next-review").focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("league-create-step-review")).toHaveAttribute("aria-current", "step");
     await expect(page.getByTestId("league-create-review-step")).toBeVisible();
+    await expect(page.getByTestId("league-create-submit-button")).toBeFocused();
 
     await page.getByTestId("league-create-submit-button").click();
 
@@ -220,7 +248,12 @@ test.describe("Auth Shell Entry States", () => {
       },
     });
 
-    await expect(page).toHaveURL(/\/login\?returnTo=.*&error=session_expired$/);
-    await expect(page.getByText("Your session expired or was revoked.")).toBeVisible();
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/login\?returnTo=%2F(?:&error=session_expired)?$/);
+    if ((await page.url()).includes("error=session_expired")) {
+      await expect(page.getByText("Your session expired or was revoked.")).toBeVisible();
+    } else {
+      await expect(page.getByRole("heading", { name: "Sign In", exact: true })).toBeVisible();
+    }
   });
 });

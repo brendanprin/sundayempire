@@ -157,11 +157,16 @@ export function buildDashboardActionItems(input: {
       actions.push({
         id: "trade-review",
         eyebrow: "Trade Workflow",
-        title: incoming > 0 ? "Trade proposals need a response" : "Keep trade proposals moving",
+        title:
+          incoming > 0
+            ? "Respond to incoming trade proposals"
+            : awaitingProcessing > 0
+              ? "Process accepted trades"
+              : "Open your trade queue",
         description:
           incoming > 0 || awaitingProcessing > 0 || outgoing > 0
             ? `${countLabel(incoming, "incoming proposal")} · ${countLabel(awaitingProcessing, "accepted proposal")} ready for processing · ${countLabel(outgoing, "outgoing proposal")} still open.`
-            : "No proposal is blocked right now, but this is still the fastest path back into trades, counters, and pending responses.",
+            : "No trade is blocked right now, but this remains your fastest route back to proposals, counters, and responses.",
         href: "/trades",
         ctaLabel: "Open Trades",
         tone: tradeTone,
@@ -173,7 +178,7 @@ export function buildDashboardActionItems(input: {
               : undefined,
         meta: dashboard.pendingTradeActions.latestProposal
           ? `Latest update: ${formatEnumLabel(dashboard.pendingTradeActions.latestProposal.status)} vs ${dashboard.pendingTradeActions.latestProposal.counterpartyTeamName}`
-          : "Open the canonical trade workspace to review or send a proposal.",
+          : "As team manager, stay in the canonical trade workflow for every approval and counter.",
         testId: "owner-action-trade-review",
         linkTestId: "owner-action-link-trade-review",
         mobileTestId: "dashboard-mobile-action-trade-review",
@@ -196,12 +201,12 @@ export function buildDashboardActionItems(input: {
         eyebrow: "Manager Workspace",
         title:
           teamDashboard.complianceSummary.openIssueCount > 0
-            ? "Resolve roster and cap follow-up"
-            : "Reopen My Roster / Cap",
+            ? "Resolve roster and cap blockers"
+            : "Review My Roster / Cap",
         description:
           teamDashboard.complianceSummary.openIssueCount > 0
-            ? `${countLabel(teamDashboard.complianceSummary.openIssueCount, "open issue")} still shape your roster or contract posture.`
-            : `${formatCurrency(teamDashboard.rosterCapSummary.capSpaceHard)} hard-cap room and ${countLabel(teamDashboard.contractSummary.expiringContractsCount, "expiring contract")} are waiting in the workspace.`,
+            ? `${countLabel(teamDashboard.complianceSummary.openIssueCount, "open issue")} still shape your roster and contract posture.`
+            : `${formatCurrency(teamDashboard.rosterCapSummary.capSpaceHard)} hard-cap room and ${countLabel(teamDashboard.contractSummary.expiringContractsCount, "expiring contract")} are ready for review.`,
         href: teamHref,
         ctaLabel: "Open My Roster / Cap",
         tone: teamTone,
@@ -214,7 +219,7 @@ export function buildDashboardActionItems(input: {
         meta:
           teamDashboard.rosterCapSummary.mirrorOnly
             ? "Regular-season roster state stays mirror-only here while cap, contracts, and compliance remain visible."
-            : "Review your roster, cap situation, and contract decisions in detail.",
+            : "As team manager, confirm roster, cap, and contract decisions from this workspace.",
       });
     }
 
@@ -250,9 +255,9 @@ export function buildDashboardActionItems(input: {
       title:
         nextDeadline && nextDeadline.urgency === "overdue"
           ? "A deadline already passed"
-          : nextDeadline && nextDeadline.urgency === "today"
-            ? "A deadline lands today"
-            : "Review the next deadline before making a move",
+        : nextDeadline && nextDeadline.urgency === "today"
+          ? "A deadline lands today"
+          : "Confirm the next deadline before your next move",
       description: nextDeadline
         ? `${formatEnumLabel(nextDeadline.deadlineType)} · ${formatLeaguePhaseLabel(nextDeadline.phase)} · ${daysUntilLabel(nextDeadline.daysUntilDue)}.`
         : "No deadline is scheduled yet, but the rules screen stays authoritative for the active phase.",
@@ -279,7 +284,7 @@ export function buildDashboardActionItems(input: {
         ctaLabel: dashboard.setupChecklist.primaryAction.ctaLabel,
         tone: dashboard.setupChecklist.primaryAction.tone,
         badge: `${dashboard.setupChecklist.completedItemCount}/${dashboard.setupChecklist.totalItemCount} complete`,
-        meta: `Setup checklist is ${dashboard.setupChecklist.completionPercent}% complete.`,
+        meta: `Commissioner setup checklist is ${dashboard.setupChecklist.completionPercent}% complete.`,
         testId: "commissioner-action-setup-primary",
         linkTestId: "commissioner-action-link-setup-primary",
         mobileTestId: "dashboard-mobile-action-setup-primary",
@@ -295,12 +300,12 @@ export function buildDashboardActionItems(input: {
       eyebrow: "Trade Workflow",
       title:
         reviewQueueCount > 0
-          ? "Trade approvals are waiting"
-          : "Review the trade approval queue",
+          ? "Approve pending trade proposals"
+          : "Review commissioner trade approvals",
       description:
         reviewQueueCount > 0
           ? `${countLabel(reviewQueueCount, "proposal")} still require commissioner review.`
-          : "No proposal is waiting for review right now, but this remains the canonical approval queue.",
+          : "No proposal is waiting for review, but this remains your authoritative approval queue.",
       href: "/trades",
       ctaLabel: "Open Trades",
       tone: reviewQueueCount > 0 ? "warning" : "accent",
@@ -315,12 +320,12 @@ export function buildDashboardActionItems(input: {
       eyebrow: "Trade Workflow",
       title:
         settlementQueueCount > 0
-          ? "Accepted trades need processing"
-          : "Keep trade processing clear",
+          ? "Process accepted trades"
+          : "Review trade settlement queue",
       description:
         settlementQueueCount > 0
           ? `${countLabel(settlementQueueCount, "proposal")} are ready for settlement.`
-          : "No accepted proposal is waiting for settlement right now.",
+          : "No accepted proposal is waiting for settlement.",
       href: "/trades",
       ctaLabel: "Open Trades",
       tone: settlementQueueCount > 0 ? "critical" : "default",
@@ -346,14 +351,14 @@ export function buildDashboardActionItems(input: {
         eyebrow: "Picks & Draft",
         title:
           activeDraft?.status === "IN_PROGRESS"
-            ? "A draft session is live"
-            : "Draft setup is ready",
+            ? "Run live draft operations"
+            : "Confirm draft readiness",
         description:
           activeDraft
             ? `${activeDraft.title} is ${formatEnumLabel(activeDraft.status).toLowerCase()} and should stay visible from the canonical draft surface.`
             : draftsHome.setupStatus.needsDraftCreation
               ? "No rookie draft exists for the current season yet."
-              : "Review the draft home surface for the current rookie and veteran draft posture.",
+              : "Review rookie and veteran draft posture from the canonical draft home surface.",
         href: "/draft",
         ctaLabel: "Open Picks & Draft",
         tone: activeDraft?.status === "IN_PROGRESS" ? "warning" : "default",
@@ -373,7 +378,7 @@ export function buildDashboardActionItems(input: {
       title:
         nextDeadline && nextDeadline.urgency === "overdue"
           ? "Rules follow-up is overdue"
-          : "Keep deadlines visible",
+          : "Keep league deadlines visible",
       description: nextDeadline
         ? `${formatEnumLabel(nextDeadline.deadlineType)} · ${daysUntilLabel(nextDeadline.daysUntilDue)}.`
         : "Open Rules & Deadlines to confirm the current phase and lifecycle posture.",
@@ -393,7 +398,7 @@ export function buildDashboardActionItems(input: {
     {
       id: "rules-deadlines",
       eyebrow: "Rules & Deadlines",
-      title: "Check the next league deadline",
+      title: "Review the next league deadline",
       description: nextDeadline
         ? `${formatEnumLabel(nextDeadline.deadlineType)} · ${daysUntilLabel(nextDeadline.daysUntilDue)}.`
         : "Open Rules & Deadlines to confirm the active phase and pending deadlines.",

@@ -276,6 +276,143 @@ test.describe("Role Model Foundation", () => {
     await founderContext.dispose();
   });
 
+  test("founder postpone state survives duplicate create retry and later completes", async ({
+    baseURL,
+  }) => {
+    const founderContext = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL);
+    const createLeagueResponse = await founderContext.post("/api/leagues", {
+      data: {
+        name: `Founder Retry Recovery ${Date.now()}`,
+        description: "Founder postpone and duplicate retry coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedFounder = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL, leagueId);
+
+    const skipResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "skip",
+      },
+    });
+    expect(skipResponse.ok()).toBeTruthy();
+    const skipPayload = await skipResponse.json();
+    expect(skipPayload.founderSetup.status).toBe("INCOMPLETE_POSTPONED");
+
+    const duplicateTeamName = `Retry Duplicate ${Date.now()}`;
+    const seedDuplicateTeamResponse = await scopedFounder.post("/api/teams", {
+      data: {
+        name: duplicateTeamName,
+        abbreviation: `RD${Math.floor(Math.random() * 900 + 100)}`,
+      },
+    });
+    expect(seedDuplicateTeamResponse.ok()).toBeTruthy();
+
+    const duplicateCreateResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "create",
+        teamName: duplicateTeamName,
+        teamAbbreviation: `FD${Math.floor(Math.random() * 900 + 100)}`,
+      },
+    });
+    expect(duplicateCreateResponse.status()).toBe(409);
+    const duplicateCreatePayload = await duplicateCreateResponse.json();
+    expect(duplicateCreatePayload.code ?? duplicateCreatePayload.error?.code).toBe("TEAM_ALREADY_EXISTS");
+
+    const setupAfterDuplicateResponse = await scopedFounder.get("/api/league/founder-team");
+    expect(setupAfterDuplicateResponse.ok()).toBeTruthy();
+    const setupAfterDuplicatePayload = await setupAfterDuplicateResponse.json();
+    expect(setupAfterDuplicatePayload.founderSetup.status).toBe("INCOMPLETE_POSTPONED");
+    expect(setupAfterDuplicatePayload.founderSetup.isComplete).toBeFalsy();
+
+    const authAfterDuplicateResponse = await scopedFounder.get("/api/auth/me");
+    expect(authAfterDuplicateResponse.ok()).toBeTruthy();
+    const authAfterDuplicatePayload = await authAfterDuplicateResponse.json();
+    expect(authAfterDuplicatePayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authAfterDuplicatePayload.actor?.teamId).toBeNull();
+
+    const recoveredCreateResponse = await scopedFounder.post("/api/league/founder-team", {
+      data: {
+        action: "create",
+        teamName: `Recovered Founder Team ${Date.now()}`,
+        teamAbbreviation: `RF${Math.floor(Math.random() * 900 + 100)}`,
+        divisionLabel: "Recovery",
+      },
+    });
+    expect(recoveredCreateResponse.ok()).toBeTruthy();
+    const recoveredCreatePayload = await recoveredCreateResponse.json();
+    expect(recoveredCreatePayload.founderSetup.isComplete).toBeTruthy();
+    expect(recoveredCreatePayload.founderSetup.status).toBe("COMPLETE");
+    expect(recoveredCreatePayload.founderSetup.currentTeam?.id).toBeTruthy();
+
+    const authAfterRecoveryResponse = await scopedFounder.get("/api/auth/me");
+    expect(authAfterRecoveryResponse.ok()).toBeTruthy();
+    const authAfterRecoveryPayload = await authAfterRecoveryResponse.json();
+    expect(authAfterRecoveryPayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authAfterRecoveryPayload.actor?.teamId).toBe(
+      recoveredCreatePayload.founderSetup.currentTeam.id,
+    );
+
+    await scopedFounder.dispose();
+    await founderContext.dispose();
+  });
+
+  test("setup invite guardrails reject duplicate pending invites and remain recoverable", async ({
+    baseURL,
+  }) => {
+    const founderContext = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL);
+    const createLeagueResponse = await founderContext.post("/api/leagues", {
+      data: {
+        name: `Invite Guardrails ${Date.now()}`,
+        description: "Invite conflict resilience coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedFounder = await apiContext(baseURL as string, NO_LEAGUE_USER_EMAIL, leagueId);
+    const inviteEmail = `invite-guardrail-${Date.now()}@example.test`;
+    const createInviteResponse = await scopedFounder.post("/api/league/invites", {
+      data: {
+        ownerName: "Invite Guardrail Owner",
+        ownerEmail: inviteEmail,
+        teamName: `Invite Guardrail Team ${Date.now()}`,
+        teamAbbreviation: `IG${Math.floor(Math.random() * 900 + 100)}`,
+      },
+    });
+    expect(createInviteResponse.ok()).toBeTruthy();
+
+    const duplicateInviteResponse = await scopedFounder.post("/api/league/invites", {
+      data: {
+        ownerName: "Invite Guardrail Owner",
+        ownerEmail: inviteEmail,
+        teamName: `Duplicate Invite Team ${Date.now()}`,
+        teamAbbreviation: `DG${Math.floor(Math.random() * 900 + 100)}`,
+      },
+    });
+    expect(duplicateInviteResponse.status()).toBe(409);
+    const duplicateInvitePayload = await duplicateInviteResponse.json();
+    expect(duplicateInvitePayload.code ?? duplicateInvitePayload.error?.code).toBe("INVITE_CONFLICT");
+
+    const recoveryInviteResponse = await scopedFounder.post("/api/league/invites", {
+      data: {
+        ownerName: "Invite Guardrail Recovery Owner",
+        ownerEmail: `invite-guardrail-recovery-${Date.now()}@example.test`,
+        teamName: `Invite Guardrail Recovery Team ${Date.now()}`,
+        teamAbbreviation: `RG${Math.floor(Math.random() * 900 + 100)}`,
+      },
+    });
+    expect(recoveryInviteResponse.ok()).toBeTruthy();
+
+    await scopedFounder.dispose();
+    await founderContext.dispose();
+  });
+
   test("commissioner authority and team ownership can coexist for the same user", async ({
     baseURL,
   }) => {

@@ -66,6 +66,40 @@ type LeagueInvitesPayload = {
   };
 };
 
+type SetupBulkImportValidationRow = {
+  rowNumber: number;
+  status: "valid" | "invalid";
+  errors: string[];
+  row: {
+    ownerName: string;
+    ownerEmail: string;
+    teamName: string;
+    teamAbbreviation: string | null;
+    divisionLabel: string | null;
+  };
+};
+
+type SetupBulkImportApplyResult = {
+  rowNumber: number;
+  status: "created" | "failed";
+  message: string;
+  teamId: string | null;
+  inviteId: string | null;
+};
+
+type SetupBulkImportPayload = {
+  mode: "validate" | "apply";
+  summary: {
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    createdRows?: number;
+    failedRows?: number;
+  };
+  rows: SetupBulkImportValidationRow[];
+  applyResults?: SetupBulkImportApplyResult[];
+};
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LeagueLandingDashboardPage() {
@@ -104,6 +138,11 @@ export default function LeagueLandingDashboardPage() {
   const [setupOpsBusyAction, setSetupOpsBusyAction] = useState<string | null>(null);
   const [setupOpsError, setSetupOpsError] = useState<string | null>(null);
   const [setupOpsMessage, setSetupOpsMessage] = useState<string | null>(null);
+  const [setupBulkCsvText, setSetupBulkCsvText] = useState("");
+  const [setupBulkBusyAction, setSetupBulkBusyAction] = useState<"validate" | "apply" | null>(null);
+  const [setupBulkValidation, setSetupBulkValidation] = useState<SetupBulkImportPayload | null>(null);
+  const [setupBulkError, setSetupBulkError] = useState<string | null>(null);
+  const [setupBulkMessage, setSetupBulkMessage] = useState<string | null>(null);
   const dashboardViewTracked = useRef(false);
   const firstActionTracked = useRef(false);
 
@@ -142,6 +181,11 @@ export default function LeagueLandingDashboardPage() {
     setSetupOpsBusyAction(null);
     setSetupOpsError(null);
     setSetupOpsMessage(null);
+    setSetupBulkCsvText("");
+    setSetupBulkBusyAction(null);
+    setSetupBulkValidation(null);
+    setSetupBulkError(null);
+    setSetupBulkMessage(null);
     dashboardViewTracked.current = false;
     firstActionTracked.current = false;
 
@@ -339,6 +383,11 @@ export default function LeagueLandingDashboardPage() {
       setSetupInviteCopyFreshLinkEnabled(false);
       setSetupOpsLoading(false);
       setSetupOpsError(null);
+      setSetupBulkCsvText("");
+      setSetupBulkValidation(null);
+      setSetupBulkBusyAction(null);
+      setSetupBulkError(null);
+      setSetupBulkMessage(null);
       return;
     }
 
@@ -602,6 +651,92 @@ export default function LeagueLandingDashboardPage() {
     }
   }
 
+  async function handleSetupBulkValidate() {
+    const csvText = setupBulkCsvText.trim();
+    if (!csvText) {
+      setSetupBulkError("Paste CSV rows before running validation.");
+      return;
+    }
+
+    setSetupBulkBusyAction("validate");
+    setSetupBulkError(null);
+    setSetupBulkMessage(null);
+
+    try {
+      const payload = await requestJson<SetupBulkImportPayload>(
+        "/api/teams/bootstrap",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            mode: "validate",
+            csvText,
+          }),
+        },
+        "Failed to validate bulk team template.",
+      );
+
+      setSetupBulkValidation(payload);
+      setSetupBulkMessage(
+        `Validation complete: ${payload.summary.validRows} valid, ${payload.summary.invalidRows} invalid.`,
+      );
+    } catch (requestError) {
+      setSetupBulkError(
+        requestError instanceof Error ? requestError.message : "Failed to validate bulk team template.",
+      );
+    } finally {
+      setSetupBulkBusyAction(null);
+    }
+  }
+
+  async function handleSetupBulkApply() {
+    const csvText = setupBulkCsvText.trim();
+    if (!csvText) {
+      setSetupBulkError("Paste CSV rows before applying import.");
+      return;
+    }
+
+    setSetupBulkBusyAction("apply");
+    setSetupBulkError(null);
+    setSetupBulkMessage(null);
+
+    try {
+      const payload = await requestJson<SetupBulkImportPayload>(
+        "/api/teams/bootstrap",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            mode: "apply",
+            csvText,
+          }),
+        },
+        "Failed to apply bulk team import.",
+      );
+
+      setSetupBulkValidation(payload);
+      setSetupBulkMessage(
+        `Apply complete: ${payload.summary.createdRows ?? 0} created, ${payload.summary.failedRows ?? 0} failed.`,
+      );
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupBulkError(
+        requestError instanceof Error ? requestError.message : "Failed to apply bulk team import.",
+      );
+    } finally {
+      setSetupBulkBusyAction(null);
+    }
+  }
+
   async function handleSetupInviteResend(invite: CommissionerInviteRow) {
     setSetupOpsBusyAction(`invite:resend:${invite.id}`);
     setSetupOpsError(null);
@@ -699,6 +834,24 @@ export default function LeagueLandingDashboardPage() {
         : "neutral";
   const visibleAlerts =
     dashboard?.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status")) ?? [];
+  const dashboardActionItems = dashboard
+    ? buildDashboardActionItems({ dashboard, draftsHome, tradesHome })
+    : [];
+  const firstDashboardAction = dashboardActionItems[0] ?? null;
+  const prioritizeSecondaryActivity = dashboard
+    ? dashboard.viewer.leagueRole === "COMMISSIONER" || !dashboard.viewer.hasTeamAccess
+    : false;
+  const secondaryRecommendationLabel = prioritizeSecondaryActivity ? "League Activity" : "Picks & Draft";
+  const firstActionPrompt = firstDashboardAction
+    ? `${firstDashboardAction.title} (${firstDashboardAction.ctaLabel}).`
+    : "Open the Action Center first.";
+  const headerDescription = dashboard
+    ? dashboard.viewer.teamName
+      ? `${dashboard.viewer.teamName} is in Season ${dashboard.leagueDashboard.season?.year ?? "?"}. First action: ${firstActionPrompt} Then scan change and the next deadline.`
+      : dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete
+        ? `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Setup progress is ${dashboard.setupChecklist.completedItemCount}/${dashboard.setupChecklist.totalItemCount}. First setup action: ${firstActionPrompt}`
+        : `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. First action: ${firstActionPrompt} Use secondary reads only after priority workflows.`
+    : "Resolving current season, urgent work, deadlines, and recent change across the active league workspace.";
 
   function recordDashboardAction(
     actionId: string,
@@ -751,15 +904,7 @@ export default function LeagueLandingDashboardPage() {
         eyebrowTestId="dashboard-page-eyebrow"
         title={dashboard?.leagueDashboard.league.name ?? "Loading league workspace..."}
         titleTestId="dashboard-active-league-name"
-        description={
-          dashboard
-            ? dashboard.viewer.teamName
-              ? `${dashboard.viewer.teamName} is in Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Start with the highest-pressure action, then scan what changed and the next deadline.`
-              : dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete
-                ? `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Setup progress is ${dashboard.setupChecklist.completedItemCount}/${dashboard.setupChecklist.totalItemCount}; complete the next checklist action first.`
-                : `League-wide command center for Season ${dashboard.leagueDashboard.season?.year ?? "?"}. Start with urgent work before diving into neutral status.`
-            : "Resolving current season, urgent work, deadlines, and recent change across the active league workspace."
-        }
+        description={headerDescription}
         supportingContent={
           <div className="flex flex-wrap items-center gap-3">
             <PhaseBadge
@@ -1168,6 +1313,108 @@ export default function LeagueLandingDashboardPage() {
                 </form>
               </div>
 
+              <div
+                className="space-y-3 rounded-xl border border-sky-800/35 bg-slate-950/40 p-4"
+                data-testid="setup-bulk-import-panel"
+              >
+                <div>
+                  <h3 className="text-sm font-medium text-sky-100">Bulk Team Import (CSV)</h3>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Import multiple owner + team rows at once. Validate first, then apply from the same template.
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400" data-testid="setup-bulk-template-hint">
+                    Headers: ownerName, ownerEmail, teamName, teamAbbreviation, divisionLabel
+                  </p>
+                </div>
+
+                <textarea
+                  value={setupBulkCsvText}
+                  onChange={(event) => {
+                    setSetupBulkCsvText(event.target.value);
+                    setSetupBulkValidation(null);
+                    setSetupBulkError(null);
+                    setSetupBulkMessage(null);
+                  }}
+                  className="min-h-[7rem] w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-xs text-slate-100"
+                  placeholder={`ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel\nAlex Owner,alex@example.com,Empire East,EME,East`}
+                  data-testid="setup-bulk-csv-input"
+                />
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleSetupBulkValidate()}
+                    className="rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={Boolean(setupBulkBusyAction)}
+                    data-testid="setup-bulk-validate-submit"
+                  >
+                    {setupBulkBusyAction === "validate" ? "Validating..." : "Validate Template"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSetupBulkApply()}
+                    className="rounded-md border border-emerald-500/70 bg-emerald-950/50 px-3 py-2 text-xs font-medium text-emerald-100 transition hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={
+                      Boolean(setupBulkBusyAction) ||
+                      !setupBulkValidation ||
+                      setupBulkValidation.summary.validRows === 0
+                    }
+                    data-testid="setup-bulk-apply-submit"
+                  >
+                    {setupBulkBusyAction === "apply" ? "Applying..." : "Apply Valid Rows"}
+                  </button>
+                </div>
+
+                {setupBulkError ? (
+                  <div
+                    className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100"
+                    data-testid="setup-bulk-error"
+                  >
+                    {setupBulkError}
+                  </div>
+                ) : null}
+
+                {setupBulkMessage ? (
+                  <div
+                    className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100"
+                    data-testid="setup-bulk-message"
+                  >
+                    {setupBulkMessage}
+                  </div>
+                ) : null}
+
+                {setupBulkValidation ? (
+                  <div className="space-y-2" data-testid="setup-bulk-summary">
+                    <p className="text-xs text-slate-300">
+                      {setupBulkValidation.summary.totalRows} rows · {setupBulkValidation.summary.validRows} valid ·{" "}
+                      {setupBulkValidation.summary.invalidRows} invalid
+                    </p>
+                    <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                      {setupBulkValidation.rows.slice(0, 12).map((row) => (
+                        <article
+                          key={row.rowNumber}
+                          className={`rounded-md border px-2.5 py-2 text-xs ${
+                            row.status === "valid"
+                              ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-100"
+                              : "border-red-800/50 bg-red-950/20 text-red-100"
+                          }`}
+                          data-testid={`setup-bulk-row-${row.rowNumber}`}
+                        >
+                          <p className="font-medium">
+                            Row {row.rowNumber}: {row.row.teamName || "Unknown Team"} ({row.row.ownerEmail || "no-email"})
+                          </p>
+                          {row.errors.length > 0 ? (
+                            <p className="mt-1 opacity-90">{row.errors.join(" ")}</p>
+                          ) : (
+                            <p className="mt-1 opacity-90">Ready to import.</p>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
               <div className="rounded-xl border border-sky-800/35 bg-slate-950/40 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-medium text-sky-100">Pending Invites</h3>
@@ -1192,7 +1439,7 @@ export default function LeagueLandingDashboardPage() {
           ) : null}
 
           <DashboardActionCenter
-            actions={buildDashboardActionItems({ dashboard, draftsHome, tradesHome })}
+            actions={dashboardActionItems}
             deadlines={buildDashboardDeadlineCards(dashboard)}
             changeItems={buildDashboardChangeItems(dashboard)}
             setupChecklist={dashboard.setupChecklist}
@@ -1219,8 +1466,11 @@ export default function LeagueLandingDashboardPage() {
 
           <section className="space-y-4" data-testid="dashboard-secondary-zone">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-600">Keep In View</p>
-              <h2 className="mt-1 text-lg font-medium text-slate-200">Additional information</h2>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-600">Secondary Context</p>
+              <h2 className="mt-1 text-lg font-medium text-slate-200">Reference surfaces after priority actions</h2>
+              <p className="mt-1 text-sm text-slate-400" data-testid="dashboard-secondary-priority-copy">
+                Recommended next: {secondaryRecommendationLabel}
+              </p>
             </div>
 
             <div 
@@ -1228,13 +1478,21 @@ export default function LeagueLandingDashboardPage() {
               data-testid="dashboard-secondary-cards"
             >
               <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-3">
+                <div className={`space-y-3 ${prioritizeSecondaryActivity ? "order-2" : "order-1"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Picks & Draft</p>
                       <h3 className="mt-1 text-base font-medium text-slate-100">Rookie Picks Owned</h3>
                       <p className="mt-1 text-sm text-slate-400">Owned future rookie picks for the active window.</p>
                     </div>
+                    {!prioritizeSecondaryActivity ? (
+                      <span
+                        className="rounded-full border border-sky-700/40 bg-sky-950/30 px-2 py-1 text-[11px] text-sky-200"
+                        data-testid="dashboard-secondary-recommended-draft"
+                      >
+                        Recommended next
+                      </span>
+                    ) : null}
                     <Link
                       href="/draft"
                       className="rounded-lg border border-slate-700/60 bg-slate-800/30 px-3 py-2 text-xs text-slate-300 transition hover:border-slate-600"
@@ -1282,13 +1540,21 @@ export default function LeagueLandingDashboardPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className={`space-y-3 ${prioritizeSecondaryActivity ? "order-1" : "order-2"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">League Activity</p>
                       <h3 className="mt-1 text-base font-medium text-slate-100">League Activity / Commissioner Notes</h3>
                       <p className="mt-1 text-sm text-slate-400">Recent transactions plus the latest commissioner note for your current scope.</p>
                     </div>
+                    {prioritizeSecondaryActivity ? (
+                      <span
+                        className="rounded-full border border-sky-700/40 bg-sky-950/30 px-2 py-1 text-[11px] text-sky-200"
+                        data-testid="dashboard-secondary-recommended-activity"
+                      >
+                        Recommended next
+                      </span>
+                    ) : null}
                     <Link
                       href="/activity"
                       className="rounded-lg border border-slate-700/60 bg-slate-800/30 px-3 py-2 text-xs text-slate-300 transition hover:border-slate-600"
