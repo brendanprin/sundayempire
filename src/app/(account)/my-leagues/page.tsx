@@ -51,17 +51,6 @@ type LeagueWorkspacesPayload = {
   leagues: LeagueWorkspace[];
 };
 
-type CreateLeagueWizardStep = "basics" | "options" | "review";
-
-const CREATE_LEAGUE_WIZARD_STEPS: {
-  id: CreateLeagueWizardStep;
-  label: string;
-}[] = [
-  { id: "basics", label: "Basics" },
-  { id: "options", label: "Options" },
-  { id: "review", label: "Review" },
-];
-
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function formatMembershipContext(league: LeagueWorkspace) {
@@ -134,26 +123,11 @@ export default function MyLeaguesPage() {
   const [resolverChecked, setResolverChecked] = useState(false);
   const [shouldShowDirectory, setShouldShowDirectory] = useState(false);
   const [leaguesLoading, setLeaguesLoading] = useState(true);
-  const [wizardError, setWizardError] = useState<string | null>(null);
   const [activatingLeagueId, setActivatingLeagueId] = useState<string | null>(null);
-  const [creatingLeague, setCreatingLeague] = useState(false);
-  const [createLeagueName, setCreateLeagueName] = useState("");
-  const [createLeagueDescription, setCreateLeagueDescription] = useState("");
-  const [designatedCommissionerEmail, setDesignatedCommissionerEmail] = useState("");
-  const [createLeagueSeasonYear, setCreateLeagueSeasonYear] = useState(
-    String(new Date().getFullYear()),
-  );
-  const [createLeagueWizardOpen, setCreateLeagueWizardOpen] = useState(false);
-  const [createLeagueWizardStep, setCreateLeagueWizardStep] =
-    useState<CreateLeagueWizardStep>("basics");
   const [joinInviteValue, setJoinInviteValue] = useState("");
   const directoryOpenedAt = useRef(0);
   const directoryViewTracked = useRef(false);
   const noLeagueWizardAutoOpened = useRef(false);
-  const wizardErrorRef = useRef<HTMLDivElement | null>(null);
-  const createLeagueNameInputRef = useRef<HTMLInputElement | null>(null);
-  const createLeagueDescriptionInputRef = useRef<HTMLInputElement | null>(null);
-  const createLeagueSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     directoryOpenedAt.current = Date.now();
@@ -278,7 +252,7 @@ export default function MyLeaguesPage() {
     }
 
     noLeagueWizardAutoOpened.current = true;
-    setCreateLeagueWizardOpen(true);
+    router.push("/my-leagues/new");
   }, [leaguesLoading, orderedLeagues.length]);
 
   useEffect(() => {
@@ -359,80 +333,11 @@ export default function MyLeaguesPage() {
     }
   }
 
-  async function createNewLeague() {
-    setError(null);
-    setWizardError(null);
-    setCreateLeagueWizardStep("basics");
-    setCreateLeagueWizardOpen(true);
+  function createNewLeague() {
+    router.push("/my-leagues/new");
   }
 
-  async function handleCreateLeague() {
-    if (creatingLeague) {
-      return;
-    }
 
-    const trimmedName = createLeagueName.trim();
-    if (trimmedName.length < 2) {
-      setWizardError("League name must be at least 2 characters.");
-      return;
-    }
-
-    const seasonYear = Number.parseInt(createLeagueSeasonYear.trim(), 10);
-    if (!Number.isInteger(seasonYear) || seasonYear < 2000 || seasonYear > 2100) {
-      setWizardError("Season year must be between 2000 and 2100.");
-      return;
-    }
-
-    const normalizedCommissionerEmail = designatedCommissionerEmail.trim().toLowerCase();
-    if (normalizedCommissionerEmail && !EMAIL_PATTERN.test(normalizedCommissionerEmail)) {
-      setWizardError("Alternate commissioner email must be a valid email address.");
-      return;
-    }
-
-    setCreatingLeague(true);
-    setError(null);
-    setWizardError(null);
-
-    try {
-      const payload = await requestJson<{
-        league: {
-          id: string;
-          name: string;
-        };
-      }>(
-        "/api/leagues",
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            name: trimmedName,
-            description: createLeagueDescription.trim() || null,
-            seasonYear,
-            designatedCommissionerEmail: normalizedCommissionerEmail || null,
-          }),
-        },
-        "Failed to create league.",
-      );
-
-      router.push(`/league/${payload.league.id}`);
-      router.refresh();
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
-        window.location.assign(
-          buildLoginPath({
-            returnTo: "/my-leagues",
-            error: LOGIN_ERROR_SESSION_EXPIRED,
-          }),
-        );
-        return;
-      }
-
-      setWizardError(requestError instanceof Error ? requestError.message : "Failed to create league.");
-      setCreatingLeague(false);
-    }
-  }
 
   function handleJoinLeague() {
     const token = parseInviteToken(joinInviteValue);
@@ -523,11 +428,10 @@ export default function MyLeaguesPage() {
                 <button
                   type="button"
                   onClick={createNewLeague}
-                  disabled={creatingLeague}
-                  className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
+                  className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                   data-testid="create-league-button"
                 >
-                  {creatingLeague ? "Creating..." : "Create League"}
+                  Create League
                 </button>
               )}
             </div>
@@ -625,10 +529,9 @@ export default function MyLeaguesPage() {
                     <button
                       type="button"
                       onClick={createNewLeague}
-                      disabled={creatingLeague}
-                      className="rounded-md bg-[var(--brand-accent-primary)] px-6 py-3 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
+                      className="rounded-md bg-[var(--brand-accent-primary)] px-6 py-3 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                     >
-                      {creatingLeague ? "Creating..." : "Create League"}
+                      Create League
                     </button>
                     <div className="flex gap-2">
                       <input
@@ -653,104 +556,7 @@ export default function MyLeaguesPage() {
                     </div>
                   </div>
 
-                  {createLeagueWizardOpen && (
-                    <div className="mt-6">
-                      <div
-                        className="rounded-lg border p-6 text-left"
-                        style={{
-                          borderColor: "var(--brand-structure-muted)",
-                          backgroundColor: "var(--brand-surface-elevated)",
-                        }}
-                      >
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-                              Create League
-                            </h4>
-                            <button
-                              type="button"
-                              onClick={() => setCreateLeagueWizardOpen(false)}
-                              className="text-sm text-slate-400 hover:text-slate-300"
-                            >
-                              Cancel
-                            </button>
-                          </div>
 
-                          {wizardError ? (
-                            <div
-                              className="rounded-md border border-red-700/70 bg-red-950/40 px-3 py-2 text-sm text-red-100"
-                              role="alert"
-                            >
-                              {wizardError}
-                            </div>
-                          ) : null}
-
-                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div>
-                              <label className="block text-xs font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>
-                                League Name
-                              </label>
-                              <input
-                                ref={createLeagueNameInputRef}
-                                type="text"
-                                value={createLeagueName}
-                                onChange={(event) => setCreateLeagueName(event.target.value)}
-                                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                                style={{
-                                  borderColor: "var(--brand-structure-muted)",
-                                  color: "var(--foreground)",
-                                }}
-                                placeholder="Sunday Empire League"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>
-                                Season Year
-                              </label>
-                              <input
-                                type="number"
-                                value={createLeagueSeasonYear}
-                                onChange={(event) => setCreateLeagueSeasonYear(event.target.value)}
-                                className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                                style={{
-                                  borderColor: "var(--brand-structure-muted)",
-                                  color: "var(--foreground)",
-                                }}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>
-                              Description (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              value={createLeagueDescription}
-                              onChange={(event) => setCreateLeagueDescription(event.target.value)}
-                              className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                              style={{
-                                borderColor: "var(--brand-structure-muted)",
-                                color: "var(--foreground)",
-                              }}
-                              placeholder="Optional league description"
-                            />
-                          </div>
-
-                          <div className="flex justify-end">
-                            <button
-                              type="button"
-                              onClick={handleCreateLeague}
-                              disabled={creatingLeague || !createLeagueName.trim()}
-                              className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
-                            >
-                              {creatingLeague ? "Creating..." : "Create League"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
