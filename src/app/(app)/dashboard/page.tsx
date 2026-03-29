@@ -13,6 +13,21 @@ import { trackUiEvent } from "@/lib/ui-analytics";
 import { LeagueSummaryPayload } from "@/types/league";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
 
+type AuthenticatedEntryResolution = {
+  kind: "no_league_access" | "single_league_entry" | "multiple_league_choice";
+  route: string;
+  context: any;
+};
+
+type EntryResolverResponse = {
+  resolution: AuthenticatedEntryResolution;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+  };
+};
+
 type LeagueWorkspace = {
   id: string;
   name: string;
@@ -115,6 +130,9 @@ export default function LeagueDirectoryPage() {
   const router = useRouter();
   const [leagues, setLeagues] = useState<LeagueWorkspace[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [resolverChecked, setResolverChecked] = useState(false);
+  const [shouldShowDashboard, setShouldShowDashboard] = useState(false);
+  const [leaguesLoading, setLeaguesLoading] = useState(true);
   const [wizardError, setWizardError] = useState<string | null>(null);
   const [activatingLeagueId, setActivatingLeagueId] = useState<string | null>(null);
   const [creatingLeague, setCreatingLeague] = useState(false);
@@ -128,7 +146,6 @@ export default function LeagueDirectoryPage() {
   const [createLeagueWizardStep, setCreateLeagueWizardStep] =
     useState<CreateLeagueWizardStep>("basics");
   const [joinInviteValue, setJoinInviteValue] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const directoryOpenedAt = useRef(0);
   const directoryViewTracked = useRef(false);
@@ -143,9 +160,70 @@ export default function LeagueDirectoryPage() {
     directoryOpenedAt.current = Date.now();
   }, []);
 
+  // First, check the centralized resolver to see if we should even show dashboard
   useEffect(() => {
+    if (resolverChecked) return;
+
     let mounted = true;
-    setIsLoading(true);
+
+    requestJson<EntryResolverResponse>(
+      "/api/auth/entry-resolver",
+      { cache: "no-store" },
+      "Failed to resolve user context."
+    )
+      .then((payload) => {
+        if (!mounted) return;
+
+        const { resolution } = payload;
+
+        if (resolution.kind === "single_league_entry") {
+          // User should be routed directly - redirect them now
+          router.push(resolution.route);
+          return;
+        }
+
+        if (resolution.kind === "no_league_access") {
+          // No leagues - show the dashboard for league creation
+          setShouldShowDashboard(true);
+          setResolverChecked(true);
+          return;
+        }
+
+        if (resolution.kind === "multiple_league_choice") {
+          // Multiple leagues - show dashboard for selection
+          setShouldShowDashboard(true);
+          setResolverChecked(true);
+          return;
+        }
+      })
+      .catch((requestError) => {
+        if (!mounted) return;
+
+        if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+          window.location.assign(
+            buildLoginPath({
+              returnTo: "/dashboard",
+              error: LOGIN_ERROR_SESSION_EXPIRED,
+            }),
+          );
+          return;
+        }
+
+        setError(requestError instanceof Error ? requestError.message : "Failed to resolve user context.");
+        setResolverChecked(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, resolverChecked]);
+
+  // Only load leagues if we determined we should show the dashboard
+  useEffect(() => {
+    if (!shouldShowDashboard) return;
+
+    let mounted = true;
+    setLeaguesLoading(true);
 
     requestJson<LeagueWorkspacesPayload>("/api/leagues", { cache: "no-store" }, "Failed to load leagues.")
       .then((payload) => {
@@ -174,14 +252,14 @@ export default function LeagueDirectoryPage() {
       })
       .finally(() => {
         if (mounted) {
-          setIsLoading(false);
+          setLeaguesLoading(false);
         }
       });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [shouldShowDashboard]);
 
   const orderedLeagues = useMemo(() => {
     return [...leagues].sort((left, right) => {
@@ -195,13 +273,13 @@ export default function LeagueDirectoryPage() {
   }, [leagues]);
 
   useEffect(() => {
-    if (isLoading || orderedLeagues.length !== 0 || noLeagueWizardAutoOpened.current) {
+    if (leaguesLoading || orderedLeagues.length !== 0 || noLeagueWizardAutoOpened.current) {
       return;
     }
 
     noLeagueWizardAutoOpened.current = true;
     setCreateLeagueWizardOpen(true);
-  }, [isLoading, orderedLeagues.length]);
+  }, [leaguesLoading, orderedLeagues.length]);
 
   useEffect(() => {
     if (orderedLeagues.length === 0 || directoryViewTracked.current) {
@@ -243,8 +321,9 @@ export default function LeagueDirectoryPage() {
         });
       }
 
-      await requestJson(
-        "/api/league/context",
+      // Use the centralized resolver to get the optimal route for this league
+      const response = await requestJson<EntryResolverResponse>(
+        "/api/auth/entry-resolver", 
         {
           method: "POST",
           headers: {
@@ -254,10 +333,11 @@ export default function LeagueDirectoryPage() {
             leagueId: league.id,
           }),
         },
-        "Failed to activate selected league.",
+        "Failed to resolve league context."
       );
 
-      router.push(`/league/${league.id}`);
+      // Navigate to the resolved optimal route
+      router.push(response.resolution.route);
       router.refresh();
     } catch (requestError) {
       if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
@@ -278,15 +358,6 @@ export default function LeagueDirectoryPage() {
       setActivatingLeagueId((current) => (current === league.id ? null : current));
     }
   }
-
-  useEffect(() => {
-    if (isLoading || error || orderedLeagues.length !== 1 || autoRedirectStarted.current) {
-      return;
-    }
-
-    autoRedirectStarted.current = true;
-    void activateLeague(orderedLeagues[0], "auto_single");
-  }, [error, isLoading, orderedLeagues]);
 
   function openCreateLeagueWizard() {
     setError(null);
@@ -446,6 +517,50 @@ export default function LeagueDirectoryPage() {
       : orderedLeagues.length === 1
         ? "You only have one accessible league, so we're routing you straight into that workspace."
         : "Your identity has access to multiple leagues. Pick one workspace to continue.";
+
+  // Show loading until resolver check is complete
+  if (!resolverChecked) {
+    return (
+      <div className="space-y-6" data-testid="league-directory-page">
+        <header className="space-y-1">
+          <p
+            className="text-xs uppercase tracking-[0.2em]"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            SundayEmpire
+          </p>
+          <h2
+            className="text-2xl font-semibold"
+            style={{ color: "var(--foreground)" }}
+          >
+            Resolving Context
+          </h2>
+          <p
+            className="text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            Determining your role, team assignment, and current phase...
+          </p>
+        </header>
+
+        <div
+          className="rounded-lg p-6 text-sm"
+          style={{
+            border: "1px solid var(--brand-structure-muted)",
+            backgroundColor: "var(--brand-surface-card)",
+            color: "var(--muted-foreground)",
+          }}
+        >
+          Resolving your authenticated context and determining optimal routing...
+        </div>
+      </div>
+    );
+  }
+
+  // Only show the league directory if resolver determined we should
+  if (!shouldShowDashboard) {
+    return null;
+  }
 
   useEffect(() => {
     if (!createLeagueWizardOpen) {
@@ -865,7 +980,7 @@ export default function LeagueDirectoryPage() {
         </div>
       ) : null}
 
-      {isLoading ? (
+      {leaguesLoading ? (
         <div
           className="rounded-lg p-6 text-sm"
           style={{
@@ -878,7 +993,7 @@ export default function LeagueDirectoryPage() {
         </div>
       ) : null}
 
-      {!isLoading && orderedLeagues.length === 0 && !error ? (
+      {!leaguesLoading && orderedLeagues.length === 0 && !error ? (
         <section
           className="rounded-lg p-6"
           style={{
@@ -955,7 +1070,7 @@ export default function LeagueDirectoryPage() {
         </section>
       ) : null}
 
-      {!isLoading && orderedLeagues.length === 1 && !error ? (
+      {!leaguesLoading && orderedLeagues.length === 1 && !error ? (
         <section
           className="rounded-lg p-6 text-sm"
           style={{
@@ -969,7 +1084,7 @@ export default function LeagueDirectoryPage() {
         </section>
       ) : null}
 
-      {!isLoading && orderedLeagues.length > 1 ? (
+      {!leaguesLoading && orderedLeagues.length > 1 ? (
         <section className="space-y-3" data-testid="league-directory-multi-state">
           <div
             className="rounded-lg border p-4"

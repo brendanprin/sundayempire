@@ -354,7 +354,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await requestJson(
+      const response = await requestJson<{ destination?: string }>(
         "/api/auth/session",
         {
           method: "POST",
@@ -370,6 +370,8 @@ export default function LoginPage() {
         "Sign-in failed.",
       );
 
+      const destination = response.destination || returnTo;
+
       trackUiEvent({
         eventType: PILOT_EVENT_TYPES.UI_AUTH_SIGN_IN_SUCCESS,
         pagePath: "/login",
@@ -379,6 +381,7 @@ export default function LoginPage() {
         entityId: selectedEmail,
         context: {
           returnTo,
+          destination,
           switchRequested,
           elapsedMs: Date.now() - loginOpenedAtRef.current,
           authMode: "demo",
@@ -390,15 +393,16 @@ export default function LoginPage() {
         eventStep: "route_transition",
         status: "success",
         entityType: "route",
-        entityId: returnTo,
+        entityId: destination,
         context: {
-          destination: returnTo,
+          destination,
+          requestedReturnTo: returnTo,
           switchRequested,
           authMode: "demo",
         },
       });
 
-      router.push(returnTo);
+      router.push(destination);
       router.refresh();
     } catch (submitError) {
       trackUiEvent({

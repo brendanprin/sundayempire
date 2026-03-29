@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { resolvePostAuthenticationDestination } from "@/lib/auth-entry";
+import { resolveQuickAuthenticatedRoute } from "@/lib/auth/authenticated-entry-resolver";
 import {
   ACTIVE_LEAGUE_COOKIE,
   AUTH_SESSION_MAX_AGE_SECONDS,
@@ -217,7 +218,6 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
   }
 
   const requestedLeagueId = normalizeOptionalString(body.leagueId);
-  const currentLeagueId = readRequestedLeagueId(request);
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -253,57 +253,7 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
     );
   }
 
-  const selectedMembership = pickPreferredReadyMembership({
-    memberships,
-    preferredLeagueIds: [requestedLeagueId, currentLeagueId],
-  });
-
-  if (!selectedMembership) {
-    return apiError(
-      409,
-      "LEAGUE_CONTEXT_NOT_READY",
-      "Selected user does not have any leagues with an active season/ruleset context.",
-      { email },
-    );
-  }
-
-  const selectedSeason = selectPreferredSeason(selectedMembership.league.seasons);
-  if (!selectedSeason) {
-    return apiError(
-      409,
-      "LEAGUE_CONTEXT_NOT_READY",
-      "Requested league does not have an active season/ruleset context.",
-      { email, leagueId: selectedMembership.leagueId },
-    );
-  }
-
-  const resolvedActor = await createActorContextService(prisma).resolveActorForUserId(
-    user.id,
-    selectedMembership.leagueId,
-  );
-  if (!resolvedActor) {
-    return apiError(403, "LEAGUE_MEMBERSHIP_NOT_FOUND", "No league membership was found for this user.", {
-      email,
-      leagueId: selectedMembership.leagueId,
-    });
-  }
-
-  const response = NextResponse.json({
-    actor: {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      accountRole: resolvedActor.accountRole,
-      leagueRole: resolvedActor.leagueRole,
-      teamId: resolvedActor.teamId,
-      teamName: resolvedActor.teamName,
-      leagueId: selectedMembership.leagueId,
-      leagueName: selectedMembership.league.name,
-      seasonId: selectedSeason.id,
-      seasonYear: selectedSeason.year,
-    },
-  });
-
+  // Use the centralized resolver to determine context and create session
   const { token } = await createUserSession({
     userId: user.id,
     expiresAt: new Date(Date.now() + AUTH_SESSION_MAX_AGE_SECONDS * 1000),
@@ -311,9 +261,23 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
     ipAddress: extractClientIpAddress(request),
   });
 
+  // Get the optimal route using the resolver
+  const destinationRoute = await resolveQuickAuthenticatedRoute(user.id, requestedLeagueId);
+
+  const response = NextResponse.json({
+    actor: {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      // Note: Keeping minimal actor data for demo response
+      // Full context resolution happens server-side via the resolver
+    },
+    destination: destinationRoute,
+  });
+
   applyAuthenticatedSessionCookies(response, {
     token,
-    activeLeagueId: selectedMembership.leagueId,
+    activeLeagueId: requestedLeagueId,
   });
 
   return response;
@@ -358,21 +322,39 @@ export async function GET(request: NextRequest) {
       userAgent: request.headers.get("user-agent")?.trim() ?? null,
     });
 
-    const memberships = await listSessionMemberships(consumedMagicLink.user.id);
-    const readyLeagueIds = memberships.filter(hasReadyLeagueContext).map((membership) => membership.leagueId);
-    const explicitLeagueId =
-      parseLeagueIdFromReturnTo(returnTo) ?? readRequestedLeagueId(request);
+    // Use new centralized resolver for context-aware routing
+    const preferredLeagueId = parseLeagueIdFromReturnTo(returnTo) ?? readRequestedLeagueId(request);
+    let destinationRoute: string;
 
-    const destination = resolvePostAuthenticationDestination({
-      returnTo,
-      readyLeagueIds,
-      explicitLeagueId,
-    });
-    const response = NextResponse.redirect(new URL(destination.redirectTo, request.url));
+    // If we have a valid returnTo that's not a league route, honor it
+    if (returnTo && !returnTo.startsWith('/league/') && !returnTo.startsWith('/dashboard')) {
+      // For non-league specific routes, use the resolver to determine active league context
+      // but keep the requested route
+      destinationRoute = returnTo;
+    } else {
+      // For default routing or league-specific routes, use full context resolution
+      destinationRoute = await resolveQuickAuthenticatedRoute(
+        consumedMagicLink.user.id,
+        preferredLeagueId
+      );
+    }
+
+    const response = NextResponse.redirect(new URL(destinationRoute, request.url));
+
+    // Determine active league ID for session cookie
+    let activeLeagueId: string | null = null;
+    if (preferredLeagueId) {
+      // Verify the user has access to the preferred league
+      const memberships = await listSessionMemberships(consumedMagicLink.user.id);
+      const hasAccess = memberships.some(m => m.leagueId === preferredLeagueId && hasReadyLeagueContext(m));
+      if (hasAccess) {
+        activeLeagueId = preferredLeagueId;
+      }
+    }
 
     applyAuthenticatedSessionCookies(response, {
       token: consumedMagicLink.sessionToken,
-      activeLeagueId: destination.activeLeagueId,
+      activeLeagueId,
     });
 
     return response;
