@@ -307,8 +307,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             setLeaguePhase(null);
             setNotificationUnreadCount(null);
 
-            if (pathname !== "/" && !leagueMatch?.[1]) {
-              router.replace("/");
+            if (pathname !== "/dashboard" && !leagueMatch?.[1]) {
+              router.replace("/dashboard");
             }
           }
         } else {
@@ -316,12 +316,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           setNotificationUnreadCount(null);
         }
 
-        if (pathname !== "/" && !leagueMatch?.[1] && !activeLeague) {
+        if (pathname !== "/dashboard" && !leagueMatch?.[1] && !activeLeague) {
           const canAccessWithoutLeague =
             authPayload.user.accountRole === "ADMIN" &&
             (pathname === "/settings" || pathname === "/support/commissioner");
           if (!canAccessWithoutLeague) {
-            router.replace("/");
+            router.replace("/dashboard");
           }
         }
       } catch (error) {

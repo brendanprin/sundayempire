@@ -445,7 +445,7 @@ export default function LoginPage() {
             ? "Request a fresh sign-in link for yourself, or use the demo switcher only when local/test mode enables it."
             : returnTo.startsWith("/invite")
               ? "Enter the invited email address and we’ll send a one-time sign-in link so you can accept the league invite."
-              : "Enter your email and we’ll send a one-time sign-in link to continue."}
+              : "We'll email you a secure sign-in link. Works for new accounts and existing users."}
         </p>
       </header>
 
@@ -516,7 +516,7 @@ export default function LoginPage() {
                   event.currentTarget.style.color = "var(--shell-text-secondary)";
                 }}
               >
-                Back to app
+                {returnTo === "/" ? "Back to home" : "Back to app"}
               </Link>
             </div>
           </form>
@@ -531,7 +531,7 @@ export default function LoginPage() {
             </div>
           ) : (
             <p className="text-xs" style={{ color: "var(--shell-text-muted)" }}>
-              We’ll only sign you in from a valid one-time link. Demo account selection stays separate.
+              Magic-link authentication • No passwords needed • Works for new and returning users
             </p>
           )}
         </div>

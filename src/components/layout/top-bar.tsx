@@ -227,7 +227,7 @@ export function TopBar(props: {
                 </p>
               </div>
               <Link
-                href="/"
+                href="/dashboard"
                 className="rounded-xl px-3 py-1.5 text-xs transition hover:bg-opacity-80"
                 style={{
                   border: "1px solid var(--brand-structure-muted)",

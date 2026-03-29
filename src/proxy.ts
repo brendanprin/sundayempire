@@ -24,6 +24,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
   if (pathname === "/login") {
     if (!hasSession) {
       return NextResponse.next();
@@ -35,13 +39,13 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM)) ?? "/";
+    const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM)) ?? "/dashboard";
     return NextResponse.redirect(new URL(returnTo, request.url));
   }
 
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
-    const returnTo = normalizeReturnTo(`${pathname}${search}`) ?? "/";
+    const returnTo = normalizeReturnTo(`${pathname}${search}`) ?? "/dashboard";
     loginUrl.searchParams.set(RETURN_TO_PARAM, returnTo);
     return NextResponse.redirect(loginUrl);
   }

@@ -77,7 +77,7 @@ export function resolvePostAuthenticationDestination(input: {
     }
 
     return {
-      redirectTo: "/",
+      redirectTo: "/dashboard",
       activeLeagueId: validExplicitLeagueId,
     };
   }
@@ -92,7 +92,7 @@ export function resolvePostAuthenticationDestination(input: {
   const returnToLeagueId = parseLeagueIdFromReturnTo(normalizedReturnTo);
   if (returnToLeagueId) {
     return {
-      redirectTo: entry.leagueIds.includes(returnToLeagueId) ? normalizedReturnTo : "/",
+      redirectTo: entry.leagueIds.includes(returnToLeagueId) ? normalizedReturnTo : "/dashboard",
       activeLeagueId: entry.leagueIds.includes(returnToLeagueId) ? returnToLeagueId : null,
     };
   }
@@ -112,7 +112,7 @@ export function resolvePostAuthenticationDestination(input: {
   }
 
   return {
-    redirectTo: "/",
+    redirectTo: "/dashboard",
     activeLeagueId: null,
   };
 }
