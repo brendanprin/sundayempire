@@ -115,6 +115,7 @@ export default function LeagueDirectoryPage() {
   const router = useRouter();
   const [leagues, setLeagues] = useState<LeagueWorkspace[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [wizardError, setWizardError] = useState<string | null>(null);
   const [activatingLeagueId, setActivatingLeagueId] = useState<string | null>(null);
   const [creatingLeague, setCreatingLeague] = useState(false);
   const [createLeagueName, setCreateLeagueName] = useState("");
@@ -133,6 +134,10 @@ export default function LeagueDirectoryPage() {
   const directoryViewTracked = useRef(false);
   const autoRedirectStarted = useRef(false);
   const noLeagueWizardAutoOpened = useRef(false);
+  const wizardErrorRef = useRef<HTMLDivElement | null>(null);
+  const createLeagueNameInputRef = useRef<HTMLInputElement | null>(null);
+  const createLeagueDescriptionInputRef = useRef<HTMLInputElement | null>(null);
+  const createLeagueSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     directoryOpenedAt.current = Date.now();
@@ -285,6 +290,7 @@ export default function LeagueDirectoryPage() {
 
   function openCreateLeagueWizard() {
     setError(null);
+    setWizardError(null);
     setCreateLeagueWizardStep("basics");
     setCreateLeagueWizardOpen(true);
   }
@@ -292,18 +298,18 @@ export default function LeagueDirectoryPage() {
   function validateCreateLeagueBasics() {
     const trimmedName = createLeagueName.trim();
     if (trimmedName.length < 2) {
-      setError("League name must be at least 2 characters.");
+      setWizardError("League name must be at least 2 characters.");
       return false;
     }
 
     const seasonYear = Number.parseInt(createLeagueSeasonYear.trim(), 10);
     if (!Number.isInteger(seasonYear)) {
-      setError("Season year must be a valid integer.");
+      setWizardError("Season year must be a valid integer.");
       return false;
     }
 
     if (seasonYear < 2000 || seasonYear > 2100) {
-      setError("Season year must be between 2000 and 2100.");
+      setWizardError("Season year must be between 2000 and 2100.");
       return false;
     }
 
@@ -313,7 +319,7 @@ export default function LeagueDirectoryPage() {
   function validateCreateLeagueOptions() {
     const normalizedCommissionerEmail = designatedCommissionerEmail.trim().toLowerCase();
     if (normalizedCommissionerEmail && !EMAIL_PATTERN.test(normalizedCommissionerEmail)) {
-      setError("Alternate commissioner email must be a valid email address.");
+      setWizardError("Alternate commissioner email must be a valid email address.");
       return false;
     }
 
@@ -324,7 +330,7 @@ export default function LeagueDirectoryPage() {
     if (!validateCreateLeagueBasics()) {
       return;
     }
-    setError(null);
+    setWizardError(null);
     setCreateLeagueWizardStep("options");
   }
 
@@ -332,7 +338,7 @@ export default function LeagueDirectoryPage() {
     if (!validateCreateLeagueBasics() || !validateCreateLeagueOptions()) {
       return;
     }
-    setError(null);
+    setWizardError(null);
     setCreateLeagueWizardStep("review");
   }
 
@@ -350,6 +356,7 @@ export default function LeagueDirectoryPage() {
 
     setCreatingLeague(true);
     setError(null);
+    setWizardError(null);
 
     try {
       const payload = await requestJson<{
@@ -387,7 +394,7 @@ export default function LeagueDirectoryPage() {
         return;
       }
 
-      setError(requestError instanceof Error ? requestError.message : "Failed to create league.");
+      setWizardError(requestError instanceof Error ? requestError.message : "Failed to create league.");
       setCreatingLeague(false);
     }
   }
@@ -438,7 +445,33 @@ export default function LeagueDirectoryPage() {
       ? "This account is signed in but not attached to a league yet. Create a new league or join an existing one by invite."
       : orderedLeagues.length === 1
         ? "You only have one accessible league, so we’re routing you straight into that workspace."
-        : "Authentication identifies you. League choice is separate, so pick the workspace you want to open.";
+        : "Your identity has access to multiple leagues. Pick one workspace to continue.";
+
+  useEffect(() => {
+    if (!createLeagueWizardOpen) {
+      return;
+    }
+
+    if (createLeagueWizardStep === "basics") {
+      createLeagueNameInputRef.current?.focus();
+      return;
+    }
+
+    if (createLeagueWizardStep === "options") {
+      createLeagueDescriptionInputRef.current?.focus();
+      return;
+    }
+
+    createLeagueSubmitButtonRef.current?.focus();
+  }, [createLeagueWizardOpen, createLeagueWizardStep]);
+
+  useEffect(() => {
+    if (!wizardError) {
+      return;
+    }
+
+    wizardErrorRef.current?.focus();
+  }, [wizardError]);
 
   function renderCreateLeagueWizard(input: {
     allowClose: boolean;
@@ -447,6 +480,20 @@ export default function LeagueDirectoryPage() {
     const currentStepIndex = CREATE_LEAGUE_WIZARD_STEPS.findIndex(
       (step) => step.id === createLeagueWizardStep,
     );
+    const trimmedName = createLeagueName.trim();
+    const parsedSeasonYear = Number.parseInt(createLeagueSeasonYear.trim(), 10);
+    const basicsValid =
+      trimmedName.length >= 2 &&
+      Number.isInteger(parsedSeasonYear) &&
+      parsedSeasonYear >= 2000 &&
+      parsedSeasonYear <= 2100;
+    const leagueNameInvalid = trimmedName.length > 0 && trimmedName.length < 2;
+    const seasonYearInvalid =
+      createLeagueSeasonYear.trim().length > 0 &&
+      (!Number.isInteger(parsedSeasonYear) || parsedSeasonYear < 2000 || parsedSeasonYear > 2100);
+    const normalizedCommissionerEmail = designatedCommissionerEmail.trim().toLowerCase();
+    const optionsValid = !normalizedCommissionerEmail || EMAIL_PATTERN.test(normalizedCommissionerEmail);
+    const designatedCommissionerInvalid = Boolean(normalizedCommissionerEmail && !optionsValid);
 
     return (
       <section
@@ -456,6 +503,8 @@ export default function LeagueDirectoryPage() {
           backgroundColor: "var(--brand-surface-elevated)",
         }}
         data-testid="league-create-wizard"
+        role="region"
+        aria-label="Create league wizard"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -469,13 +518,16 @@ export default function LeagueDirectoryPage() {
               Create League
             </h3>
             <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-              Move step-by-step through league basics, optional settings, then review before create.
+              Complete the three guided steps: basics, optional commissioner settings, then final review.
             </p>
           </div>
           {input.allowClose ? (
             <button
               type="button"
-              onClick={() => setCreateLeagueWizardOpen(false)}
+              onClick={() => {
+                setWizardError(null);
+                setCreateLeagueWizardOpen(false);
+              }}
               className="rounded-md border border-[var(--brand-structure-muted)] px-3 py-1.5 text-xs transition hover:border-[var(--brand-structure)]"
               style={{ color: "var(--foreground)" }}
               data-testid={input.closeTestId}
@@ -485,7 +537,11 @@ export default function LeagueDirectoryPage() {
           ) : null}
         </div>
 
-        <ol className="flex flex-wrap gap-2" data-testid="league-create-wizard-steps">
+        <ol
+          className="flex flex-wrap gap-2"
+          data-testid="league-create-wizard-steps"
+          aria-label="Create league progress"
+        >
           {CREATE_LEAGUE_WIZARD_STEPS.map((step, index) => {
             const isCurrent = step.id === createLeagueWizardStep;
             const isComplete = currentStepIndex > index;
@@ -501,6 +557,7 @@ export default function LeagueDirectoryPage() {
                       : "border-slate-700 bg-slate-900 text-slate-300"
                 }`}
                 data-testid={`league-create-step-${step.id}`}
+                aria-current={isCurrent ? "step" : undefined}
               >
                 {index + 1}. {step.label}
               </li>
@@ -508,17 +565,37 @@ export default function LeagueDirectoryPage() {
           })}
         </ol>
 
+        {wizardError ? (
+          <div
+            ref={wizardErrorRef}
+            className="rounded-md border border-red-700/70 bg-red-950/40 px-3 py-2 text-sm text-red-100"
+            role="alert"
+            aria-live="assertive"
+            tabIndex={-1}
+            data-testid="league-create-wizard-error"
+          >
+            {wizardError}
+          </div>
+        ) : null}
+
         {createLeagueWizardStep === "basics" ? (
           <div className="space-y-3" data-testid="league-create-wizard-basics">
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              Start with a league name and active season year.
+            </p>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
                   League Name
                 </span>
                 <input
+                  ref={createLeagueNameInputRef}
                   type="text"
                   value={createLeagueName}
-                  onChange={(event) => setCreateLeagueName(event.target.value)}
+                  onChange={(event) => {
+                    setCreateLeagueName(event.target.value);
+                    setWizardError(null);
+                  }}
                   className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                   style={{
                     borderColor: "var(--brand-structure-muted)",
@@ -526,7 +603,14 @@ export default function LeagueDirectoryPage() {
                   }}
                   placeholder="Sunday Empire League"
                   data-testid="no-league-create-name"
+                  aria-invalid={leagueNameInvalid}
+                  aria-describedby="league-create-basics-hint"
                 />
+                {leagueNameInvalid ? (
+                  <p className="text-xs text-red-200" data-testid="league-create-name-error">
+                    League name must be at least 2 characters.
+                  </p>
+                ) : null}
               </label>
               <label className="space-y-1">
                 <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
@@ -535,24 +619,43 @@ export default function LeagueDirectoryPage() {
                 <input
                   type="number"
                   value={createLeagueSeasonYear}
-                  onChange={(event) => setCreateLeagueSeasonYear(event.target.value)}
+                  onChange={(event) => {
+                    setCreateLeagueSeasonYear(event.target.value);
+                    setWizardError(null);
+                  }}
                   className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                   style={{
                     borderColor: "var(--brand-structure-muted)",
                     color: "var(--foreground)",
                   }}
                   data-testid="no-league-create-season-year"
+                  aria-invalid={seasonYearInvalid}
+                  aria-describedby="league-create-basics-hint"
                 />
+                {seasonYearInvalid ? (
+                  <p className="text-xs text-red-200" data-testid="league-create-season-year-error">
+                    Season year must be between 2000 and 2100.
+                  </p>
+                ) : null}
               </label>
             </div>
+            <p
+              id="league-create-basics-hint"
+              className="text-xs"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              League name must be at least 2 characters. Season year must be between 2000 and 2100.
+            </p>
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={continueCreateLeagueWizardToOptions}
+                disabled={!basicsValid}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                 data-testid="league-create-next-options"
+                aria-disabled={!basicsValid}
               >
-                Continue
+                Continue to Options
               </button>
             </div>
           </div>
@@ -560,15 +663,22 @@ export default function LeagueDirectoryPage() {
 
         {createLeagueWizardStep === "options" ? (
           <div className="space-y-3" data-testid="league-create-wizard-options">
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              Add optional context and designate another commissioner only if needed.
+            </p>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-xs uppercase tracking-[0.14em]" style={{ color: "var(--muted-foreground)" }}>
                   Description
                 </span>
                 <input
+                  ref={createLeagueDescriptionInputRef}
                   type="text"
                   value={createLeagueDescription}
-                  onChange={(event) => setCreateLeagueDescription(event.target.value)}
+                  onChange={(event) => {
+                    setCreateLeagueDescription(event.target.value);
+                    setWizardError(null);
+                  }}
                   className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                   style={{
                     borderColor: "var(--brand-structure-muted)",
@@ -585,7 +695,10 @@ export default function LeagueDirectoryPage() {
                 <input
                   type="email"
                   value={designatedCommissionerEmail}
-                  onChange={(event) => setDesignatedCommissionerEmail(event.target.value)}
+                  onChange={(event) => {
+                    setDesignatedCommissionerEmail(event.target.value);
+                    setWizardError(null);
+                  }}
                   className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                   style={{
                     borderColor: "var(--brand-structure-muted)",
@@ -593,13 +706,33 @@ export default function LeagueDirectoryPage() {
                   }}
                   placeholder="commissioner@example.com"
                   data-testid="no-league-create-designated-commissioner-email"
+                  aria-invalid={designatedCommissionerInvalid}
+                  aria-describedby="league-create-options-hint"
                 />
+                {designatedCommissionerInvalid ? (
+                  <p
+                    className="text-xs text-red-200"
+                    data-testid="league-create-designated-commissioner-error"
+                  >
+                    Alternate commissioner email must be a valid email address.
+                  </p>
+                ) : null}
               </label>
             </div>
+            <p
+              id="league-create-options-hint"
+              className="text-xs"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              Leave alternate commissioner blank to keep the creating account as commissioner.
+            </p>
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setCreateLeagueWizardStep("basics")}
+                onClick={() => {
+                  setWizardError(null);
+                  setCreateLeagueWizardStep("basics");
+                }}
                 className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)]"
                 style={{ color: "var(--foreground)" }}
                 data-testid="league-create-back-basics"
@@ -609,10 +742,12 @@ export default function LeagueDirectoryPage() {
               <button
                 type="button"
                 onClick={continueCreateLeagueWizardToReview}
+                disabled={!basicsValid || !optionsValid}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                 data-testid="league-create-next-review"
+                aria-disabled={!basicsValid || !optionsValid}
               >
-                Review
+                Continue to Review
               </button>
             </div>
           </div>
@@ -620,6 +755,9 @@ export default function LeagueDirectoryPage() {
 
         {createLeagueWizardStep === "review" ? (
           <div className="space-y-3" data-testid="league-create-wizard-review">
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              Confirm details, then create and open league home.
+            </p>
             <div
               className="grid grid-cols-1 gap-2 rounded-md border p-3 text-sm"
               style={{
@@ -650,7 +788,10 @@ export default function LeagueDirectoryPage() {
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setCreateLeagueWizardStep("options")}
+                onClick={() => {
+                  setWizardError(null);
+                  setCreateLeagueWizardStep("options");
+                }}
                 className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)]"
                 style={{ color: "var(--foreground)" }}
                 data-testid="league-create-back-options"
@@ -658,17 +799,28 @@ export default function LeagueDirectoryPage() {
                 Back
               </button>
               <button
+                ref={createLeagueSubmitButtonRef}
                 type="button"
                 onClick={() => {
                   void handleCreateLeague();
                 }}
-                disabled={creatingLeague}
+                disabled={creatingLeague || !basicsValid || !optionsValid}
                 className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 data-testid="league-create-submit-button"
+                aria-disabled={creatingLeague || !basicsValid || !optionsValid}
               >
-                {creatingLeague ? "Creating League..." : "Create League"}
+                {creatingLeague ? "Creating League and Opening Workspace..." : "Create League"}
               </button>
             </div>
+            {creatingLeague ? (
+              <p
+                className="text-xs"
+                style={{ color: "var(--muted-foreground)" }}
+                data-testid="league-create-submit-progress"
+              >
+                Creating league records and activating your new workspace.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -705,6 +857,9 @@ export default function LeagueDirectoryPage() {
             border: "1px solid rgb(185, 28, 28)",
             backgroundColor: "rgba(69, 10, 10, 0.4)",
           }}
+          role="alert"
+          aria-live="assertive"
+          data-testid="league-directory-error"
         >
           {error}
         </div>
@@ -734,10 +889,10 @@ export default function LeagueDirectoryPage() {
         >
           <div className="space-y-4">
             <p className="text-sm" style={{ color: "var(--foreground)" }}>
-              No league memberships are attached to this signed-in account.
+              No league memberships are attached to this signed-in account yet.
             </p>
             <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              Create a league now, or join an existing league with an invite link.
+              Create a new league in guided steps, or join an existing one with an invite link.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -810,7 +965,7 @@ export default function LeagueDirectoryPage() {
           }}
           data-testid="league-entry-auto-redirect"
         >
-          Opening {orderedLeagues[0].name}...
+          Opening {orderedLeagues[0].name}. You will be redirected automatically.
         </section>
       ) : null}
 
