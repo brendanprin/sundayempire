@@ -199,14 +199,14 @@ async function resolveLeagueUserContext(
 function determineOptimalRoute(context: ResolvedLeagueContext): string {
   const baseRoute = `/league/${context.leagueId}`;
   
-  // For commissioners, always direct to league home for oversight
+  // For commissioners, direct to commissioner operations dashboard for oversight
   if (context.isCommissioner) {
-    return baseRoute;
+    return "/commissioner";
   }
 
-  // For users without team access, direct to league home
+  // For users without team access, direct to teams directory for team selection/onboarding
   if (!context.hasTeamAccess) {
-    return baseRoute;
+    return "/teams";
   }
 
   // For team managers, consider current phase for optimal routing
@@ -218,21 +218,21 @@ function determineOptimalRoute(context: ResolvedLeagueContext): string {
         return `${baseRoute}/draft/veteran-auction`;
       case "REGULAR_SEASON":
       case "PLAYOFFS":
-        // During active seasons, direct to team management
-        return context.teamId ? `/teams/${context.teamId}` : baseRoute;
+        // During active seasons, direct to team command center
+        return context.teamId ? `/teams/${context.teamId}` : "/teams";
       case "TAG_OPTION_COMPLIANCE":
         // During compliance periods, direct to team for roster management
-        return context.teamId ? `/teams/${context.teamId}` : baseRoute;
+        return context.teamId ? `/teams/${context.teamId}` : "/teams";
       case "OFFSEASON_ROLLOVER":
       case "PRESEASON_SETUP":
       default:
-        // Default to league home for other phases
-        return baseRoute;
+        // During offseason, team workspace is still the best starting point for managers
+        return context.teamId ? `/teams/${context.teamId}` : "/teams";
     }
   }
 
-  // Fallback to league home
-  return baseRoute;
+  // Fallback: team workspace for managers, teams directory for unassigned
+  return context.teamId ? `/teams/${context.teamId}` : "/teams";
 }
 
 /**
