@@ -153,10 +153,15 @@ export default function LoginPage() {
   const [errorDetails, setErrorDetails] = useState<ReturnType<typeof buildLoginErrorMessage>>(null);
   const [returnTo, setReturnTo] = useState("/");
   const [switchRequested, setSwitchRequested] = useState(false);
+  const [showDemoSection, setShowDemoSection] = useState(false);
   const loginOpenedAtRef = useRef(Date.now());
   const loginViewedTrackedRef = useRef(false);
   const selectedEmailRef = useRef("");
   const emailRef = useRef("");
+
+  // Environment checks for demo auth
+  const isProduction = process.env.NODE_ENV === "production";
+  const isDemoAuthAvailable = demoAuthEnabled && !isProduction;
 
   useEffect(() => {
     selectedEmailRef.current = selectedEmail;
@@ -736,139 +741,153 @@ export default function LoginPage() {
         )
       )}
 
-      {demoAuthEnabled ? (
-        <div
-          className="rounded-lg border border-[var(--brand-structure-muted)] p-4"
-          style={{ backgroundColor: "var(--brand-surface-muted)" }}
-          data-testid="login-demo-auth-panel"
-        >
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--shell-text-muted)" }}>
-                Demo/Test Access
-              </p>
-              <p className="text-sm" style={{ color: "var(--shell-text-secondary)" }}>
-                This seeded account switcher is only available because demo auth is explicitly enabled for this environment.
-              </p>
-            </div>
-
-            {isLoading ? (
-              <p className="text-sm" style={{ color: "var(--foreground)" }}>
-                Loading demo identities...
-              </p>
-            ) : identities.length === 0 ? (
-              <p className="text-sm text-amber-600">No demo identities are available in the active workspace.</p>
-            ) : (
-              <form className="space-y-4" onSubmit={handleDemoSignIn}>
-                <div className="space-y-2" data-testid="login-role-prompt">
-                  <span
-                    className="text-xs uppercase tracking-wide"
-                    style={{ color: "var(--shell-text-muted)" }}
-                  >
-                    Sign In As
-                  </span>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    {LOGIN_ROLE_OPTIONS.map((option) => {
-                      const isSelected = selectedRole === option.option;
-                      const count = identities.filter(
-                        (identity) => toIdentityOption(identity) === option.option,
-                      ).length;
-                      return (
-                        <button
-                          key={option.option}
-                          type="button"
-                          onClick={() => handleRoleSelection(option.option)}
-                          className={`rounded-md border px-3 py-3 text-left transition ${
-                            isSelected
-                              ? "border-[var(--brand-accent-primary)] bg-[var(--brand-accent-soft)]"
-                              : "border-[var(--brand-structure-muted)] hover:border-[var(--brand-structure)]"
-                          }`}
-                          style={{
-                            backgroundColor: isSelected ? undefined : "var(--brand-surface-card)",
-                          }}
-                          data-testid={option.testId}
-                        >
-                          <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-                            {option.label}
-                          </p>
-                          <p className="mt-1 text-xs" style={{ color: "var(--shell-text-secondary)" }}>
-                            {option.description}
-                          </p>
-                          <p className="mt-2 text-[11px]" style={{ color: "var(--shell-text-muted)" }}>
-                            {count} account{count === 1 ? "" : "s"}
-                          </p>
-                        </button>
-                      );
-                    })}
+      {isDemoAuthAvailable ? (
+        <div className="mt-8">
+          {/* Collapsible Demo Section */}
+          <div className="space-y-3">
+            {!showDemoSection && (
+              <button
+                type="button"
+                onClick={() => setShowDemoSection(true)}
+                className="w-full rounded-md border border-amber-600/30 bg-amber-950/20 px-3 py-2 text-center text-xs font-medium text-amber-400 transition hover:bg-amber-950/30"
+                data-testid="login-show-demo-section"
+              >
+                ⚠️ Development Access Available
+              </button>
+            )}
+            
+            {showDemoSection && (
+              <div
+                className="rounded-lg border border-amber-600/40 bg-amber-950/20 p-4"
+                data-testid="login-demo-auth-panel"
+              >
+                <div className="space-y-4">
+                  {/* Warning Header */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400">
+                          Development Only
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowDemoSection(false)}
+                        className="rounded p-1 text-amber-500 hover:bg-amber-950/40"
+                        aria-label="Hide demo section"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="rounded border border-amber-600/30 bg-amber-950/30 p-3 text-xs text-amber-200">
+                      <p className="font-medium">This is a seeded account switcher for development and testing.</p>
+                      <p className="mt-1">It only appears when demo auth environment flags are explicitly enabled and should never be visible in production.</p>
+                    </div>
                   </div>
+
+                  {isLoading ? (
+                    <p className="text-sm text-amber-300">Loading demo identities...</p>
+                  ) : identities.length === 0 ? (
+                    <p className="text-sm text-amber-400">No demo identities are available in the active workspace.</p>
+                  ) : (
+                    <form className="space-y-4" onSubmit={handleDemoSignIn}>
+                      <div className="space-y-2" data-testid="login-role-prompt">
+                        <span className="text-xs font-medium uppercase tracking-wide text-amber-400">
+                          Quick Demo Sign In
+                        </span>
+                        <div className="grid gap-2 md:grid-cols-3">
+                          {LOGIN_ROLE_OPTIONS.map((option, index) => {
+                            const count = identities.filter(
+                              (identity) => toIdentityOption(identity) === option.option,
+                            ).length;
+                            const isSelected = selectedRole === option.option;
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRole(option.option);
+                                  setSelectedEmail("");
+                                }}
+                                className="rounded-lg border p-3 text-left transition hover:border-[var(--brand-structure)]"
+                                style={{
+                                  borderColor: isSelected
+                                    ? "var(--brand-structure)"
+                                    : "var(--brand-structure-muted)",
+                                  backgroundColor: isSelected ? undefined : "var(--brand-surface-card)",
+                                }}
+                                data-testid={option.testId}
+                              >
+                                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                                  {option.label}
+                                </p>
+                                <p className="mt-1 text-xs" style={{ color: "var(--shell-text-secondary)" }}>
+                                  {option.description}
+                                </p>
+                                <p className="mt-2 text-[11px]" style={{ color: "var(--shell-text-muted)" }}>
+                                  {count} account{count === 1 ? "" : "s"}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <label className="block space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-amber-400">
+                          Select Account
+                        </span>
+                        <select
+                          value={selectedEmail}
+                          onChange={(event) => {
+                            const nextEmail = event.target.value;
+                            setSelectedEmail(nextEmail);
+                          }}
+                          disabled={!selectedRole}
+                          className="w-full rounded-md border border-amber-600/40 bg-amber-950/10 px-3 py-2 text-sm text-amber-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
+                          data-testid="login-demo-email-select"
+                        >
+                          <option value="">
+                            {selectedRole ? "Choose an account..." : "Select a role first"}
+                          </option>
+                          {identitiesForSelectedRole.map((identity) => (
+                            <option key={identity.email} value={identity.email}>
+                              {identity.name ?? identity.email} ({identityLabel(identity)})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {selectedRole && identitiesForSelectedRole.length === 0 ? (
+                        <p className="text-xs text-amber-600" data-testid="login-role-no-identities">
+                          No accounts are available for this role in the current league workspace.
+                        </p>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || !selectedEmail || !selectedRole}
+                          className="rounded-md border border-amber-600/40 bg-amber-900/30 px-4 py-2 text-sm font-medium text-amber-300 transition hover:bg-amber-900/50 disabled:cursor-not-allowed disabled:opacity-60"
+                          data-testid="login-demo-submit"
+                        >
+                          {isSubmitting ? "Signing In..." : "Use Demo Identity"}
+                        </button>
+                      </div>
+
+                      {selectedIdentity ? (
+                        <p className="text-xs text-amber-300" data-testid="login-selection-summary">
+                          Selected: {selectedIdentity.name ?? selectedIdentity.email} as{" "}
+                          {identityLabel(selectedIdentity)}
+                        </p>
+                      ) : null}
+                    </form>
+                  )}
                 </div>
-
-                <label className="block space-y-2">
-                  <span
-                    className="text-xs uppercase tracking-wide"
-                    style={{ color: "var(--shell-text-muted)" }}
-                  >
-                    Choose Account
-                  </span>
-                  <select
-                    value={selectedEmail}
-                    onChange={(event) => {
-                      const nextEmail = event.target.value;
-                      setSelectedEmail(nextEmail);
-                      const nextIdentity =
-                        identities.find((identity) => identity.email === nextEmail) ?? null;
-                      if (nextIdentity) {
-                        setSelectedRole(toIdentityOption(nextIdentity));
-                      }
-                    }}
-                    className="w-full rounded-md border border-[var(--brand-structure-muted)] px-3 py-2 text-sm focus:border-[var(--brand-accent-primary)] focus:outline-none"
-                    style={{
-                      backgroundColor: "var(--brand-surface-card)",
-                      color: "var(--foreground)",
-                    }}
-                    disabled={isSubmitting}
-                    data-testid="login-identity-select"
-                  >
-                    {identitiesForSelectedRole.map((identity) => (
-                      <option key={identity.email} value={identity.email}>
-                        {identity.name ?? identity.email} ({identityLabel(identity)})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {selectedRole && identitiesForSelectedRole.length === 0 ? (
-                  <p className="text-xs text-amber-600" data-testid="login-role-no-identities">
-                    No accounts are available for this role in the current league workspace.
-                  </p>
-                ) : null}
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !selectedEmail || !selectedRole}
-                    className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm font-medium transition hover:border-[var(--brand-structure)] disabled:cursor-not-allowed disabled:opacity-60"
-                    style={{
-                      color: "var(--foreground)",
-                      backgroundColor: "var(--brand-surface-card)",
-                    }}
-                    data-testid="login-demo-submit"
-                  >
-                    {isSubmitting ? "Signing In..." : "Use Demo Identity"}
-                  </button>
-                </div>
-
-                {selectedIdentity ? (
-                  <p
-                    className="text-xs"
-                    style={{ color: "var(--shell-text-muted)" }}
-                    data-testid="login-selection-summary"
-                  >
-                    Selected: {selectedIdentity.name ?? selectedIdentity.email} as{" "}
-                    {identityLabel(selectedIdentity)}
-                  </p>
-                ) : null}
-              </form>
+              </div>
             )}
           </div>
         </div>
