@@ -39,7 +39,7 @@ test("single-league users route directly into their workspace after sign-in", ()
   );
 });
 
-test("multi-league users without an explicit active league land on the chooser", () => {
+test("multi-league users without an explicit active league land on the dashboard", () => {
   assert.deepEqual(
     resolvePostAuthenticationDestination({
       returnTo: "/trades",
@@ -47,7 +47,7 @@ test("multi-league users without an explicit active league land on the chooser",
       explicitLeagueId: null,
     }),
     {
-      redirectTo: "/",
+      redirectTo: "/dashboard",
       activeLeagueId: null,
     },
   );
@@ -67,7 +67,7 @@ test("valid explicit active league selection preserves non-league returnTo route
   );
 });
 
-test("invalid requested league ids fall back to the authenticated entry flow", () => {
+test("invalid requested league ids fall back to the dashboard", () => {
   assert.deepEqual(
     resolvePostAuthenticationDestination({
       returnTo: "/league/not-a-real-league",
@@ -75,7 +75,7 @@ test("invalid requested league ids fall back to the authenticated entry flow", (
       explicitLeagueId: "not-a-real-league",
     }),
     {
-      redirectTo: "/",
+      redirectTo: "/dashboard",
       activeLeagueId: null,
     },
   );
