@@ -176,12 +176,28 @@ function pickPreferredReadyMembership(input: {
   return readyMemberships[0] ?? null;
 }
 
-function buildMagicLinkErrorRedirect(request: NextRequest, returnTo: string | null) {
+function buildMagicLinkErrorRedirect(request: NextRequest, returnTo: string | null, error: MagicLinkConsumeError) {
   const loginUrl = new URL("/login", request.url);
   if (returnTo) {
     loginUrl.searchParams.set(RETURN_TO_PARAM, returnTo);
   }
-  loginUrl.searchParams.set("error", "magic_link_invalid");
+  
+  // Map specific error codes to login error parameters
+  const errorParam = (() => {
+    switch (error.code) {
+      case "EXPIRED_MAGIC_LINK":
+        return "magic_link_expired";
+      case "CONSUMED_MAGIC_LINK":
+        return "magic_link_used";
+      case "MAGIC_LINK_USER_NOT_FOUND":
+        return "user_not_found";
+      case "INVALID_MAGIC_LINK":
+      default:
+        return "magic_link_invalid";
+    }
+  })();
+  
+  loginUrl.searchParams.set("error", errorParam);
   return NextResponse.redirect(loginUrl);
 }
 
@@ -331,7 +347,8 @@ export async function GET(request: NextRequest) {
   const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM));
 
   if (token.length === 0) {
-    return buildMagicLinkErrorRedirect(request, returnTo);
+    const invalidTokenError = new MagicLinkConsumeError("INVALID_MAGIC_LINK");
+    return buildMagicLinkErrorRedirect(request, returnTo, invalidTokenError);
   }
 
   try {
@@ -361,7 +378,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof MagicLinkConsumeError) {
-      return buildMagicLinkErrorRedirect(request, returnTo);
+      return buildMagicLinkErrorRedirect(request, returnTo, error);
     }
 
     throw error;

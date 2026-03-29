@@ -4,6 +4,9 @@ export const RETURN_TO_PARAM = "returnTo";
 export const SWITCH_SESSION_PARAM = "switch";
 export const LOGIN_ERROR_PARAM = "error";
 export const LOGIN_ERROR_MAGIC_LINK_INVALID = "magic_link_invalid";
+export const LOGIN_ERROR_MAGIC_LINK_EXPIRED = "magic_link_expired";
+export const LOGIN_ERROR_MAGIC_LINK_USED = "magic_link_used";
+export const LOGIN_ERROR_USER_NOT_FOUND = "user_not_found";
 export const LOGIN_ERROR_SESSION_EXPIRED = "session_expired";
 
 export function normalizeReturnTo(value: string | null | undefined): string | null {

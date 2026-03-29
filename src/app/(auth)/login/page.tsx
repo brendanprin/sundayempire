@@ -7,6 +7,9 @@ import { requestJson } from "@/lib/client-request";
 import {
   LOGIN_ERROR_PARAM,
   LOGIN_ERROR_MAGIC_LINK_INVALID,
+  LOGIN_ERROR_MAGIC_LINK_EXPIRED,
+  LOGIN_ERROR_MAGIC_LINK_USED,
+  LOGIN_ERROR_USER_NOT_FOUND,
   LOGIN_ERROR_SESSION_EXPIRED,
   RETURN_TO_PARAM,
   SWITCH_SESSION_PARAM,
@@ -89,15 +92,50 @@ function toIdentityOption(identity: Identity): IdentityOption {
 }
 
 function buildLoginErrorMessage(code: string | null) {
-  if (code === LOGIN_ERROR_MAGIC_LINK_INVALID) {
-    return "That sign-in link is no longer valid. Request a new one to continue.";
+  switch (code) {
+    case LOGIN_ERROR_MAGIC_LINK_INVALID:
+      return {
+        title: "Invalid Sign-In Link",
+        message: "This sign-in link appears to be malformed or corrupted.",
+        canResendToSameEmail: false,
+        recoveryAction: "request_new"
+      };
+    
+    case LOGIN_ERROR_MAGIC_LINK_EXPIRED:
+      return {
+        title: "Expired Sign-In Link",
+        message: "This sign-in link has expired. Sign-in links are valid for 15 minutes after being sent.",
+        canResendToSameEmail: true,
+        recoveryAction: "resend"
+      };
+    
+    case LOGIN_ERROR_MAGIC_LINK_USED:
+      return {
+        title: "Already Used Sign-In Link",
+        message: "This sign-in link has already been used. Each link can only be used once for security.",
+        canResendToSameEmail: true,
+        recoveryAction: "resend"
+      };
+    
+    case LOGIN_ERROR_USER_NOT_FOUND:
+      return {
+        title: "Account Access Issue",
+        message: "We couldn't locate or create your account. This may be a temporary issue.",
+        canResendToSameEmail: true,
+        recoveryAction: "retry"
+      };
+    
+    case LOGIN_ERROR_SESSION_EXPIRED:
+      return {
+        title: "Session Expired",
+        message: "Your session expired or was revoked. Sign in again to continue.",
+        canResendToSameEmail: false,
+        recoveryAction: "sign_in_again"
+      };
+    
+    default:
+      return null;
   }
-
-  if (code === LOGIN_ERROR_SESSION_EXPIRED) {
-    return "Your session expired or was revoked. Sign in again to keep working.";
-  }
-
-  return null;
 }
 
 export default function LoginPage() {
@@ -112,6 +150,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<ReturnType<typeof buildLoginErrorMessage>>(null);
   const [returnTo, setReturnTo] = useState("/");
   const [switchRequested, setSwitchRequested] = useState(false);
   const loginOpenedAtRef = useRef(Date.now());
@@ -178,7 +217,8 @@ export default function LoginPage() {
 
     setReturnTo(normalizedReturnTo);
     setSwitchRequested(isSwitchRequested);
-    setError(loginError);
+    setErrorDetails(loginError);
+    setError(loginError?.message || null);
 
     if (!loginViewedTrackedRef.current) {
       loginViewedTrackedRef.current = true;
@@ -478,6 +518,7 @@ export default function LoginPage() {
       });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not resend sign-in link.");
+      setErrorDetails(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -487,7 +528,27 @@ export default function LoginPage() {
   function handleChangeEmail() {
     setRequestedEmail(null);
     setError(null);
+    setErrorDetails(null);
     setEmail("");
+  }
+
+  // Handle quick recovery actions based on error type
+  async function handleQuickRecovery() {
+    if (!errorDetails) return;
+    
+    if (errorDetails.recoveryAction === "resend" && errorDetails.canResendToSameEmail) {
+      // If we can resend to the same email, try to get the last email from URL or use a reasonable default
+      const lastEmail = email || "";
+      if (lastEmail) {
+        setEmail(lastEmail);
+        await handleMagicLinkRequest(new Event("submit") as any);
+      }
+    } else {
+      // For other cases, just clear the error and let user start fresh
+      setErrorDetails(null);
+      setError(null);
+      setEmail("");
+    }
   }
 
   return (
@@ -593,7 +654,8 @@ export default function LoginPage() {
           </div>
         </div>
       ) : (
-        // Initial Email Form State
+        // Initial Email Form State - only show if no magic link error
+        !errorDetails && (
         <div
           className="rounded-lg border border-[var(--brand-structure-muted)] p-4"
           style={{ backgroundColor: "var(--brand-surface-muted)" }}
@@ -671,6 +733,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+        )
       )}
 
       {demoAuthEnabled ? (
@@ -817,7 +880,118 @@ export default function LoginPage() {
         </p>
       ) : null}
 
-      {error ? (
+      {/* Magic Link Error State - Show prominently if present */}
+      {errorDetails ? (
+        <div
+          className="rounded-lg border border-red-600/30 p-6"
+          style={{ backgroundColor: "var(--brand-error-surface)", borderColor: "var(--brand-error-border)" }}
+          data-testid="login-magic-link-error-state"
+        >
+          <div className="space-y-4">
+            {/* Error icon and title */}
+            <div className="flex items-start gap-3">
+              <div 
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: "var(--brand-error-soft)" }}
+              >
+                <svg className="h-6 w-6" style={{ color: "var(--brand-error-primary)" }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                </svg>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-lg font-semibold" style={{ color: "var(--brand-error-primary)" }}>
+                  {errorDetails.title}
+                </p>
+                <p className="text-sm" style={{ color: "var(--shell-text-secondary)" }}>
+                  {errorDetails.message}
+                </p>
+              </div>
+            </div>
+
+            {/* Recovery Actions */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {errorDetails.recoveryAction === "resend" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleQuickRecovery}
+                    disabled={isSubmitting}
+                    className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                    data-testid="login-error-resend"
+                  >
+                    {isSubmitting ? "Sending..." : "Send New Link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleChangeEmail}
+                    disabled={isSubmitting}
+                    className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm transition hover:border-[var(--brand-structure)] disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      color: "var(--shell-text-secondary)",
+                    }}
+                    data-testid="login-error-change-email"
+                  >
+                    Use Different Email
+                  </button>
+                </>
+              ) : errorDetails.recoveryAction === "request_new" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleChangeEmail}
+                    disabled={isSubmitting}
+                    className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                    data-testid="login-error-start-over"
+                  >
+                    Request New Sign-In Link
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleChangeEmail}
+                  disabled={isSubmitting}
+                  className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="login-error-try-again"
+                >
+                  Try Signing In Again
+                </button>
+              )}
+              
+              <Link
+                href={returnTo}
+                className="text-sm underline decoration-dotted underline-offset-4 transition"
+                style={{
+                  color: "var(--shell-text-secondary)",
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.color = "var(--foreground)";
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.color = "var(--shell-text-secondary)";
+                }}
+              >
+                {returnTo === "/" ? "Back to home" : "Back to app"}
+              </Link>
+            </div>
+            
+            {/* Help text for specific error types */}
+            {errorDetails.recoveryAction === "resend" && (
+              <div 
+                className="rounded-md border border-[var(--brand-structure-muted)] p-3 text-xs"
+                style={{ backgroundColor: "var(--brand-surface-card)" }}
+              >
+                <p className="font-medium" style={{ color: "var(--foreground)" }}>Need a fresh link?</p>
+                <p style={{ color: "var(--shell-text-muted)" }}>
+                  Click "Send New Link" to get a new sign-in link sent to the same email address, 
+                  or choose "Use Different Email" to sign in with a different account.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : error ? (
         <div className="rounded-md border border-red-700/70 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {error}
         </div>
