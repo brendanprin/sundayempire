@@ -79,15 +79,40 @@ export function DashboardActionCenter(props: {
         </p>
         <h2 className="mt-2 text-3xl font-bold text-slate-100">What needs attention now</h2>
         <p className="mt-3 text-base text-slate-300">
-          Start with the highest-pressure workflow, scan what changed, and move into the next canonical screen without hunting through utility pages.
+          Complete the first action, then scan deadlines and recent change without detouring into secondary pages.
         </p>
       </div>
+
+      {primaryAction ? (
+        <article
+          className={`rounded-2xl border px-4 py-4 ${cardClasses(primaryAction.tone ?? "accent")}`}
+          data-testid="dashboard-first-action-hint"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">First Action</p>
+              <p className="text-base font-semibold text-slate-100">{primaryAction.title}</p>
+              <p className="text-sm text-slate-300">
+                {primaryAction.meta ?? "Open the canonical workflow and complete this before moving to secondary reads."}
+              </p>
+            </div>
+            <Link
+              href={primaryAction.href}
+              className="rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-400"
+              data-testid="dashboard-first-action-link"
+              onClick={() => props.onActionSelect(primaryAction.id, "action-center")}
+            >
+              {primaryAction.ctaLabel}
+            </Link>
+          </div>
+        </article>
+      ) : null}
 
       {props.setupChecklist?.available ? (
         <DashboardCard
           title="New League Checklist"
           eyebrow="Setup Progress"
-          description="Commissioner-first setup items with explicit completion state and a single next action."
+          description="Commissioner setup items with explicit state, clear completion counts, and one recommended next step."
           className="border-amber-700/40 bg-[linear-gradient(160deg,rgba(120,53,15,0.2),rgba(15,23,42,0.94)_40%,rgba(2,6,23,0.96))] shadow-[0_18px_48px_rgba(120,53,15,0.2)]"
           testId="dashboard-setup-checklist"
         >
@@ -103,15 +128,28 @@ export function DashboardActionCenter(props: {
                 {props.setupChecklist.completionPercent}% complete
               </span>
             </div>
+            <div
+              className="h-1.5 overflow-hidden rounded-full border border-amber-700/40 bg-amber-950/40"
+              aria-hidden
+            >
+              <div
+                className="h-full rounded-full bg-amber-400/70"
+                style={{ width: `${props.setupChecklist.completionPercent}%` }}
+              />
+            </div>
 
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {props.setupChecklist.items.map((item) => {
+                const isPrimaryIncomplete =
+                  props.setupChecklist?.primaryIncompleteItemId === item.id && item.status !== "COMPLETE";
                 const itemTone =
                   item.status === "COMPLETE"
                     ? "border-emerald-700/40 bg-emerald-950/20 text-emerald-100"
                     : item.status === "INCOMPLETE_POSTPONED"
                       ? "border-amber-700/40 bg-amber-950/20 text-amber-100"
-                      : "border-slate-700/50 bg-slate-900/60 text-slate-100";
+                      : isPrimaryIncomplete
+                        ? "border-sky-600/50 bg-sky-950/25 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+                        : "border-slate-700/50 bg-slate-900/60 text-slate-100";
                 const statusLabel =
                   item.status === "COMPLETE"
                     ? "Complete"
@@ -126,13 +164,30 @@ export function DashboardActionCenter(props: {
                     data-testid={`dashboard-setup-checklist-item-${item.id}`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="font-medium">{item.title}</p>
-                      <span
-                        className="rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide"
-                        data-testid={`dashboard-setup-checklist-status-${item.id}`}
-                      >
-                        {statusLabel}
-                      </span>
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        {isPrimaryIncomplete ? (
+                          <p
+                            className="mt-1 text-[11px] uppercase tracking-wide text-sky-200"
+                            data-testid={`dashboard-setup-checklist-next-${item.id}`}
+                          >
+                            Next recommended step
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className="rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide"
+                          data-testid={`dashboard-setup-checklist-status-${item.id}`}
+                        >
+                          {statusLabel}
+                        </span>
+                        {isPrimaryIncomplete ? (
+                          <span className="rounded-full border border-sky-500/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-sky-200">
+                            Start here
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <p className="mt-2 text-xs opacity-90">{item.description}</p>
                     {item.href && item.ctaLabel ? (

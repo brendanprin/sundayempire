@@ -37,6 +37,10 @@ test.describe("Role-Aware Landing Routes", () => {
     await expect(page.getByTestId("dashboard-setup-checklist-progress")).toContainText("0 / 5 complete");
     await expect(page.getByTestId("dashboard-setup-checklist-item-founder-team-status")).toBeVisible();
     await expect(page.getByTestId("commissioner-action-link-setup-primary")).toBeVisible();
+    await expect(page.getByTestId("dashboard-first-action-hint")).toBeVisible();
+    await expect(page.getByTestId("dashboard-first-action-link")).toBeVisible();
+    await expect(page.getByTestId("dashboard-secondary-priority-copy")).toContainText("League Activity");
+    await expect(page.getByTestId("dashboard-secondary-recommended-activity")).toBeVisible();
     await expect(page.getByTestId("setup-bootstrap-panel")).toBeVisible();
 
     const createdTeamName = `Landing Team ${now}`;
@@ -112,6 +116,9 @@ test.describe("Role-Aware Landing Routes", () => {
     await expect(page).toHaveURL(/\/league\/[^/]+$/);
     await expect(page.getByTestId("dashboard-page-eyebrow")).toHaveText("Dashboard");
     await expect(page.getByTestId("owner-action-queue")).toBeVisible();
+    await expect(page.getByTestId("dashboard-first-action-hint")).toBeVisible();
+    await expect(page.getByTestId("dashboard-secondary-priority-copy")).toContainText("Picks & Draft");
+    await expect(page.getByTestId("dashboard-secondary-recommended-draft")).toBeVisible();
     await expect(page.getByTestId("dashboard-setup-checklist")).toHaveCount(0);
   });
 
@@ -130,6 +137,9 @@ test.describe("Role-Aware Landing Routes", () => {
     await expect(page).toHaveURL(/\/league\/[^/]+$/);
     await expect(page.getByTestId("owner-action-queue")).toHaveCount(0);
     await expect(page.getByTestId("commissioner-action-queue")).toHaveCount(0);
+    await expect(page.getByTestId("dashboard-first-action-hint")).toBeVisible();
+    await expect(page.getByTestId("dashboard-secondary-priority-copy")).toContainText("League Activity");
+    await expect(page.getByTestId("dashboard-secondary-recommended-activity")).toBeVisible();
     await expect(page.getByTestId("dashboard-setup-checklist")).toHaveCount(0);
   });
 });
