@@ -126,6 +126,15 @@ test.describe("Founder First Run", () => {
       expect(authBeforeFounderTeam.actor?.leagueRole).toBe("COMMISSIONER");
       expect(authBeforeFounderTeam.actor?.teamId).toBeNull();
 
+      await page.getByTestId("founder-team-create-name-input").fill("A");
+      await page.getByTestId("founder-team-create-submit").click();
+      await expect(
+        page.getByTestId("founder-team-setup-panel").getByText("Team name must be at least 2 characters."),
+      ).toBeVisible();
+      evidence.screenshots.push(
+        ...(await captureSmokeEvidence(page, test.info(), "03a-founder-validation-error")).screenshots,
+      );
+
       await page.getByTestId("founder-team-create-name-input").fill(founderTeamName);
       await page.getByTestId("founder-team-create-abbreviation-input").fill("FND");
       await page.getByTestId("founder-team-create-division-input").fill("North");
@@ -143,6 +152,15 @@ test.describe("Founder First Run", () => {
       expect(authAfterFounderTeam.actor?.teamId).toBeTruthy();
 
       await expect(page.getByTestId("setup-bootstrap-panel")).toBeVisible();
+      await page.getByTestId("setup-create-team-name").fill(founderTeamName);
+      await page.getByTestId("setup-create-team-abbr").fill("DUP");
+      await page.getByTestId("setup-create-team-division").fill("North");
+      await page.getByTestId("setup-create-team-submit").click();
+      await expect(page.getByTestId("setup-bootstrap-panel").getByText("already exists")).toBeVisible();
+      evidence.screenshots.push(
+        ...(await captureSmokeEvidence(page, test.info(), "05a-duplicate-team-error")).screenshots,
+      );
+
       await page.getByTestId("setup-create-team-name").fill(addedTeamName);
       await page.getByTestId("setup-create-team-abbr").fill("EXP");
       await page.getByTestId("setup-create-team-division").fill("South");
@@ -150,6 +168,18 @@ test.describe("Founder First Run", () => {
       await expect(
         page.getByTestId("setup-bootstrap-panel").getByText(`Created team ${addedTeamName}.`),
       ).toBeVisible();
+
+      await page.getByTestId("setup-invite-owner-name").fill("Founder Smoke Invite");
+      await page.getByTestId("setup-invite-owner-email").fill("not-an-email");
+      await page.getByTestId("setup-invite-team-name").fill(invitedTeamName);
+      await page.getByTestId("setup-invite-team-abbr").fill("INV");
+      await page.getByTestId("setup-invite-submit").click();
+      await expect(
+        page.getByTestId("setup-bootstrap-panel").getByText("Owner email must be a valid email address."),
+      ).toBeVisible();
+      evidence.screenshots.push(
+        ...(await captureSmokeEvidence(page, test.info(), "05b-invite-validation-error")).screenshots,
+      );
 
       await page.getByTestId("setup-invite-owner-name").fill("Founder Smoke Invite");
       await page.getByTestId("setup-invite-owner-email").fill(invitedEmail);

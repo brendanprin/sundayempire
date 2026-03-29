@@ -80,6 +80,113 @@ test.describe("Role-Aware Landing Routes", () => {
     expect(capturedInvite.email).toBe(invitedEmail);
   });
 
+  test("founder postpone flow recovers through duplicate and validation failures, then completes", async ({
+    page,
+    baseURL,
+  }) => {
+    const now = Date.now();
+    const founderEmail = "noleague@local.league";
+    const founderApi = await apiContext(baseURL as string, founderEmail);
+    const createLeagueResponse = await founderApi.post("/api/leagues", {
+      data: {
+        name: `Landing Setup Recovery ${now}`,
+        description: "Founder postpone and retry coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+    await founderApi.dispose();
+
+    await page.setExtraHTTPHeaders({
+      "x-dynasty-user-email": founderEmail,
+      "x-dynasty-league-id": leagueId,
+    });
+    await page.goto(`/league/${leagueId}`);
+
+    await expect(page.getByTestId("founder-team-setup-panel")).toBeVisible();
+    await page.getByTestId("founder-team-skip").click();
+    await expect(page.getByTestId("founder-team-postponed-note")).toBeVisible();
+    await expect(page.getByTestId("founder-team-setup-status")).toHaveText("Postponed");
+    await expect(page.getByTestId("dashboard-setup-checklist-status-founder-team-status")).toHaveText(
+      "Postponed",
+    );
+
+    const duplicateTeamName = `Recovery Duplicate ${now}`;
+    await page.getByTestId("setup-create-team-name").fill(duplicateTeamName);
+    await page.getByTestId("setup-create-team-abbr").fill(`R${String(now).slice(-3)}`);
+    await page.getByTestId("setup-create-team-division").fill("Recovery");
+    await page.getByTestId("setup-create-team-submit").click();
+    await expect(
+      page.getByTestId("setup-bootstrap-panel").getByText(`Created team ${duplicateTeamName}.`),
+    ).toBeVisible();
+
+    await page.getByTestId("founder-team-create-name-input").fill(duplicateTeamName);
+    await page.getByTestId("founder-team-create-abbreviation-input").fill(`F${String(now).slice(-3)}`);
+    await page.getByTestId("founder-team-create-submit").click();
+    await expect(page.getByTestId("founder-team-setup-panel").getByText("already exists")).toBeVisible();
+
+    const founderScopeAfterDuplicate = await apiContext(baseURL as string, founderEmail, leagueId);
+    const authAfterDuplicate = await founderScopeAfterDuplicate.get("/api/auth/me");
+    expect(authAfterDuplicate.ok()).toBeTruthy();
+    const authAfterDuplicatePayload = await authAfterDuplicate.json();
+    expect(authAfterDuplicatePayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authAfterDuplicatePayload.actor?.teamId).toBeNull();
+
+    const founderStateAfterDuplicate = await founderScopeAfterDuplicate.get("/api/league/founder-team");
+    expect(founderStateAfterDuplicate.ok()).toBeTruthy();
+    const founderStateAfterDuplicatePayload = await founderStateAfterDuplicate.json();
+    expect(founderStateAfterDuplicatePayload.founderSetup.status).toBe("INCOMPLETE_POSTPONED");
+    await founderScopeAfterDuplicate.dispose();
+
+    const founderRecoveryTeamName = `Recovery Founder ${now}`;
+    await page.getByTestId("founder-team-create-name-input").fill(founderRecoveryTeamName);
+    await page.getByTestId("founder-team-create-abbreviation-input").fill(`FC${String(now).slice(-2)}`);
+    await page.getByTestId("founder-team-create-division-input").fill("Recovery");
+    await page.getByTestId("founder-team-create-submit").click();
+    await expect(page.getByTestId("founder-team-setup-panel")).toHaveCount(0);
+    await expect(page.getByTestId("dashboard-setup-checklist-status-founder-team-status")).toHaveText(
+      "Complete",
+    );
+
+    await page.getByTestId("setup-invite-owner-name").fill("Recovery Invite Owner");
+    await page.getByTestId("setup-invite-owner-email").fill("not-an-email");
+    await page.getByTestId("setup-invite-team-name").fill(`Recovery Invite Team ${now}`);
+    await page.getByTestId("setup-invite-team-abbr").fill(`IV${String(now).slice(-2)}`);
+    await page.getByTestId("setup-invite-submit").click();
+    await expect(
+      page.getByTestId("setup-bootstrap-panel").getByText("Owner email must be a valid email address."),
+    ).toBeVisible();
+
+    const invitedEmail = `landing-recovery-invite-${now}@example.test`;
+    await page.getByTestId("setup-invite-owner-name").fill("Recovery Invite Owner");
+    await page.getByTestId("setup-invite-owner-email").fill(invitedEmail);
+    await page.getByTestId("setup-invite-team-name").fill(`Recovery Invite Team ${now}`);
+    await page.getByTestId("setup-invite-team-abbr").fill(`IV${String(now).slice(-2)}`);
+    await page.getByTestId("setup-invite-division").fill("South");
+    await page.getByTestId("setup-invite-submit").click();
+    await expect(
+      page.getByTestId("setup-bootstrap-panel").getByText("Invited Recovery Invite Owner and created"),
+    ).toBeVisible();
+
+    await page.getByTestId("setup-invite-owner-name").fill("Recovery Invite Owner");
+    await page.getByTestId("setup-invite-owner-email").fill(invitedEmail);
+    await page.getByTestId("setup-invite-team-name").fill(`Recovery Duplicate Invite Team ${now}`);
+    await page.getByTestId("setup-invite-team-abbr").fill(`DU${String(now).slice(-2)}`);
+    await page.getByTestId("setup-invite-division").fill("East");
+    await page.getByTestId("setup-invite-submit").click();
+    await expect(page.getByTestId("setup-bootstrap-panel").getByText("conflicts", { exact: false })).toBeVisible();
+
+    const founderScopeAfterRecovery = await apiContext(baseURL as string, founderEmail, leagueId);
+    const authAfterRecovery = await founderScopeAfterRecovery.get("/api/auth/me");
+    expect(authAfterRecovery.ok()).toBeTruthy();
+    const authAfterRecoveryPayload = await authAfterRecovery.json();
+    expect(authAfterRecoveryPayload.actor?.leagueRole).toBe("COMMISSIONER");
+    expect(authAfterRecoveryPayload.actor?.teamId).toBeTruthy();
+    await founderScopeAfterRecovery.dispose();
+  });
+
   test("commissioner root reflects zero/one/many league entry behavior", async ({
     page,
     baseURL,
