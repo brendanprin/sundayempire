@@ -187,6 +187,65 @@ test.describe("Role-Aware Landing Routes", () => {
     await founderScopeAfterRecovery.dispose();
   });
 
+  test("commissioner can validate and apply bulk bootstrap template from setup panel", async ({
+    page,
+    baseURL,
+  }) => {
+    const now = Date.now();
+    const founderEmail = "noleague@local.league";
+    const founderApi = await apiContext(baseURL as string, founderEmail);
+    const createLeagueResponse = await founderApi.post("/api/leagues", {
+      data: {
+        name: `Landing Bulk Bootstrap ${now}`,
+        description: "Bulk bootstrap setup panel coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+    await founderApi.dispose();
+
+    await page.setExtraHTTPHeaders({
+      "x-dynasty-user-email": founderEmail,
+      "x-dynasty-league-id": leagueId,
+    });
+    await page.goto(`/league/${leagueId}`);
+
+    await expect(page.getByTestId("setup-bulk-import-panel")).toBeVisible();
+    await expect(page.getByTestId("setup-bulk-template-hint")).toContainText("ownerName");
+
+    await page.getByTestId("setup-bulk-csv-input").fill(
+      "ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel\nBad Owner,not-an-email,Bulk Team One,BT1,North",
+    );
+    await page.getByTestId("setup-bulk-validate-submit").click();
+    await expect(page.getByTestId("setup-bulk-summary")).toContainText("0 valid");
+    await expect(page.getByTestId("setup-bulk-row-2")).toContainText("valid email");
+
+    const inviteEmailOne = `bulk-owner-1-${now}@example.test`;
+    const inviteEmailTwo = `bulk-owner-2-${now}@example.test`;
+    await page.getByTestId("setup-bulk-csv-input").fill(
+      [
+        "ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel",
+        `Bulk Owner One,${inviteEmailOne},Bulk Team One ${now},B1${String(now).slice(-2)},North`,
+        `Bulk Owner Two,${inviteEmailTwo},Bulk Team Two ${now},B2${String(now).slice(-2)},South`,
+      ].join("\n"),
+    );
+    await page.getByTestId("setup-bulk-validate-submit").click();
+    await expect(page.getByTestId("setup-bulk-summary")).toContainText("2 rows");
+    await expect(page.getByTestId("setup-bulk-summary")).toContainText("2 valid");
+    await expect(page.getByTestId("setup-bulk-apply-submit")).toBeEnabled();
+
+    await page.getByTestId("setup-bulk-apply-submit").click();
+    await expect(page.getByTestId("setup-bulk-message")).toContainText("2 created");
+    await expect(
+      page.getByTestId("workspace-invite-row").filter({ hasText: inviteEmailOne }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("workspace-invite-row").filter({ hasText: inviteEmailTwo }).first(),
+    ).toBeVisible();
+  });
+
   test("commissioner root reflects zero/one/many league entry behavior", async ({
     page,
     baseURL,

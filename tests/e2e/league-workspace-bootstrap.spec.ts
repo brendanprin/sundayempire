@@ -115,4 +115,77 @@ test.describe("League Workspace Bootstrap", () => {
     await scopedCommissioner.dispose();
     await commissioner.dispose();
   });
+
+  test("bulk bootstrap endpoint validates malformed rows and applies valid template rows", async ({
+    baseURL,
+  }) => {
+    const now = Date.now();
+    const commissioner = await apiContext(baseURL as string, COMMISSIONER_EMAIL);
+
+    const createLeagueResponse = await commissioner.post("/api/leagues", {
+      data: {
+        name: `Bulk Template League ${now}`,
+        description: "Bulk bootstrap endpoint coverage",
+        seasonYear: 2026,
+      },
+    });
+    expect(createLeagueResponse.ok()).toBeTruthy();
+    const createLeaguePayload = await createLeagueResponse.json();
+    const leagueId = createLeaguePayload.league.id as string;
+
+    const scopedCommissioner = await apiContext(baseURL as string, COMMISSIONER_EMAIL, leagueId);
+    const malformedTemplate = [
+      "ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel",
+      `Bad Owner,not-an-email,Bulk Invalid Team ${now},INV1,North`,
+      `,bulk-owner-dup-${now}@example.test,Bulk Invalid Team ${now},INV2,South`,
+    ].join("\n");
+
+    const validateResponse = await scopedCommissioner.post("/api/teams/bootstrap", {
+      data: {
+        mode: "validate",
+        csvText: malformedTemplate,
+      },
+    });
+    expect(validateResponse.ok()).toBeTruthy();
+    const validatePayload = await validateResponse.json();
+    expect(validatePayload.summary.totalRows).toBe(2);
+    expect(validatePayload.summary.invalidRows).toBe(2);
+    expect(validatePayload.rows[0].errors.join(" ")).toContain("valid email");
+    expect(validatePayload.rows[1].errors.join(" ")).toContain("Owner name");
+
+    const validEmailOne = `bulk-api-owner-1-${now}@example.test`;
+    const validEmailTwo = `bulk-api-owner-2-${now}@example.test`;
+    const validTemplate = [
+      "ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel",
+      `Bulk API Owner One,${validEmailOne},Bulk API Team One ${now},A1${String(now).slice(-2)},North`,
+      `Bulk API Owner Two,${validEmailTwo},Bulk API Team Two ${now},A2${String(now).slice(-2)},South`,
+    ].join("\n");
+
+    const applyResponse = await scopedCommissioner.post("/api/teams/bootstrap", {
+      data: {
+        mode: "apply",
+        csvText: validTemplate,
+      },
+    });
+    expect(applyResponse.ok()).toBeTruthy();
+    const applyPayload = await applyResponse.json();
+    expect(applyPayload.summary.totalRows).toBe(2);
+    expect(applyPayload.summary.createdRows).toBe(2);
+    expect(applyPayload.summary.failedRows).toBe(0);
+
+    const teamsResponse = await scopedCommissioner.get("/api/teams");
+    expect(teamsResponse.ok()).toBeTruthy();
+    const teamsPayload = await teamsResponse.json();
+    expect(teamsPayload.teams).toHaveLength(2);
+
+    const invitesResponse = await scopedCommissioner.get("/api/league/invites");
+    expect(invitesResponse.ok()).toBeTruthy();
+    const invitesPayload = await invitesResponse.json();
+    const inviteEmails = (invitesPayload.invites as Array<{ email: string }>).map((invite) => invite.email);
+    expect(inviteEmails).toContain(validEmailOne);
+    expect(inviteEmails).toContain(validEmailTwo);
+
+    await scopedCommissioner.dispose();
+    await commissioner.dispose();
+  });
 });
