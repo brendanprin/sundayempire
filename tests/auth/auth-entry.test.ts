@@ -47,7 +47,7 @@ test("multi-league users without an explicit active league land on the dashboard
       explicitLeagueId: null,
     }),
     {
-      redirectTo: "/dashboard",
+      redirectTo: "/my-leagues",
       activeLeagueId: null,
     },
   );
@@ -75,7 +75,7 @@ test("invalid requested league ids fall back to the dashboard", () => {
       explicitLeagueId: "not-a-real-league",
     }),
     {
-      redirectTo: "/dashboard",
+      redirectTo: "/my-leagues",
       activeLeagueId: null,
     },
   );

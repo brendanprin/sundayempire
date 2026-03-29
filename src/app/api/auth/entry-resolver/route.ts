@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { ACTIVE_LEAGUE_COOKIE, AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth-constants";
 import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
 import { parseLeagueIdFromReturnTo } from "@/lib/return-to";
 
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Force resolution with a specific league ID
     const resolution = await resolveAuthenticatedEntry(user.id, leagueId.trim());
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       resolution,
       user: {
         id: user.id,
@@ -64,6 +65,16 @@ export async function POST(request: NextRequest) {
         name: user.name,
       },
     });
+
+    // Set the active league cookie to establish context for subsequent API calls
+    response.cookies.set(ACTIVE_LEAGUE_COOKIE, leagueId.trim(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     return apiError(
       500,

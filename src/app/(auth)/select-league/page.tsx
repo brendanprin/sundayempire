@@ -231,7 +231,7 @@ export default function MyLeaguesDirectoryPage() {
     
     try {
       // Route to dashboard for league creation wizard
-      router.push("/dashboard");
+      router.push("/my-leagues");
     } catch (requestError) {
       setError("Failed to navigate to league creation.");
       setCreatingLeague(false);

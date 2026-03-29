@@ -27,7 +27,7 @@ export function proxy(request: NextRequest) {
   if (pathname === "/") {
     // Redirect authenticated users away from landing page to their appropriate destination
     if (hasSession) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/my-leagues", request.url));
     }
     return NextResponse.next();
   }
@@ -43,13 +43,13 @@ export function proxy(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM)) ?? "/dashboard";
+    const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM)) ?? "/my-leagues";
     return NextResponse.redirect(new URL(returnTo, request.url));
   }
 
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
-    const returnTo = normalizeReturnTo(`${pathname}${search}`) ?? "/dashboard";
+    const returnTo = normalizeReturnTo(`${pathname}${search}`) ?? "/my-leagues";
     loginUrl.searchParams.set(RETURN_TO_PARAM, returnTo);
     return NextResponse.redirect(loginUrl);
   }

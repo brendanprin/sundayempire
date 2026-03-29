@@ -373,7 +373,7 @@ export default function LoginPage() {
       // Ensure we navigate to an authenticated route, never back to the landing page
       const destination = response.destination && response.destination !== "/" 
         ? response.destination 
-        : "/dashboard";
+        : "/my-leagues";
 
       trackUiEvent({
         eventType: PILOT_EVENT_TYPES.UI_AUTH_SIGN_IN_SUCCESS,

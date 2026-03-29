@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export type AuthenticatedEntryResolution = 
   | {
       kind: "no_league_access";
-      route: "/dashboard" | "/select-league";
+      route: "/my-leagues" | "/select-league";
       context: {
         hasLeagues: false;
         totalLeagues: 0;
@@ -29,7 +29,7 @@ export type AuthenticatedEntryResolution =
     }
   | {
       kind: "multiple_league_choice";
-      route: "/dashboard" | "/select-league";
+      route: "/my-leagues" | "/select-league";
       context: {
         hasLeagues: true;
         totalLeagues: number;

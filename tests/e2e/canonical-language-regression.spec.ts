@@ -9,7 +9,7 @@ test.describe("Canonical Language Standards", () => {
     { path: "/trades", name: "Trades" },
     { path: "/draft", name: "Picks & Draft" },
     { path: "/activity", name: "Activity" },
-    { path: "/dashboard", name: "Dashboard" }
+    { path: "/my-leagues", name: "My Leagues" }
   ];
 
   const FORBIDDEN_PILOT_TERMS = [
@@ -53,7 +53,7 @@ test.describe("Canonical Language Standards", () => {
 
         // Check for forbidden architecture terms (except in acceptable contexts)
         FORBIDDEN_ARCHITECTURE_TERMS.forEach(term => {
-          if (term === 'workspace' && (route.path === '/dashboard' || route.path === '/draft')) {
+          if (term === 'workspace' && (route.path === '/my-leagues' || route.path === '/draft')) {
             // Workspace is acceptable in specific contexts (league workspace, draft workspace)
             return;
           }

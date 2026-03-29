@@ -70,7 +70,7 @@ async function ensureDraftOfType(
 test.describe("Legacy route aliases", () => {
   test("dashboard alias redirects into the canonical league directory root", async ({ page }) => {
     await page.setExtraHTTPHeaders({ "x-dynasty-user-email": OWNER_EMAIL });
-    await page.goto("/dashboard");
+    await page.goto("/my-leagues");
 
     await expect(page).toHaveURL(/\/($|league\/[^/]+$)/);
     if (await page.getByTestId("league-directory-page").isVisible().catch(() => false)) {

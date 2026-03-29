@@ -89,7 +89,7 @@ test.describe("Compatibility Fencing Validation", () => {
     await page.setExtraHTTPHeaders({ "x-dynasty-user-email": OWNER_EMAIL });
     
     // From dashboard, canonical routes should be primary navigation
-    await page.goto("/dashboard");
+    await page.goto("/my-leagues");
     const dashboardNav = page.locator("nav, aside");
     
     // Canonical routes should be prominently featured

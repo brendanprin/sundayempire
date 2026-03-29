@@ -91,7 +91,7 @@ test.describe("Sprint 18 Final Conformance", () => {
     await expect(page.getByTestId("diagnostics-page")).toBeVisible();
     
     // Should not be prominent in primary navigation
-    await page.goto("/dashboard");
+    await page.goto("/my-leagues");
     const primaryNav = page.locator("nav, aside");
     await expect(primaryNav.getByRole("link", { name: "Diagnostics" })).toHaveCount(0);
   });
@@ -178,7 +178,7 @@ test.describe("Sprint 18 Final Conformance", () => {
     await page.setExtraHTTPHeaders({ "x-dynasty-user-email": OWNER_EMAIL });
     
     // Dashboard should prominently link to canonical routes
-    await page.goto("/dashboard");
+    await page.goto("/my-leagues");
     
     const primaryLinks = [
       "My Team", "Trades", "League Guide", "Picks & Draft", "Activity"
