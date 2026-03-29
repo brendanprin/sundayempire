@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { COMMISSIONER_EMAIL, OWNER_EMAIL } from "./helpers/api";
-import { captureSmokeEvidence, waitForPageStable } from "./helpers/smoke-helpers";
+import { OWNER_EMAIL } from "./helpers/smoke-auth";
+import { captureSmokeEvidence, waitForPageStable } from "./helpers/smoke-evidence";
 
 // Core auction smoke test to verify the room interface works end-to-end
 
