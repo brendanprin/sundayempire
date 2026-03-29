@@ -261,8 +261,20 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
     ipAddress: extractClientIpAddress(request),
   });
 
-  // Get the optimal route using the resolver
-  const destinationRoute = await resolveQuickAuthenticatedRoute(user.id, requestedLeagueId);
+  // Get the optimal route using the resolver with fallback
+  let destinationRoute: string;
+  try {
+    destinationRoute = await resolveQuickAuthenticatedRoute(user.id, requestedLeagueId);
+    
+    // Ensure we don't redirect to the public landing page
+    if (!destinationRoute || destinationRoute === "/") {
+      destinationRoute = "/dashboard";
+    }
+  } catch (error) {
+    // If resolver fails, provide a sensible fallback
+    console.error("Demo auth resolver failed:", error);
+    destinationRoute = "/dashboard";
+  }
 
   const response = NextResponse.json({
     actor: {
