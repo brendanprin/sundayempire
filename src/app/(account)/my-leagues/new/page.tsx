@@ -174,72 +174,20 @@ export default function CreateLeaguePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--background)" }} data-testid="league-create-wizard">
-      {/* Progress indicator */}
-      <div className="border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
-        <div className="mx-auto max-w-4xl px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Link 
-              href="/my-leagues"
-              className="text-sm font-medium transition-colors hover:text-[var(--brand-accent-primary)]"
-              style={{ color: "var(--muted-foreground)" }}
-            >
-              ← Dynasty Football Hub
-            </Link>
-            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              /
-            </span>
-            <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-              Create League
-            </span>
-          </div>
-          
-          {/* Step Progress */}
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
-                step === "basics" ? "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)]" : 
-                getCurrentStepNumber() > 1 ? "bg-green-600 text-white" : "bg-gray-600 text-gray-300"
-              }`} data-testid="league-create-step-basics" aria-current={step === "basics" ? "step" : undefined}>
-                {getCurrentStepNumber() > 1 ? "✓" : "1"}
-              </div>
-              <span className="text-sm font-medium" style={{ color: step === "basics" ? "var(--foreground)" : "var(--muted-foreground)" }}>
-                Basics
-              </span>
-            </div>
-            
-            <div className="h-px w-8 bg-gray-600"></div>
-            
-            <div className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
-                step === "options" ? "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)]" : 
-                getCurrentStepNumber() > 2 ? "bg-green-600 text-white" : "bg-gray-600 text-gray-300"
-              }`} data-testid="league-create-step-options" aria-current={step === "options" ? "step" : undefined}>
-                {getCurrentStepNumber() > 2 ? "✓" : "2"}
-              </div>
-              <span className="text-sm font-medium" style={{ color: step === "options" ? "var(--foreground)" : "var(--muted-foreground)" }}>
-                Options
-              </span>
-            </div>
-            
-            <div className="h-px w-8 bg-gray-600"></div>
-            
-            <div className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
-                step === "review" ? "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)]" : "bg-gray-600 text-gray-300"
-              }`} data-testid="league-create-step-review" aria-current={step === "review" ? "step" : undefined}>
-                3
-              </div>
-              <span className="text-sm font-medium" style={{ color: step === "review" ? "var(--foreground)" : "var(--muted-foreground)" }}>
-                Review
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen px-4 py-8" style={{ backgroundColor: "var(--background)" }} data-testid="league-create-wizard">
+      {/* Simple breadcrumb */}
+      <div className="mx-auto max-w-2xl mb-8">
+        <Link 
+          href="/my-leagues"
+          className="inline-flex items-center gap-2 text-sm transition-colors hover:text-[var(--brand-accent-primary)]"
+          style={{ color: "var(--muted-foreground)" }}
+        >
+          ← Back to Dynasty Football Hub
+        </Link>
       </div>
 
       {/* Main content */}
-      <div className="mx-auto max-w-2xl px-4 py-12">
+      <div className="mx-auto max-w-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-4" style={{ color: "var(--foreground)" }}>
             {getStepTitle()}
@@ -247,11 +195,32 @@ export default function CreateLeaguePage() {
           <p className="text-lg" style={{ color: "var(--muted-foreground)" }}>
             {getStepDescription()}
           </p>
+          
+          {/* Step Progress - simplified */}
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {["Basics", "Options", "Review"].map((stepName, index) => {
+              const stepNumber = index + 1;
+              const isActive = getCurrentStepNumber() === stepNumber;
+              const isCompleted = getCurrentStepNumber() > stepNumber;
+              
+              return (
+                <div key={stepName} className="flex items-center">
+                  {index > 0 && <div className="h-px w-8 mx-2 bg-gray-600"></div>}
+                  <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                    isActive ? "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)]" : 
+                    isCompleted ? "bg-green-600 text-white" : "bg-gray-600 text-gray-300"
+                  }`}>
+                    {isCompleted ? "✓" : stepNumber}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <form 
           onSubmit={handleSubmit}
-          className="rounded-xl border p-8"
+          className="rounded-xl border p-8 max-w-lg mx-auto"
           style={{
             borderColor: "var(--brand-structure-muted)",
             backgroundColor: "var(--brand-surface-elevated)",

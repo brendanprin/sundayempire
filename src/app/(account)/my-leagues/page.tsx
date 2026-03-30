@@ -363,10 +363,10 @@ export default function MyLeaguesPage() {
   // Show loading until resolver check is complete
   if (!resolverChecked) {
     return (
-      <div className="min-h-screen bg-[var(--brand-midnight-navy)] text-[var(--foreground)]">
-        <div className="mx-auto max-w-5xl px-6 py-12">
+      <div className="min-h-screen px-4 py-8" style={{ backgroundColor: "var(--background)" }}>
+        <div className="mx-auto max-w-4xl">
           <div className="space-y-8" data-testid="my-leagues-page">
-            <header className="space-y-4">
+            <header className="text-center space-y-3">
               <p
                 className="text-xs uppercase tracking-[0.2em]"
                 style={{ color: "var(--muted-foreground)" }}
@@ -374,24 +374,27 @@ export default function MyLeaguesPage() {
                 SundayEmpire
               </p>
               <h1 className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                Account Overview
+                Account Hub
               </h1>
-              <p className="mt-2 text-lg" style={{ color: "var(--muted-foreground)" }}>
-                Loading your dynasty football account and leagues...
+              <p className="text-lg" style={{ color: "var(--muted-foreground)" }}>
+                Loading your dynasty football account...
               </p>
             </header>
 
-            <div
-              className="rounded-lg p-8 text-center"
-              style={{
-                border: "1px solid var(--brand-structure-muted)",
-                backgroundColor: "var(--brand-surface-card)",
-              }}
-            >
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent"></div>
-              <p className="mt-4 text-sm text-sky-200">
-                Resolving your account access and league memberships...
-              </p>
+            <div className="flex justify-center">
+              <div
+                className="rounded-lg p-8 text-center border"
+                style={{
+                  borderColor: "var(--brand-structure-muted)",
+                  backgroundColor: "var(--brand-surface-elevated)",
+                  maxWidth: "400px"
+                }}
+              >
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-accent-primary)] border-t-transparent"></div>
+                <p className="mt-4 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  Loading your leagues and preferences...
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -405,239 +408,229 @@ export default function MyLeaguesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--brand-midnight-navy)] text-[var(--foreground)]">
-      <div className="mx-auto max-w-5xl px-6 py-12">
+    <div className="min-h-screen px-4 py-8" style={{ backgroundColor: "var(--background)" }}>
+      <div className="mx-auto max-w-4xl">
         <div className="space-y-8" data-testid="my-leagues-page">
-          <header className="space-y-4">
+          <header className="text-center space-y-3">
             <p
               className="text-xs uppercase tracking-[0.2em]"
               style={{ color: "var(--muted-foreground)" }}
             >
               SundayEmpire
             </p>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                  {heading}
-                </h1>
-                <p className="mt-2 text-lg" style={{ color: "var(--muted-foreground)" }}>
-                  {description}
-                </p>
-              </div>
-              {orderedLeagues.length > 0 && (
+            <h1 className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
+              {heading}
+            </h1>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: "var(--muted-foreground)" }}>
+              {description}
+            </p>
+            
+            {/* Create League CTA for empty state */}
+            {orderedLeagues.length === 0 && (
+              <div className="pt-4">
                 <button
                   type="button"
                   onClick={createNewLeague}
-                  className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                   data-testid="create-league-button"
                 >
-                  Create New League
+                  Create Your First League
                 </button>
-              )}
-            </div>
-            
-            {/* Signed-in Identity Summary */}
-            {userProfile && (
-              <div
-                className="rounded-lg p-4 text-sm"
-                style={{
-                  border: "1px solid var(--brand-structure-muted)",
-                  backgroundColor: "var(--brand-surface-elevated)",
-                }}
-                data-testid="user-identity-summary"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium" style={{ color: "var(--foreground)" }}>
-                      Signed in as {userProfile.name || userProfile.email}
-                    </p>
-                    <p style={{ color: "var(--muted-foreground)" }}>
-                      {userProfile.email}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href="/"
-                      className="text-xs text-sky-400 hover:text-sky-300 transition"
-                    >
-                      Return Home
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => window.location.assign("/api/auth/session?action=sign-out")}
-                      className="text-xs text-sky-400 hover:text-sky-300 transition"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </header>
+          
+          {/* User Profile Summary */}
+          {userProfile && orderedLeagues.length > 0 && (
+            <div className="text-center">
+              <div className="inline-flex items-center gap-4 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                <span>Signed in as {userProfile.name || userProfile.email}</span>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={() => window.location.assign("/api/auth/session?action=sign-out")}
+                  className="text-[var(--brand-accent-primary)] hover:text-[var(--brand-accent-hover)] transition"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
 
           {error ? (
-            <div
-              className="rounded-lg p-4"
-              style={{
-                border: "1px solid var(--destructive)",
-                backgroundColor: "var(--destructive-background)",
-                color: "var(--destructive-foreground)",
-              }}
-              data-testid="my-leagues-error"
-            >
-              <p className="font-medium">League Loading Error</p>
-              <p className="mt-1 text-sm">{error}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  window.location.reload();
+            <div className="max-w-md mx-auto">
+              <div
+                className="rounded-lg p-4 text-center border"
+                style={{
+                  borderColor: "var(--destructive)",
+                  backgroundColor: "var(--destructive-background)",
+                  color: "var(--destructive-foreground)",
                 }}
-                className="mt-2 text-sm underline hover:no-underline"
+                data-testid="my-leagues-error"
               >
-                Try Again
-              </button>
+                <p className="font-medium">Unable to Load Leagues</p>
+                <p className="mt-1 text-sm">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    window.location.reload();
+                  }}
+                  className="mt-3 text-sm underline hover:no-underline"
+                >
+                  Try Again
+                </button>
+              </div>
             </div>
           ) : null}
 
           {orderedLeagues.length === 0 ? (
-            <div
-              className="rounded-lg p-8 text-center"
-              style={{
-                border: "1px solid var(--brand-structure-muted)",
-                backgroundColor: "var(--brand-surface-card)",
-              }}
-              data-testid="my-leagues-empty-state"
-            >
-              <div className="space-y-6">
-                <div className="mx-auto h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center">
-                  <svg className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Ready to Start Playing?
-                  </h3>
-                  <p className="mt-2 text-sm max-w-md mx-auto" style={{ color: "var(--muted-foreground)" }}>
-                    Start your dynasty football journey by creating a new league or joining an existing one with friends.
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button
-                      type="button"
-                      onClick={createNewLeague}
-                      className="rounded-md bg-[var(--brand-accent-primary)] px-6 py-3 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
-                    >
-                      Create New League
-                    </button>
+            <div className="max-w-lg mx-auto">
+              <div
+                className="rounded-xl p-8 text-center border"
+                style={{
+                  borderColor: "var(--brand-structure-muted)",
+                  backgroundColor: "var(--brand-surface-elevated)",
+                }}
+                data-testid="my-leagues-empty-state"
+              >
+                <div className="space-y-6">
+                  <div className="mx-auto h-14 w-14 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--brand-surface-card)" }}>
+                    <svg className="h-7 w-7" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+                      Ready to Start Playing?
+                    </h3>
+                    <p className="mt-2 max-w-md mx-auto" style={{ color: "var(--muted-foreground)" }}>
+                      Start your dynasty football journey by creating a new league or joining an existing one.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3">
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={joinInviteValue}
                         onChange={(event) => setJoinInviteValue(event.target.value)}
-                        className="rounded-md border bg-transparent px-3 py-2 text-sm"
+                        className="flex-1 rounded-lg border bg-transparent px-3 py-2.5 text-sm transition-colors focus:ring-2 focus:ring-[var(--brand-accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
                         style={{
                           borderColor: "var(--brand-structure-muted)",
                           color: "var(--foreground)",
                         }}
-                        placeholder="Paste invite link"
+                        placeholder="Paste invite link to join league"
                       />
                       <button
                         type="button"
                         onClick={handleJoinLeague}
-                        className="rounded-md border border-[var(--brand-structure-muted)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--brand-surface-elevated)]"
-                        style={{ color: "var(--foreground)" }}
+                        className="px-4 py-2.5 rounded-lg border text-sm font-medium transition hover:bg-[var(--brand-surface-elevated)]"
+                        style={{ 
+                          borderColor: "var(--brand-structure-muted)",
+                          color: "var(--foreground)" 
+                        }}
                       >
                         Join League
                       </button>
                     </div>
                   </div>
-
-
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="my-leagues-grid">
-              {orderedLeagues.map((league) => {
-                const urgency = urgencyForPhase(league.season?.phase);
-                return (
-                  <div
-                    key={league.id}
-                    className="rounded-lg p-6 transition"
-                    style={{
-                      border: "1px solid var(--brand-structure-muted)",
-                      backgroundColor: "var(--brand-surface-elevated)",
-                    }}
-                    data-testid="league-card"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
+            <div className="space-y-6">
+              {/* Secondary create button for existing leagues */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={createNewLeague}
+                  className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition hover:bg-[var(--brand-surface-elevated)]"
+                  style={{ 
+                    borderColor: "var(--brand-structure-muted)",
+                    color: "var(--foreground)" 
+                  }}
+                  data-testid="create-league-button-secondary"
+                >
+                  Create Another League
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4" data-testid="my-leagues-grid">
+                {orderedLeagues.map((league) => {
+                  const urgency = urgencyForPhase(league.season?.phase);
+                  return (
+                    <div
+                      key={league.id}
+                      className="rounded-xl p-6 transition border hover:shadow-sm"
+                      style={{
+                        borderColor: "var(--brand-structure-muted)",
+                        backgroundColor: "var(--brand-surface-elevated)",
+                      }}
+                      data-testid="league-card"
+                    >
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold truncate" style={{ color: "var(--foreground)" }}>
+                          <h3 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
                             {league.name}
                           </h3>
-                          <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                            {formatMembershipContext(league)}
-                          </p>
-                        </div>
-                        <span className={`flex-shrink-0 rounded-full border px-3 py-1 text-xs ${urgency.className}`}>
-                          {urgency.label}
-                        </span>
-                      </div>
-
-                      {league.description && (
-                        <p className="text-sm" style={{ color: "var(--foreground)" }}>
-                          {league.description}
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap gap-3 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                        <span>Season {league.season?.year ?? "-"}</span>
-                        <span>Phase: {formatLeaguePhaseLabel(league.season?.phase)}</span>
-                        <span>{league.counts.teams} teams</span>
-                      </div>
-
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => activateLeague(league, "directory")}
-                          disabled={activatingLeagueId === league.id}
-                          className={`w-full rounded-md px-4 py-2 text-sm font-medium transition ${
-                            activatingLeagueId === league.id
-                              ? "opacity-75 cursor-not-allowed bg-gray-600 text-gray-300"
-                              : "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)] hover:bg-[var(--brand-accent-hover)]"
-                          }`}
-                          data-testid="open-league-button"
-                        >
-                          {activatingLeagueId === league.id ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
-                              Opening...
-                            </span>
-                          ) : (
-                            "Enter League"
+                          <div className="mt-1 flex items-center gap-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                            <span>{formatMembershipContext(league)}</span>
+                            {league.season && (
+                              <>
+                                <span>·</span>
+                                <span className={`rounded-full px-2 py-0.5 text-xs border ${urgency.className}`}>
+                                  {urgency.label}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {league.description && (
+                            <p className="mt-2 text-sm line-clamp-2" style={{ color: "var(--foreground)" }}>
+                              {league.description}
+                            </p>
                           )}
-                        </button>
+
+                        </div>
+                        <div className="flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => activateLeague(league, "directory")}
+                            disabled={activatingLeagueId === league.id}
+                            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+                              activatingLeagueId === league.id
+                                ? "opacity-75 cursor-not-allowed"
+                                : "bg-[var(--brand-accent-primary)] text-[var(--brand-midnight-navy)] hover:bg-[var(--brand-accent-hover)]"
+                            }`}
+                            data-testid="open-league-button"
+                          >
+                            {activatingLeagueId === league.id ? (
+                              <span className="flex items-center gap-2">
+                                <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
+                                Opening...
+                              </span>
+                            ) : (
+                              "Enter League"
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {leaguesLoading && orderedLeagues.length === 0 && resolverChecked ? (
-            <div className="text-center py-8">
-              <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-sky-500 border-t-transparent"></div>
-              <p className="mt-2 text-sm text-sky-200">Loading your leagues...</p>
-            </div>
-          ) : null}
+            {leaguesLoading && orderedLeagues.length === 0 && resolverChecked ? (
+              <div className="text-center py-8">
+                <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[var(--brand-accent-primary)] border-t-transparent"></div>
+                <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>Loading your leagues...</p>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
