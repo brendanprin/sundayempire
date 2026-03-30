@@ -7,6 +7,7 @@ import {
   InviteManagementPanel,
   type CommissionerInviteRow,
 } from "@/components/commissioner/invite-management-panel";
+import { BootstrapDashboard } from "@/components/dashboard/bootstrap-dashboard";
 import { DashboardActionCenter } from "@/components/dashboard/dashboard-action-center";
 import { DashboardHealthSummaryRow } from "@/components/dashboard/dashboard-health-summary-row";
 import { PhaseBadge } from "@/components/dashboard/phase-badge";
@@ -1010,27 +1011,87 @@ export default function LeagueLandingDashboardPage() {
         </div>
       ) : null}
 
-      {dashboard ? (
+      {dashboard && dashboard.viewer.leagueRole === "COMMISSIONER" && dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete ? (
+        <BootstrapDashboard
+          dashboard={dashboard}
+          founderSetup={founderSetup}
+          founderSetupLoading={founderSetupLoading}
+          founderSetupError={founderSetupError}
+          founderSetupPendingAction={founderSetupPendingAction}
+          founderCreateTeamName={founderCreateTeamName}
+          founderCreateTeamAbbreviation={founderCreateTeamAbbreviation}
+          founderCreateTeamDivisionLabel={founderCreateTeamDivisionLabel}
+          founderClaimTeamId={founderClaimTeamId}
+          setupTeamName={setupTeamName}
+          setupTeamAbbreviation={setupTeamAbbreviation}
+          setupTeamDivisionLabel={setupTeamDivisionLabel}
+          setupInviteOwnerName={setupInviteOwnerName}
+          setupInviteOwnerEmail={setupInviteOwnerEmail}
+          setupInviteTeamName={setupInviteTeamName}
+          setupInviteTeamAbbreviation={setupInviteTeamAbbreviation}
+          setupInviteDivisionLabel={setupInviteDivisionLabel}
+          setupInvites={setupInvites}
+          setupInviteCopyFreshLinkEnabled={setupInviteCopyFreshLinkEnabled}
+          setupOpsLoading={setupOpsLoading}
+          setupOpsBusyAction={setupOpsBusyAction}
+          setupOpsError={setupOpsError}
+          setupOpsMessage={setupOpsMessage}
+          setupBulkCsvText={setupBulkCsvText}
+          setupBulkBusyAction={setupBulkBusyAction}
+          setupBulkValidation={setupBulkValidation}
+          setupBulkError={setupBulkError}
+          setupBulkMessage={setupBulkMessage}
+          setFounderCreateTeamName={setFounderCreateTeamName}
+          setFounderCreateTeamAbbreviation={setFounderCreateTeamAbbreviation}
+          setFounderCreateTeamDivisionLabel={setFounderCreateTeamDivisionLabel}
+          setFounderClaimTeamId={setFounderClaimTeamId}
+          setSetupTeamName={setSetupTeamName}
+          setSetupTeamAbbreviation={setSetupTeamAbbreviation}
+          setSetupTeamDivisionLabel={setSetupTeamDivisionLabel}
+          setSetupInviteOwnerName={setSetupInviteOwnerName}
+          setSetupInviteOwnerEmail={setSetupInviteOwnerEmail}
+          setSetupInviteTeamName={setSetupInviteTeamName}
+          setSetupInviteTeamAbbreviation={setSetupInviteTeamAbbreviation}
+          setSetupInviteDivisionLabel={setSetupInviteDivisionLabel}
+          setSetupBulkCsvText={setSetupBulkCsvText}
+          onFounderCreateSubmit={handleFounderCreateSubmit}
+          onFounderClaimSubmit={handleFounderClaimSubmit}
+          onFounderSkip={handleFounderSkip}
+          onSetupCreateTeamSubmit={handleSetupCreateTeamSubmit}
+          onSetupInviteSubmit={handleSetupInviteSubmit}
+          onSetupBulkValidate={handleSetupBulkValidate}
+          onSetupBulkApply={handleSetupBulkApply}
+          onSetupInviteResend={handleSetupInviteResend}
+          onSetupInviteRevoke={handleSetupInviteRevoke}
+          onSetupCopyFreshInviteLink={handleSetupCopyFreshInviteLink}
+        />
+      ) : null}
+
+      {dashboard && !(dashboard.viewer.leagueRole === "COMMISSIONER" && dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete) ? (
         <div className="space-y-6">
           {dashboard.viewer.leagueRole === "COMMISSIONER" &&
           (founderSetupLoading || founderSetupError || !founderSetup || !founderSetup.isComplete) ? (
             <section
               id="founder-team-setup"
-              className="space-y-4 rounded-2xl border border-amber-700/40 bg-amber-950/10 p-5"
+              className="space-y-4 rounded-2xl border-2 border-amber-500/60 bg-[linear-gradient(160deg,rgba(245,158,11,0.15),rgba(15,23,42,0.94)_40%,rgba(2,6,23,0.96))] p-6 shadow-[0_24px_64px_rgba(245,158,11,0.25)]"
               data-testid="founder-team-setup-panel"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/80">Founder Setup</p>
-                  <h2 className="mt-1 text-base font-medium text-amber-100">
-                    Complete commissioner + team-owner setup
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-amber-400/60 bg-amber-500/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+                      Primary Action
+                    </span>
+                  </div>
+                  <h2 className="mt-2 text-xl font-bold text-amber-100">
+                    Set Up Your Founder Team
                   </h2>
-                  <p className="mt-1 text-sm text-amber-50/80">
-                    You still have full commissioner authority. Choose your franchise now or postpone and return later.
+                  <p className="mt-2 text-amber-50/90">
+                    Complete this setup to unlock the full league management dashboard. Choose your franchise now or postpone for later.
                   </p>
                 </div>
                 <span
-                  className="rounded-full border border-amber-500/50 bg-amber-950/40 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-amber-100"
+                  className="rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] text-amber-100"
                   data-testid="founder-team-setup-status"
                 >
                   {founderSetupLoading
@@ -1443,6 +1504,7 @@ export default function LeagueLandingDashboardPage() {
             deadlines={buildDashboardDeadlineCards(dashboard)}
             changeItems={buildDashboardChangeItems(dashboard)}
             setupChecklist={dashboard.setupChecklist}
+            hasFounderSetupSection={dashboard.viewer.leagueRole === "COMMISSIONER" && (founderSetupLoading || Boolean(founderSetupError) || !founderSetup || !founderSetup.isComplete)}
             actionQueueTestId={
               dashboard.viewer.leagueRole === "MEMBER" && dashboard.viewer.hasTeamAccess
                 ? "owner-action-queue"

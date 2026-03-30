@@ -53,9 +53,12 @@ export function DashboardChangeFeed(props: {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-400">
-          Nothing new is unread in this app right now. Reopen League Activity for the full log.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-100 font-medium">No recent activity yet</p>
+          <p className="text-sm text-slate-400">
+            As teams are added and members join, league activity will appear here. Transactions, trades, and other events will be tracked automatically.
+          </p>
+        </div>
       )}
     </DashboardCard>
   );

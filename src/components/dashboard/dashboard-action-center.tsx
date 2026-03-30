@@ -65,11 +65,17 @@ export function DashboardActionCenter(props: {
   changeItems: DashboardChangeFeedItem[];
   setupChecklist?: LeagueSetupChecklistProjection | null;
   actionQueueTestId?: string;
+  hasFounderSetupSection?: boolean; /* Suppress founder setup when dedicated section exists */
   onActionSelect: (actionId: string, source: "action-center" | "mobile-rail") => void;
 }) {
-  const primaryAction = props.actions[0] ?? null;
-  const remainingActions = props.actions.slice(1);
-  const mobileActions = props.actions.slice(0, 3);
+  // Filter out founder setup from actions when there's a dedicated founder setup section
+  const filteredActions = props.hasFounderSetupSection ?
+    props.actions.filter(action => action.id !== "founder-team-status") :
+    props.actions;
+  
+  const primaryAction = filteredActions[0] ?? null;
+  const remainingActions = filteredActions.slice(1);
+  const mobileActions = filteredActions.slice(0, 3);
 
   return (
     <section className="space-y-4" data-testid="dashboard-priority-zone">
@@ -140,8 +146,10 @@ export function DashboardActionCenter(props: {
 
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {props.setupChecklist.items.map((item) => {
+                // De-emphasize founder setup when there's a dedicated section
+                const isFounderSetupWithDedicatedSection = props.hasFounderSetupSection && item.id === "founder-team-status";
                 const isPrimaryIncomplete =
-                  props.setupChecklist?.primaryIncompleteItemId === item.id && item.status !== "COMPLETE";
+                  props.setupChecklist?.primaryIncompleteItemId === item.id && item.status !== "COMPLETE" && !isFounderSetupWithDedicatedSection;
                 const itemTone =
                   item.status === "COMPLETE"
                     ? "border-emerald-700/40 bg-emerald-950/20 text-emerald-100"
@@ -160,13 +168,17 @@ export function DashboardActionCenter(props: {
                 return (
                   <article
                     key={item.id}
-                    className={`rounded-xl border px-3 py-3 text-sm ${itemTone}`}
+                    className={`rounded-xl border px-3 py-3 text-sm ${
+                      isFounderSetupWithDedicatedSection ? 
+                        "border-slate-700/40 bg-slate-950/20 text-slate-300 opacity-75" : 
+                        itemTone
+                    }`}
                     data-testid={`dashboard-setup-checklist-item-${item.id}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{item.title}</p>
-                        {isPrimaryIncomplete ? (
+                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection ? (
                           <p
                             className="mt-1 text-[11px] uppercase tracking-wide text-sky-200"
                             data-testid={`dashboard-setup-checklist-next-${item.id}`}
@@ -177,20 +189,26 @@ export function DashboardActionCenter(props: {
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <span
-                          className="rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide"
+                          className={`rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide ${
+                            isFounderSetupWithDedicatedSection ? "text-slate-400" : ""
+                          }`}
                           data-testid={`dashboard-setup-checklist-status-${item.id}`}
                         >
                           {statusLabel}
                         </span>
-                        {isPrimaryIncomplete ? (
+                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection ? (
                           <span className="rounded-full border border-sky-500/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-sky-200">
                             Start here
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <p className="mt-2 text-xs opacity-90">{item.description}</p>
-                    {item.href && item.ctaLabel ? (
+                    <p className={`mt-2 text-xs opacity-90 ${
+                      isFounderSetupWithDedicatedSection ? "text-slate-400" : ""
+                    }`}>
+                      {isFounderSetupWithDedicatedSection ? "See founder setup section above" : item.description}
+                    </p>
+                    {item.href && item.ctaLabel && !isFounderSetupWithDedicatedSection ? (
                       <Link
                         href={item.href}
                         className="mt-3 inline-flex rounded-md border border-current/50 px-2.5 py-1.5 text-xs font-medium transition hover:border-current"
@@ -308,9 +326,19 @@ export function DashboardActionCenter(props: {
               ) : null}
             </div>
           ) : (
-            <p className="text-sm text-slate-400">
-              No action recommendations are available yet. Open Rules & Deadlines or League Activity to confirm the current state.
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-slate-100 font-medium">No urgent actions needed yet</p>
+              <p className="text-sm text-slate-400">
+                As you set up teams and invite members, priority tasks will appear here. For now, focus on the league setup.
+              </p>
+              <Link
+                href="/rules"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-900/50 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-400"
+                onClick={() => props.onActionSelect("rules-deadlines", "action-center")}
+              >
+                View League Rules & Setup →
+              </Link>
+            </div>
           )}
         </DashboardCard>
 
@@ -352,7 +380,12 @@ export function DashboardActionCenter(props: {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400">No deadlines are scheduled for the active season yet.</p>
+              <div className="space-y-2">
+                <p className="text-sm text-slate-100 font-medium">No deadlines scheduled yet</p>
+                <p className="text-sm text-slate-400">
+                  Deadlines will be added as your league progresses through setup and into active seasons.
+                </p>
+              </div>
             )}
           </DashboardCard>
 

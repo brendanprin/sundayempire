@@ -10,7 +10,7 @@ type CreateLeagueWizardStep = "basics";
 type CreateLeaguePayload = {
   name: string;
   description?: string;
-  seasonYear: string;
+  seasonYear: number;
   designatedCommissionerEmail?: string;
 };
 
@@ -35,11 +35,11 @@ export default function CreateLeaguePage() {
       const payload: CreateLeaguePayload = {
         name: name.trim(),
         description: description.trim() || undefined,
-        seasonYear,
+        seasonYear: parseInt(seasonYear, 10),
         designatedCommissionerEmail: designatedCommissionerEmail.trim() || undefined,
       };
 
-      const response = await requestJson<{ leagueId: string }>("/api/leagues", {
+      const response = await requestJson<{ league: { id: string } }>("/api/leagues", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -47,7 +47,7 @@ export default function CreateLeaguePage() {
       // Activate the new league and navigate to it
       await requestJson("/api/auth/entry-resolver", {
         method: "POST",
-        body: JSON.stringify({ leagueId: response.leagueId }),
+        body: JSON.stringify({ leagueId: response.league.id }),
       });
 
       router.push("/dashboard");
