@@ -107,8 +107,8 @@ function buildLoginErrorMessage(code: string | null) {
     
     case LOGIN_ERROR_USER_NOT_FOUND:
       return {
-        title: "Account Not Found",
-        message: "We couldn't find an account associated with this email address.",
+        title: "No League Access",
+        message: "This email address is not associated with any Dynasty Football league. Access requires an invitation from a league commissioner.",
         canResendToSameEmail: false,
         recoveryAction: "request_new"
       };
@@ -288,7 +288,7 @@ export default function LoginPage() {
           switchRequested,
         },
       });
-      setError(submitError instanceof Error ? submitError.message : "Could not send a sign-in link.");
+      setError(submitError instanceof Error ? submitError.message : "Could not send sign-in link. Please check that this email has league access.");
     } finally {
       setIsSubmitting(false);
     }
@@ -409,12 +409,12 @@ export default function LoginPage() {
                 Sign in to your account
               </h2>
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--shell-text-secondary)" }}>
-                New to Dynasty Football?{" "}
+                Dynasty Football access requires a league invite.{" "}
                 <Link
                   href="/"
                   className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  Get an invite to a league
+                  Learn more about joining a league
                 </Link>
               </p>
             </div>
@@ -532,6 +532,7 @@ export default function LoginPage() {
                         type="email"
                         required
                         autoComplete="email"
+                        placeholder="Your invited league email"
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
                         className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 dark:ring-gray-600 dark:bg-gray-800 dark:text-white "
@@ -560,7 +561,7 @@ export default function LoginPage() {
               )}
 
               <p className="mt-6 text-xs" style={{ color: "var(--shell-text-muted)" }}>
-                Magic-link authentication • No passwords needed • Works for new and returning users
+                Secure email authentication • No passwords needed • For invited league members
               </p>
 
               {/* Subtle development access entry point */}
@@ -620,8 +621,8 @@ export default function LoginPage() {
               </div>
 
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded border-l-2 border-gray-300 dark:border-gray-600">
-                <p className="font-medium mb-1">Local development utility</p>
-                <p>Switch between seeded accounts for testing. Only visible when demo auth is explicitly enabled.</p>
+                <p className="font-medium mb-1">Developer Testing Tool</p>
+                <p>Switch between pre-seeded test accounts. This utility bypasses normal invitation requirements and is only available in development environments.</p>
               </div>
 
               {isLoadingDemo ? (
