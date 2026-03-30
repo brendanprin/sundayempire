@@ -838,6 +838,128 @@ export default function LeagueLandingDashboardPage() {
     }
   }
 
+  async function handleSlotCreateTeam(slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) {
+    setSetupOpsBusyAction(`slot:create-team:${slotNumber}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{ team: { name: string } }>(
+        "/api/teams",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            name: teamData.name,
+            abbreviation: teamData.abbreviation || null,
+            divisionLabel: teamData.divisionLabel || null,
+          }),
+        },
+        "Failed to create team for slot.",
+      );
+
+      setSetupOpsMessage(`Created team ${payload.team.name} in slot ${slotNumber}.`);
+      await refreshDashboardSurfaces();
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to create team for slot.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSlotInviteMember(slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) {
+    setSetupOpsBusyAction(`slot:invite:${slotNumber}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{
+        owner: { name: string };
+        team: { name: string };
+        delivery: { label: string; detail: string };
+      }>(
+        "/api/league/invites",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            ownerName: memberData.ownerName,
+            ownerEmail: memberData.ownerEmail,
+            teamName: memberData.teamName,
+            teamAbbreviation: memberData.teamAbbreviation || null,
+            divisionLabel: memberData.divisionLabel || null,
+          }),
+        },
+        "Failed to invite member for slot.",
+      );
+
+      setSetupOpsMessage(
+        `Invited ${payload.owner.name} and created ${payload.team.name} for slot ${slotNumber}. ${payload.delivery.label}: ${payload.delivery.detail}`,
+      );
+      await Promise.all([refreshDashboardSurfaces(), loadSetupInvites()]);
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to invite member for slot.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
+  async function handleSlotEditTeam(teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) {
+    setSetupOpsBusyAction(`slot:edit-team:${teamId}`);
+    setSetupOpsError(null);
+    setSetupOpsMessage(null);
+
+    try {
+      const payload = await requestJson<{ team: { name: string } }>(
+        `/api/teams/${teamId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            name: teamData.name,
+            abbreviation: teamData.abbreviation || null,
+            divisionLabel: teamData.divisionLabel || null,
+          }),
+        },
+        "Failed to edit team.",
+      );
+
+      setSetupOpsMessage(`Updated team ${payload.team.name}.`);
+      await refreshDashboardSurfaces();
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.code === "AUTH_REQUIRED") {
+        setEntryState("session_expired");
+      } else if (requestError instanceof ApiRequestError && requestError.code === "FORBIDDEN") {
+        setEntryState("access_denied");
+      }
+      setSetupOpsError(
+        requestError instanceof Error ? requestError.message : "Failed to edit team.",
+      );
+    } finally {
+      setSetupOpsBusyAction(null);
+    }
+  }
+
   const mirrorOnly = dashboard?.leagueDashboard.status.mirrorOnly ?? false;
   const phaseTone =
     dashboard?.leagueDashboard.status.alertLevel === "critical"
@@ -1080,6 +1202,9 @@ export default function LeagueLandingDashboardPage() {
           onSetupInviteResend={handleSetupInviteResend}
           onSetupInviteRevoke={handleSetupInviteRevoke}
           onSetupCopyFreshInviteLink={handleSetupCopyFreshInviteLink}
+          onSlotCreateTeam={handleSlotCreateTeam}
+          onSlotInviteMember={handleSlotInviteMember}
+          onSlotEditTeam={handleSlotEditTeam}
         />
       ) : null}
 

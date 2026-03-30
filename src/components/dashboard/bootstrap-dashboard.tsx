@@ -10,6 +10,8 @@ import { GlobalAlertStrip } from "@/components/layout/global-alert-strip";
 import { MirrorOnlyBanner } from "@/components/layout/mirror-only-banner";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
 import { NewLeagueChecklist } from "@/components/dashboard/new-league-checklist";
+import { LeagueMembersWorkspace } from "@/components/teams/league-members-workspace";
+import { buildTeamSlotsFromDashboard, buildLeagueMembersSummary } from "@/lib/teams/team-slot-helpers";
 import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboard/types";
 
 type FounderSetupStatus = "COMPLETE" | "INCOMPLETE_REQUIRED" | "INCOMPLETE_POSTPONED";
@@ -86,6 +88,10 @@ interface BootstrapDashboardProps {
   onSetupInviteResend: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupInviteRevoke: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupCopyFreshInviteLink: (invite: CommissionerInviteRow) => Promise<void>;
+  // New handlers for table-first interface
+  onSlotCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+  onSlotInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
+  onSlotEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
 }
 
 export function BootstrapDashboard(props: BootstrapDashboardProps) {
@@ -93,6 +99,10 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
   
   const mirrorOnly = dashboard.leagueDashboard.status.mirrorOnly;
   const visibleAlerts = dashboard.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status"));
+  
+  // Build team slots and summary for the new table-first interface
+  const teamSlots = buildTeamSlotsFromDashboard(dashboard, setupInvites);
+  const membersSummary = buildLeagueMembersSummary(dashboard, teamSlots);
 
   return (
     <div className="space-y-4" data-testid="league-bootstrap-dashboard">
@@ -296,232 +306,30 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         </section>
       )}
 
-      {/* League Bootstrap Section */}
-      <section
-        id="league-bootstrap"
-        className="space-y-4 rounded-2xl border border-sky-700/35 bg-sky-950/10 p-6"
-        data-testid="bootstrap-league-setup"
-      >
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-sky-300/80">
-            Step {founderSetup?.isComplete ? "2 & 3" : "2 (after founder team)"}
-          </p>
-          <h2 className="mt-1 text-xl font-bold text-sky-100">Build Your League</h2>
-          <p className="mt-2 text-sky-50/80">
-            {founderSetup?.isComplete 
-              ? "Team creation forms and invite management tools for expanding your league."
-              : "Add teams for other members and send invites so they can join your league."}
-          </p>
-        </div>
-
-        {props.setupOpsError && (
-          <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100">
-            {props.setupOpsError}
-          </div>
-        )}
-        {props.setupOpsMessage && (
-          <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100">
-            {props.setupOpsMessage}
-          </div>
-        )}
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <form
-            className="space-y-3 rounded-xl border border-sky-800/40 bg-black/20 p-4"
-            onSubmit={props.onSetupCreateTeamSubmit}
-            data-testid="bootstrap-create-team-form"
-          >
-            <h3 className="text-sm font-medium text-sky-100">Create Team</h3>
-            <p className="text-xs text-sky-100/70">Add teams for league members to claim when they join.</p>
-            <label className="block text-xs text-sky-100/90">
-              Team name
-              <input
-                value={props.setupTeamName}
-                onChange={(event) => props.setSetupTeamName(event.target.value)}
-                className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                placeholder="Empire Expansion"
-                data-testid="bootstrap-team-name"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-sky-100/90">
-                Abbreviation
-                <input
-                  value={props.setupTeamAbbreviation}
-                  onChange={(event) => props.setSetupTeamAbbreviation(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm uppercase text-slate-100"
-                  placeholder="EXP"
-                  data-testid="bootstrap-team-abbr"
-                />
-              </label>
-              <label className="block text-xs text-sky-100/90">
-                Division
-                <input
-                  value={props.setupTeamDivisionLabel}
-                  onChange={(event) => props.setSetupTeamDivisionLabel(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                  placeholder="North"
-                  data-testid="bootstrap-team-division"
-                />
-              </label>
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={Boolean(props.setupOpsBusyAction)}
-              data-testid="bootstrap-team-submit"
-            >
-              {props.setupOpsBusyAction === "setup:team:create" ? "Creating..." : "Create Team"}
-            </button>
-          </form>
-
-          <form
-            className="space-y-3 rounded-xl border border-sky-800/40 bg-black/20 p-4"
-            onSubmit={props.onSetupInviteSubmit}
-            data-testid="bootstrap-invite-form"
-          >
-            <h3 className="text-sm font-medium text-sky-100">Invite Member + Team</h3>
-            <p className="text-xs text-sky-100/70">Send an invite and create their team at the same time.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-sky-100/90">
-                Owner name
-                <input
-                  value={props.setupInviteOwnerName}
-                  onChange={(event) => props.setSetupInviteOwnerName(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                  placeholder="Alex Owner"
-                  data-testid="bootstrap-invite-name"
-                />
-              </label>
-              <label className="block text-xs text-sky-100/90">
-                Owner email
-                <input
-                  value={props.setupInviteOwnerEmail}
-                  onChange={(event) => props.setSetupInviteOwnerEmail(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                  placeholder="alex@example.com"
-                  data-testid="bootstrap-invite-email"
-                />
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-sky-100/90">
-                Team name
-                <input
-                  value={props.setupInviteTeamName}
-                  onChange={(event) => props.setSetupInviteTeamName(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                  placeholder="Gridiron Ghosts"
-                  data-testid="bootstrap-invite-team"
-                />
-              </label>
-              <label className="block text-xs text-sky-100/90">
-                Team abbr
-                <input
-                  value={props.setupInviteTeamAbbreviation}
-                  onChange={(event) => props.setSetupInviteTeamAbbreviation(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm uppercase text-slate-100"
-                  placeholder="GGH"
-                  data-testid="bootstrap-invite-team-abbr"
-                />
-              </label>
-            </div>
-            <label className="block text-xs text-sky-100/90">
-              Division
-              <input
-                value={props.setupInviteDivisionLabel}
-                onChange={(event) => props.setSetupInviteDivisionLabel(event.target.value)}
-                className="mt-1 w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                placeholder="South"
-                data-testid="bootstrap-invite-division"
-              />
-            </label>
-            <button
-              type="submit"
-              className="w-full rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={Boolean(props.setupOpsBusyAction)}
-              data-testid="bootstrap-invite-submit"
-            >
-              {props.setupOpsBusyAction === "setup:invite:create" ? "Inviting..." : "Create Team + Send Invite"}
-            </button>
-          </form>
-        </div>
-
-        {/* Bulk Import Section */}
-        <div className="space-y-3 rounded-xl border border-sky-800/35 bg-slate-950/40 p-4">
-          <div>
-            <h3 className="text-sm font-medium text-sky-100">Bulk Team Import (CSV)</h3>
-            <p className="mt-1 text-xs text-slate-300">
-              Import multiple teams and invites at once. Validate first, then apply.
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Headers: ownerName, ownerEmail, teamName, teamAbbreviation, divisionLabel
-            </p>
-          </div>
-
-          <textarea
-            value={props.setupBulkCsvText}
-            onChange={(event) => props.setSetupBulkCsvText(event.target.value)}
-            className="min-h-[7rem] w-full rounded-md border border-sky-700/50 bg-slate-950/70 px-3 py-2 text-xs text-slate-100"
-            placeholder="ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel&#10;Alex Owner,alex@example.com,Empire East,EME,East"
-            data-testid="bootstrap-bulk-csv"
-          />
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={props.onSetupBulkValidate}
-              className="rounded-md border border-sky-500/70 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition hover:border-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={Boolean(props.setupBulkBusyAction)}
-              data-testid="bootstrap-bulk-validate"
-            >
-              {props.setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
-            </button>
-            <button
-              type="button"
-              onClick={props.onSetupBulkApply}
-              className="rounded-md border border-emerald-500/70 bg-emerald-950/50 px-3 py-2 text-xs font-medium text-emerald-100 transition hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={Boolean(props.setupBulkBusyAction) || !props.setupBulkValidation || props.setupBulkValidation.summary.validRows === 0}
-              data-testid="bootstrap-bulk-apply"
-            >
-              {props.setupBulkBusyAction === "apply" ? "Applying..." : "Apply Valid Rows"}
-            </button>
-          </div>
-
-          {props.setupBulkError && (
-            <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100">
-              {props.setupBulkError}
-            </div>
-          )}
-          {props.setupBulkMessage && (
-            <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100">
-              {props.setupBulkMessage}
-            </div>
-          )}
-        </div>
-
-        {/* Pending Invites */}
-        <div className="rounded-xl border border-sky-800/35 bg-slate-950/40 p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-medium text-sky-100">Pending Invites</h3>
-            <span className="rounded-full border border-sky-700/50 px-2 py-0.5 text-[11px] text-sky-200">
-              {setupInvites.filter((invite) => invite.status === "pending").length} pending
-            </span>
-          </div>
-          {props.setupOpsLoading ? (
-            <p className="text-xs text-slate-300">Loading invite status...</p>
-          ) : (
-            <InviteManagementPanel
-              invites={setupInvites}
-              copyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
-              busyAction={props.setupOpsBusyAction}
-              onResend={props.onSetupInviteResend}
-              onRevoke={props.onSetupInviteRevoke}
-              onCopyFreshLink={props.onSetupCopyFreshInviteLink}
-            />
-          )}
-        </div>
-      </section>
+      {/* League Members & Teams Management - Table-First Interface */}
+      <LeagueMembersWorkspace
+        summary={membersSummary}
+        teamSlots={teamSlots}
+        invites={setupInvites}
+        setupInviteCopyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
+        setupOpsBusyAction={props.setupOpsBusyAction}
+        setupOpsError={props.setupOpsError}
+        setupOpsMessage={props.setupOpsMessage}
+        setupBulkCsvText={props.setupBulkCsvText}
+        setupBulkBusyAction={props.setupBulkBusyAction}
+        setupBulkValidation={props.setupBulkValidation}
+        setupBulkError={props.setupBulkError}
+        setupBulkMessage={props.setupBulkMessage}
+        setSetupBulkCsvText={props.setSetupBulkCsvText}
+        onSlotCreateTeam={props.onSlotCreateTeam}
+        onSlotInviteMember={props.onSlotInviteMember}
+        onSlotEditTeam={props.onSlotEditTeam}
+        onSetupBulkValidate={props.onSetupBulkValidate}
+        onSetupBulkApply={props.onSetupBulkApply}
+        onSetupInviteResend={props.onSetupInviteResend}
+        onSetupInviteRevoke={props.onSetupInviteRevoke}
+        onSetupCopyFreshInviteLink={props.onSetupCopyFreshInviteLink}
+      />
 
       {/* Quick Actions for Moving Forward */}
       <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-6">
