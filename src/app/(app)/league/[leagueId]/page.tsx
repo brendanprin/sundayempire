@@ -119,6 +119,7 @@ export default function LeagueLandingDashboardPage() {
   const [founderSetup, setFounderSetup] = useState<FounderSetupPayload | null>(null);
   const [founderSetupLoading, setFounderSetupLoading] = useState(false);
   const [founderSetupError, setFounderSetupError] = useState<string | null>(null);
+  const [founderSetupSuccessMessage, setFounderSetupSuccessMessage] = useState<string | null>(null);
   const [founderSetupPendingAction, setFounderSetupPendingAction] = useState<FounderSetupAction | null>(
     null,
   );
@@ -445,6 +446,7 @@ export default function LeagueLandingDashboardPage() {
   ) {
     setFounderSetupPendingAction(action);
     setFounderSetupError(null);
+    setFounderSetupSuccessMessage(null);
 
     try {
       const founderResponse = await requestJson<{ founderSetup: FounderSetupPayload }>(
@@ -503,6 +505,16 @@ export default function LeagueLandingDashboardPage() {
     });
 
     if (success) {
+      const teamName = founderCreateTeamName.trim();
+      setFounderSetupSuccessMessage(
+        `${teamName} created successfully. Next recommended step: Add teams for other members.`
+      );
+      
+      // Auto-dismiss success message after 8 seconds
+      setTimeout(() => {
+        setFounderSetupSuccessMessage(null);
+      }, 8000);
+      
       setFounderCreateTeamName("");
       setFounderCreateTeamAbbreviation("");
       setFounderCreateTeamDivisionLabel("");
@@ -1020,6 +1032,7 @@ export default function LeagueLandingDashboardPage() {
           founderSetup={founderSetup}
           founderSetupLoading={founderSetupLoading}
           founderSetupError={founderSetupError}
+          founderSetupSuccessMessage={founderSetupSuccessMessage}
           founderSetupPendingAction={founderSetupPendingAction}
           founderCreateTeamName={founderCreateTeamName}
           founderCreateTeamAbbreviation={founderCreateTeamAbbreviation}
