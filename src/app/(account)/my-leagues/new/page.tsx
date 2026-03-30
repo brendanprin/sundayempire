@@ -18,6 +18,7 @@ export default function CreateLeaguePage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [step, setStep] = useState<CreateLeagueWizardStep>("basics");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -97,7 +98,14 @@ export default function CreateLeaguePage() {
         body: JSON.stringify({ leagueId: response.league.id }),
       });
 
-      router.push("/dashboard");
+      // Show success message briefly before navigating
+      setCreating(false);
+      setSuccess(true);
+      
+      // Navigate after brief success state
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
     } catch (requestError) {
       setError(
         requestError instanceof ApiRequestError
@@ -579,7 +587,7 @@ export default function CreateLeaguePage() {
               {step === "review" && (
                 <button
                   type="submit"
-                  disabled={creating || stepErrors.length > 0}
+                  disabled={creating || success || stepErrors.length > 0}
                   className="rounded-lg bg-[var(--brand-accent-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="league-create-submit-button"
                 >
@@ -590,11 +598,23 @@ export default function CreateLeaguePage() {
           </div>
         </form>
 
-        {creating && (
+        {(creating || success) && (
           <div className="mt-6 text-center">
-            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              League created. Opening league home...
-            </p>
+            {creating && (
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                Creating your league...
+              </p>
+            )}
+            {success && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium" style={{ color: "var(--brand-accent-primary)" }}>
+                  ✓ {name} created successfully
+                </p>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Welcome to your new league workspace. Opening dashboard...
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
