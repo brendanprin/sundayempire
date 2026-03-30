@@ -48,7 +48,7 @@ export default function LandingPage() {
               </p>
               <div className="mt-6">
                 <p className="text-lg" style={{ color: "var(--muted-foreground)" }}>
-                  Manage your leagues, start a new one, or join via invite
+                  Sign in to access your leagues, create new leagues, or join with an invite
                 </p>
               </div>
             </div>
