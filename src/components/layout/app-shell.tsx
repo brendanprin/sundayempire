@@ -57,7 +57,7 @@ type NavLink = {
   match?: "exact" | "prefix";
 };
 type NavSection = {
-  id: "primary" | "operations" | "reference";
+  id: "primary" | "operations" | "oversight" | "reference";
   label: string;
   links: NavLink[];
 };
@@ -144,26 +144,34 @@ function buildNavSections(
       id: "operations",
       label: "Commissioner Operations",
       links: [
-        exactNavLink("/commissioner", "Commissioner Home"),
+        exactNavLink("/commissioner", "Commissioner Console"),
         prefixNavLink("/commissioner/player-refresh", "Player Refresh"),
-        prefixNavLink("/commissioner/audit", "Commissioner Audit"),
-        prefixNavLink(`/league/${actor.leagueId}/sync`, "Sync Queue"),
-        exactNavLink("/commissioner/teams", "Team Admin"),
+        prefixNavLink("/commissioner/audit", "Compliance Audit"),
+        prefixNavLink(`/league/${actor.leagueId}/sync`, "Sync Operations"),
+        exactNavLink("/commissioner/teams", "Team Administration"),
       ],
     },
     {
-      id: "primary",
-      label: "League Workspace",
+      id: "oversight",
+      label: "League Oversight",
       links: [
-        exactNavLink(`/league/${actor.leagueId}`, "Dashboard"),
-        ...(actor.teamId
-          ? [exactNavLink(`/teams/${actor.teamId}`, "My Roster / Cap")]
-          : []),
-        prefixNavLink("/trades", "Trades"),
-        prefixNavLink("/draft", "Picks & Draft"),
-        exactNavLink("/activity", "League Activity"),
+        exactNavLink(`/league/${actor.leagueId}`, "League Dashboard"),
+        prefixNavLink("/trades", "Trade Management"),
+        prefixNavLink("/draft", "Draft Operations"),
+        exactNavLink("/activity", "Activity Monitor"),
         exactNavLink("/rules", "Rules & Deadlines"),
-        exactNavLink("/settings", "Settings"),
+        exactNavLink("/settings", "League Configuration"),
+      ],
+    },
+    {
+      id: "reference",
+      label: "Reference & Tools",
+      links: [
+        prefixNavLink("/teams", "Team Rosters"),
+        prefixNavLink("/players", "Player Database"),
+        ...(actor.teamId
+          ? [exactNavLink(`/teams/${actor.teamId}`, "My Commissioner Team")]
+          : []),
       ],
     },
   ];
@@ -376,7 +384,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           : null;
   const consoleTitle =
     actor?.leagueRole === "COMMISSIONER"
-      ? "Commissioner Operations"
+      ? "Commissioner Workspace"
       : actor?.leagueRole === "MEMBER"
         ? actor.teamId
           ? "League Member Workspace"
