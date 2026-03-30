@@ -141,3 +141,32 @@ export function shouldPrioritizeSetup(dashboard: LeagueLandingDashboardProjectio
          readiness.hasPendingInvites ||
          readiness.setupProgress < 75;
 }
+
+/**
+ * Check if league is ready for mature operational actions
+ */
+export function isReadyForOperationalActions(dashboard: LeagueLandingDashboardProjection): {
+  tradeOperations: boolean;
+  draftOperations: boolean;
+  complianceReview: boolean;
+} {
+  const readiness = assessLeagueReadiness(dashboard);
+  
+  // Trade operations require multiple teams and members
+  const tradeOperationsReady = readiness.hasActiveMembers && 
+                              readiness.hasMinimalTeams && 
+                              readiness.setupProgress >= 60;
+  
+  // Draft operations need nearly complete setup
+  const draftOperationsReady = readiness.setupProgress >= 80 &&
+                              readiness.hasActiveMembers;
+  
+  // Compliance review always available but emphasis changes
+  const complianceReviewReady = true;
+  
+  return {
+    tradeOperations: tradeOperationsReady,
+    draftOperations: draftOperationsReady, 
+    complianceReview: complianceReviewReady,
+  };
+}

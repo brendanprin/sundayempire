@@ -15,6 +15,7 @@ import type {
 } from "@/components/dashboard/dashboard-action-center";
 import type { DashboardChangeFeedItem } from "@/components/dashboard/dashboard-change-feed";
 import type { DashboardHealthSummaryItem } from "@/components/dashboard/dashboard-health-summary-row";
+import { isReadyForOperationalActions } from "@/lib/dashboard/module-readiness-gates";
 
 function formatCurrency(value: number | null) {
   if (value === null) {
@@ -274,6 +275,9 @@ export function buildDashboardActionItems(input: {
   }
 
   if (viewerRole === "COMMISSIONER") {
+    // Check league readiness for mature operational actions
+    const operationalReadiness = isReadyForOperationalActions(dashboard);
+    
     if (dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete && dashboard.setupChecklist.primaryAction) {
       actions.push({
         id: dashboard.setupChecklist.primaryAction.id,
@@ -334,7 +338,8 @@ export function buildDashboardActionItems(input: {
       testId: "commissioner-action-trade-processing",
     });
 
-    if (draftsHome) {
+    // Only show draft operations if league is ready for them
+    if (operationalReadiness.draftOperations && draftsHome) {
       const draftActionId =
         activeDraft?.status === "IN_PROGRESS" ? "draft-live" : "draft-ready";
       const draftTestId =
