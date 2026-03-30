@@ -77,64 +77,103 @@ export default function LandingPage() {
                   borderColor: "var(--brand-structure-muted)"
                 }}
               >
-                {/* Mock Dashboard Cards */}
-                <div className="space-y-4">
+                {/* Action Center Preview */}
+                <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Dynasty Control Center</h3>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-[0.2em] font-medium" style={{ color: "var(--muted-foreground)" }}>
+                        Commissioner Operations
+                      </p>
+                      <h3 className="text-lg font-semibold">What needs attention now</h3>
+                    </div>
                     <div 
-                      className="rounded-full px-3 py-1 text-xs border"
+                      className="rounded-full px-3 py-1 text-xs border font-medium"
                       style={{
                         backgroundColor: "var(--brand-accent-soft)",
                         borderColor: "var(--brand-accent-primary)",
                         color: "var(--brand-accent-primary)"
                       }}
                     >
-                      Active League
+                      3 Pending
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <div 
-                      className="rounded-lg p-3 border"
-                      style={{
-                        backgroundColor: "var(--brand-surface-card)",
-                        borderColor: "var(--brand-structure-muted)"
-                      }}
-                    >
-                      <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>Cap Space</div>
-                      <div className="text-lg font-semibold">$12.4M</div>
-                    </div>
-                    <div 
-                      className="rounded-lg p-3 border"
-                      style={{
-                        backgroundColor: "var(--brand-surface-card)",
-                        borderColor: "var(--brand-structure-muted)"
-                      }}
-                    >
-                      <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>Pending</div>
-                      <div className="text-lg font-semibold">3 Trades</div>
-                    </div>
-                  </div>
-                  
+                  {/* Priority Action */}
                   <div 
-                    className="rounded-lg p-3 border"
+                    className="rounded-lg p-4 border-2"
                     style={{
-                      backgroundColor: "var(--brand-surface-card)",
-                      borderColor: "var(--brand-structure-muted)"
+                      backgroundColor: "var(--status-warning-bg)",
+                      borderColor: "var(--status-warning-border)"
                     }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Rookie Draft</span>
-                      <span 
-                        className="rounded px-2 py-1 text-xs border"
+                      <div className="space-y-1">
+                        <div 
+                          className="inline-flex items-center rounded px-2 py-1 text-xs font-medium border"
+                          style={{
+                            backgroundColor: "var(--status-warning-bg)",
+                            borderColor: "var(--status-warning-border)",
+                            color: "var(--status-warning-text)"
+                          }}
+                        >
+                          Trade Review
+                        </div>
+                        <h4 className="font-semibold text-sm">Cap violation in Wilson ↔ Chen trade</h4>
+                        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          Wilson exceeds cap by $2.1M • Due: 2h 14m
+                        </p>
+                      </div>
+                      <div 
+                        className="rounded px-3 py-1 text-xs font-medium border"
                         style={{
-                          backgroundColor: "var(--status-info-bg)",
-                          borderColor: "var(--status-info-border)",
-                          color: "var(--status-info-text)"
+                          backgroundColor: "var(--brand-surface-card)",
+                          borderColor: "var(--brand-structure-muted)",
+                          color: "var(--foreground)"
                         }}
                       >
-                        In Progress
-                      </span>
+                        Review
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Secondary Actions */}
+                  <div className="space-y-3">
+                    <div 
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                      style={{
+                        backgroundColor: "var(--brand-surface-card)",
+                        borderColor: "var(--brand-structure-muted)"
+                      }}
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-sm">Draft pick assignments</h4>
+                        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          2 teams missing 2026 2nd round picks
+                        </p>
+                      </div>
+                      <div 
+                        className="rounded-full w-2 h-2"
+                        style={{ backgroundColor: "var(--status-info-border)" }}
+                      />
+                    </div>
+                    
+                    <div 
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                      style={{
+                        backgroundColor: "var(--brand-surface-card)",
+                        borderColor: "var(--brand-structure-muted)"
+                      }}
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-sm">League setup completion</h4>
+                        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          8 of 12 teams configured • 4 pending invites
+                        </p>
+                      </div>
+                      <div 
+                        className="rounded-full w-2 h-2"
+                        style={{ backgroundColor: "var(--status-neutral-border)" }}
+                      />
                     </div>
                   </div>
                 </div>
