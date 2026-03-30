@@ -407,7 +407,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             : "Signed in as yourself. Choose the league workspace you want to open.";
   const seasonPhaseLabel = leaguePhase ? formatLeaguePhaseLabel(leaguePhase) : null;
   const demoSwitchAccountHref = demoAuthEnabled
-    ? buildDevLoginPath({
+    ? buildLoginPath({
         returnTo: buildReturnToPath(pathname),
         switchSession: true,
       })
