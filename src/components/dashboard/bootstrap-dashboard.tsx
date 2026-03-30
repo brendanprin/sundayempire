@@ -92,6 +92,7 @@ interface BootstrapDashboardProps {
   onSlotCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+  onChangeLeagueSize?: (newSize: number) => Promise<void>;
 }
 
 export function BootstrapDashboard(props: BootstrapDashboardProps) {
@@ -329,6 +330,7 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         onSetupInviteResend={props.onSetupInviteResend}
         onSetupInviteRevoke={props.onSetupInviteRevoke}
         onSetupCopyFreshInviteLink={props.onSetupCopyFreshInviteLink}
+        onChangeLeagueSize={props.onChangeLeagueSize}
       />
 
       {/* Quick Actions for Moving Forward */}

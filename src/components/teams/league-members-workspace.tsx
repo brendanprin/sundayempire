@@ -23,12 +23,102 @@ export type TeamSlot = {
   ownerId: string | null;
 };
 
+function LeagueSizeControl({ 
+  summary, 
+  onChangeLeagueSize, 
+  busyAction 
+}: {
+  summary: LeagueMembersSummary;
+  onChangeLeagueSize?: (newSize: number) => Promise<void>;
+  busyAction: string | null;
+}) {
+  const [showSizeForm, setShowSizeForm] = useState(false);
+  const [newSize, setNewSize] = useState(summary.totalSlots.toString());
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const size = parseInt(newSize, 10);
+    
+    if (size < summary.filledSlots) {
+      alert(`Cannot reduce league size below ${summary.filledSlots} (current filled teams)`);
+      return;
+    }
+    
+    if (size < 4 || size > 32) {
+      alert('League size must be between 4 and 32 teams');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      if (onChangeLeagueSize) {
+        await onChangeLeagueSize(size);
+        setShowSizeForm(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!summary.canChangeSize || !onChangeLeagueSize) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {!showSizeForm ? (
+        <button
+          onClick={() => setShowSizeForm(true)}
+          className="rounded-md border border-slate-600/50 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 hover:bg-slate-700/50 transition"
+          disabled={Boolean(busyAction)}
+        >
+          Change Size
+        </button>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <input
+            type="number"
+            value={newSize}
+            onChange={(e) => setNewSize(e.target.value)}
+            min={Math.max(4, summary.filledSlots)}
+            max={32}
+            className="w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            disabled={loading || Boolean(busyAction)}
+          >
+            {loading ? "..." : "Set"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSizeForm(false);
+              setNewSize(summary.totalSlots.toString());
+            }}
+            className="rounded bg-slate-600 px-2 py-1 text-xs font-medium text-white hover:bg-slate-500"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export type LeagueMembersSummary = {
   totalSlots: number;
   filledSlots: number;
+  createdTeams: number;
+  claimedTeams: number;
   pendingInvites: number;
   openSlots: number;
   leagueName: string;
+  canChangeSize: boolean;
 };
 
 interface LeagueMembersWorkspaceProps {
@@ -53,6 +143,7 @@ interface LeagueMembersWorkspaceProps {
   onSetupInviteResend: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupInviteRevoke: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupCopyFreshInviteLink: (invite: CommissionerInviteRow) => Promise<void>;
+  onChangeLeagueSize?: (newSize: number) => Promise<void>;
 }
 
 function getStatusBadge(status: TeamSlotStatus, inviteStatus: InviteStatus) {
@@ -82,12 +173,12 @@ function getStatusBadge(status: TeamSlotStatus, inviteStatus: InviteStatus) {
   );
 }
 
-function TeamSlotRow({ 
-  slot, 
-  busyAction, 
-  onCreateTeam, 
-  onInviteMember, 
-  onEditTeam 
+function TeamSlotActions({
+  slot,
+  busyAction,
+  onCreateTeam,
+  onInviteMember,
+  onEditTeam
 }: {
   slot: TeamSlot;
   busyAction: string | null;
@@ -400,6 +491,74 @@ function TeamSlotRow({
   );
 }
 
+function TeamSlotRow({ 
+  slot, 
+  busyAction, 
+  onCreateTeam, 
+  onInviteMember, 
+  onEditTeam 
+}: {
+  slot: TeamSlot;
+  busyAction: string | null;
+  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+  onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
+  onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+}) {
+  return (
+    <tr className="hover:bg-slate-800/30 transition-colors">
+      <td className="p-3 text-sm font-medium text-slate-200">
+        #{slot.slotNumber}
+      </td>
+      <td className="p-3">
+        {slot.teamName ? (
+          <div>
+            <div className="text-sm font-medium text-slate-100">{slot.teamName}</div>
+            {slot.teamAbbreviation && (
+              <div className="text-xs text-slate-400">{slot.teamAbbreviation}</div>
+            )}
+          </div>
+        ) : (
+          <span className="text-sm text-slate-500 italic">No team created</span>
+        )}
+      </td>
+      <td className="p-3">
+        {slot.ownerName ? (
+          <div>
+            <div className="text-sm text-slate-100">{slot.ownerName}</div>
+            {slot.ownerEmail && (
+              <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
+            )}
+          </div>
+        ) : slot.ownerEmail ? (
+          <div>
+            <div className="text-sm text-slate-300">Invited</div>
+            <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
+          </div>
+        ) : (
+          <span className="text-sm text-slate-500 italic">No owner</span>
+        )}
+      </td>
+      <td className="p-3">
+        {slot.divisionLabel && (
+          <span className="text-sm text-slate-300">{slot.divisionLabel}</span>
+        )}
+      </td>
+      <td className="p-3">
+        {getStatusBadge(slot.status, slot.inviteStatus)}
+      </td>
+      <td className="p-3">
+        <TeamSlotActions
+          slot={slot}
+          busyAction={busyAction}
+          onCreateTeam={onCreateTeam}
+          onInviteMember={onInviteMember}
+          onEditTeam={onEditTeam}
+        />
+      </td>
+    </tr>
+  );
+}
+
 export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
   const { summary, teamSlots } = props;
   
@@ -409,6 +568,15 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
     : summary.pendingInvites > 0 
     ? "Follow up on pending invites" 
     : "League setup complete";
+
+  // Build prominent summary text like: "12-team league · 3 teams created · 1 joined owner · 2 pending invites · 9 open slots"
+  const prominentSummary = [
+    `${summary.totalSlots}-team league`,
+    summary.createdTeams > 0 ? `${summary.createdTeams} team${summary.createdTeams === 1 ? '' : 's'} created` : null,
+    summary.claimedTeams > 0 ? `${summary.claimedTeams} joined owner${summary.claimedTeams === 1 ? '' : 's'}` : null,
+    summary.pendingInvites > 0 ? `${summary.pendingInvites} pending invite${summary.pendingInvites === 1 ? '' : 's'}` : null,
+    summary.openSlots > 0 ? `${summary.openSlots} open slot${summary.openSlots === 1 ? '' : 's'}` : null
+  ].filter(Boolean).join(' · ');
 
   return (
     <div className="space-y-6" data-testid="league-members-workspace">
@@ -436,6 +604,25 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
           </div>
         }
       />
+
+      {/* Prominent League Size Summary */}
+      <div className="rounded-xl bg-slate-800/40 border border-slate-700/60 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-lg font-medium text-slate-100 mb-1">
+              {prominentSummary}
+            </div>
+            <div className="text-sm text-slate-400">
+              League configuration and team slot status overview
+            </div>
+          </div>
+          <LeagueSizeControl
+            summary={summary}
+            onChangeLeagueSize={props.onChangeLeagueSize}
+            busyAction={props.setupOpsBusyAction}
+          />
+        </div>
+      </div>
 
       {/* Status Summary Bar */}
       <div className="rounded-xl bg-slate-900/40 border border-slate-700/60 p-6">

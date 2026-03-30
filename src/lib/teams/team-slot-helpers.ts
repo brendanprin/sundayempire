@@ -87,11 +87,25 @@ export function buildLeagueMembersSummary(
   const pendingInvites = teamSlots.filter(slot => slot.status === "pending_invite").length;
   const openSlots = teamSlots.filter(slot => slot.status === "open").length;
   
+  // Calculate created teams (either filled or pending invite with team name)
+  const createdTeams = teamSlots.filter(slot => 
+    slot.status === "filled" || (slot.status === "pending_invite" && slot.teamName)
+  ).length;
+  
+  // Calculate claimed teams (only filled slots with actual owners)
+  const claimedTeams = filledSlots;
+  
+  // League size can be changed if there are no teams created yet or if reducing won't delete existing teams
+  const canChangeSize = createdTeams === 0 || totalSlots >= createdTeams;
+  
   return {
     totalSlots,
     filledSlots,
     pendingInvites,
     openSlots,
+    createdTeams,
+    claimedTeams,
+    canChangeSize,
     leagueName: dashboard.leagueDashboard.league.name,
   };
 }
