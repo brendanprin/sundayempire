@@ -27,11 +27,30 @@ export default function CreateLeaguePage() {
   
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Validation helpers
+  // Enhanced validation helpers
+  const getNameValidation = () => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return { valid: false, error: "" }; // No error for empty (user hasn't started typing)
+    if (trimmed.length < 3) return { valid: false, error: "League name must be at least 3 characters long" };
+    if (trimmed.length > 50) return { valid: false, error: "League name cannot be longer than 50 characters" };
+    if (!/^[a-zA-Z0-9\s\-'&.]+$/.test(trimmed)) return { valid: false, error: "League name can only contain letters, numbers, spaces, hyphens, apostrophes, ampersands, and periods" };
+    if (/^[\s\-'.&]+$/.test(trimmed)) return { valid: false, error: "League name must contain at least some letters or numbers" };
+    return { valid: true, error: "" };
+  };
+
+  const getYearValidation = () => {
+    const year = parseInt(seasonYear);
+    const currentYear = new Date().getFullYear();
+    if (isNaN(year)) return { valid: false, error: "Please enter a valid year" };
+    if (year < currentYear) return { valid: false, error: `Season year cannot be in the past (must be ${currentYear} or later)` };
+    if (year > currentYear + 5) return { valid: false, error: `Season year cannot be more than 5 years in the future (must be ${currentYear + 5} or earlier)` };
+    return { valid: true, error: "" };
+  };
+
   const isBasicsValid = () => {
-    return name.trim().length >= 3 && 
-           parseInt(seasonYear) >= new Date().getFullYear() && 
-           parseInt(seasonYear) <= new Date().getFullYear() + 5;
+    const nameValidation = getNameValidation();
+    const yearValidation = getYearValidation();
+    return nameValidation.valid && yearValidation.valid;
   };
 
   const isOptionsValid = () => {
@@ -47,21 +66,21 @@ export default function CreateLeaguePage() {
     const errors: string[] = [];
     
     if (step === "basics" || step === "review") {
-      if (name.trim().length < 3) {
-        errors.push("League name must be at least 3 characters");
+      const nameValidation = getNameValidation();
+      if (!nameValidation.valid && nameValidation.error) {
+        errors.push(nameValidation.error);
       }
       
-      const year = parseInt(seasonYear);
-      const currentYear = new Date().getFullYear();
-      if (year < currentYear || year > currentYear + 5) {
-        errors.push(`Season year must be between ${currentYear} and ${currentYear + 5}`);
+      const yearValidation = getYearValidation();
+      if (!yearValidation.valid && yearValidation.error) {
+        errors.push(yearValidation.error);
       }
     }
     
     if ((step === "options" || step === "review") && designatedCommissionerEmail.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(designatedCommissionerEmail.trim())) {
-        errors.push("Please enter a valid email address");
+        errors.push("Please enter a valid email address for the alternate commissioner");
       }
     }
     
@@ -126,6 +145,20 @@ export default function CreateLeaguePage() {
     }
   }
 
+  function handleKeyPress(event: React.KeyboardEvent) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (step === "basics" && isBasicsValid()) {
+        handleNextStep();
+      } else if (step === "options" && isOptionsValid()) {
+        handleNextStep();
+      } else if (step === "review" && stepErrors.length === 0) {
+        const form = event.currentTarget.closest('form');
+        if (form) form.requestSubmit();
+      }
+    }
+  }
+
   function handlePrevStep() {
     if (step === "options") {
       setStep("basics");
@@ -154,7 +187,7 @@ export default function CreateLeaguePage() {
   const getStepDescription = () => {
     switch (step) {
       case "basics":
-        return "Start by giving your league a name and setting the season year.";
+        return "Start with a memorable name and choose your season year — these form the foundation of your dynasty league.";
       case "options":
         return "Add optional details or skip ahead — you can always configure these later in League Settings.";
       case "review":
@@ -220,6 +253,7 @@ export default function CreateLeaguePage() {
 
         <form 
           onSubmit={handleSubmit}
+          onKeyDown={handleKeyPress}
           className="rounded-xl border p-8 max-w-lg mx-auto"
           style={{
             borderColor: "var(--brand-structure-muted)",
@@ -267,21 +301,39 @@ export default function CreateLeaguePage() {
                   onChange={(event) => setName(event.target.value)}
                   className="w-full rounded-lg border bg-transparent px-4 py-3 text-base transition-colors focus:ring-2 focus:ring-[var(--brand-accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
                   style={{
-                    borderColor: "var(--brand-structure-muted)",
+                    borderColor: (() => {
+                      const nameValidation = getNameValidation();
+                      if (name.trim().length === 0) return "var(--brand-structure-muted)";
+                      return nameValidation.valid ? "var(--brand-accent-primary)" : "#ef4444";
+                    })(),
                     color: "var(--foreground)",
                   }}
                   placeholder="Sunday Empire League"
                   autoFocus
                   required
+                  maxLength={50}
                   data-testid="no-league-create-name"
                 />
-                {name.trim().length > 0 && name.trim().length < 3 && (
-                  <p className="mt-1 text-xs text-red-400" data-testid="league-create-name-error">
-                    League name must be at least 3 characters
-                  </p>
-                )}
+                {(() => {
+                  const nameValidation = getNameValidation();
+                  if (nameValidation.error) {
+                    return (
+                      <p className="mt-1 text-xs text-red-400" data-testid="league-create-name-error">
+                        {nameValidation.error}
+                      </p>
+                    );
+                  }
+                  if (nameValidation.valid) {
+                    return (
+                      <p className="mt-1 text-xs text-green-400">
+                        ✓ Perfect! This name looks good.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
                 <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  Choose a memorable name that reflects your league's personality.
+                  Choose a memorable name that reflects your league's personality and traditions.
                 </p>
               </div>
 
@@ -300,7 +352,11 @@ export default function CreateLeaguePage() {
                   onChange={(event) => setSeasonYear(event.target.value)}
                   className="w-full rounded-lg border bg-transparent px-4 py-3 text-base transition-colors focus:ring-2 focus:ring-[var(--brand-accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
                   style={{
-                    borderColor: "var(--brand-structure-muted)",
+                    borderColor: (() => {
+                      const yearValidation = getYearValidation();
+                      return yearValidation.valid ? "var(--brand-accent-primary)" : 
+                             yearValidation.error ? "#ef4444" : "var(--brand-structure-muted)";
+                    })(),
                     color: "var(--foreground)",
                   }}
                   min={new Date().getFullYear()}
@@ -309,19 +365,25 @@ export default function CreateLeaguePage() {
                   data-testid="no-league-create-season-year"
                 />
                 {(() => {
-                  const year = parseInt(seasonYear);
-                  const currentYear = new Date().getFullYear();
-                  if (seasonYear && (year < currentYear || year > currentYear + 5)) {
+                  const yearValidation = getYearValidation();
+                  if (yearValidation.error) {
                     return (
                       <p className="mt-1 text-xs text-red-400" data-testid="league-create-season-year-error">
-                        Season year must be between {currentYear} and {currentYear + 5}
+                        {yearValidation.error}
+                      </p>
+                    );
+                  }
+                  if (yearValidation.valid) {
+                    return (
+                      <p className="mt-1 text-xs text-green-400">
+                        ✓ {seasonYear === String(new Date().getFullYear()) ? "Perfect! Starting this season." : `Great choice for ${seasonYear}.`}
                       </p>
                     );
                   }
                   return null;
                 })()}
                 <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  The year your dynasty league season will take place.
+                  Pick your first dynasty season year. Most leagues start with the current NFL season ({new Date().getFullYear()}).
                 </p>
               </div>
             </div>
@@ -519,15 +581,22 @@ export default function CreateLeaguePage() {
               </button>
               
               {step === "basics" && (
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!isBasicsValid()}
-                  className="rounded-lg bg-[var(--brand-accent-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="league-create-next-options"
-                >
-                  Continue to Options
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={!isBasicsValid()}
+                    className="rounded-lg bg-[var(--brand-accent-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="league-create-next-options"
+                  >
+                    Continue to Options
+                  </button>
+                  {isBasicsValid() && (
+                    <p className="text-xs mt-2" style={{ color: "var(--muted-foreground)" }}>
+                      Press Enter to continue
+                    </p>
+                  )}
+                </>
               )}
               
               {step === "options" && (
