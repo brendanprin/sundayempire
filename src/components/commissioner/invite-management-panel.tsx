@@ -93,7 +93,7 @@ function getDeliveryBadgeClasses(
     case "failed":
       return "border-red-700/60 bg-red-950/20 text-red-200";
     case "not_configured":
-      return "border-orange-700/60 bg-orange-950/20 text-orange-200";
+      return "border-blue-700/60 bg-blue-950/20 text-blue-200";
     case "unknown":
     default:
       return "border-slate-700/60 bg-slate-900/70 text-slate-300";
@@ -288,18 +288,18 @@ export function InviteManagementPanel(props: {
       ) : null}
       {hasNotConfiguredDelivery ? (
         <p
-          className="rounded-md border border-orange-800/60 bg-orange-950/20 px-3 py-2 text-xs text-orange-100"
+          className="rounded-md border border-blue-800/60 bg-blue-950/20 px-3 py-2 text-xs text-blue-100"
           data-testid="workspace-invite-delivery-unavailable-note"
         >
-          Outbound invite email is not configured in this environment. Pending invites remain valid, and commissioners can resend after delivery is fixed.
+          Email delivery is disabled in this environment. All invites remain valid and can be copied or resent when needed.
         </p>
       ) : null}
       {hasFailedDelivery ? (
         <p
-          className="rounded-md border border-red-800/60 bg-red-950/20 px-3 py-2 text-xs text-red-100"
+          className="rounded-md border border-orange-800/60 bg-orange-950/20 px-3 py-2 text-xs text-orange-100"
           data-testid="workspace-invite-delivery-failed-note"
         >
-          A failed delivery does not automatically invalidate a pending invite. Use Resend to issue a fresh active link when needed.
+          Some emails failed to deliver, but the invites remain valid. Use Resend to try email delivery again with a fresh link.
         </p>
       ) : null}
 

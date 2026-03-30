@@ -221,14 +221,14 @@ function getStatusBadge(slot: TeamSlot) {
     case "invite_delivery_failed":
       return (
         <span className="inline-flex items-center rounded-full bg-orange-400/10 px-2 py-1 text-xs font-medium text-orange-400 ring-1 ring-inset ring-orange-400/20">
-          Invite Delivery Failed
+          Invite Created - Delivery Failed
         </span>
       );
     
     case "invite_not_configured":
       return (
-        <span className="inline-flex items-center rounded-full bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
-          Delivery Unavailable
+        <span className="inline-flex items-center rounded-full bg-blue-400/10 px-2 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-400/20">
+          Invite Created - Email Disabled
         </span>
       );
     
@@ -821,6 +821,32 @@ function ImportRowDetails({ validation }: { validation: any }) {
   );
 }
 
+// Helper function to create clear invite success messaging
+export function buildInviteSuccessMessage(
+  ownerName: string, 
+  teamName: string, 
+  deliveryInfo: { label: string; detail: string }
+): string {
+  const inviteSuccess = `Invite created for ${ownerName} and team ${teamName}.`;
+  
+  // Handle different delivery states with clear, trustworthy messaging
+  if (deliveryInfo.label.toLowerCase().includes('not configured') || 
+      deliveryInfo.label.toLowerCase().includes('disabled')) {
+    return `${inviteSuccess} Email delivery is disabled in this environment. The invite is still valid and can be copied or resent later.`;
+  }
+  
+  if (deliveryInfo.label.toLowerCase().includes('failed')) {
+    return `${inviteSuccess} Email delivery failed, but the invite is still valid and can be resent. ${deliveryInfo.detail}`;
+  }
+  
+  if (deliveryInfo.label.toLowerCase().includes('sent')) {
+    return `${inviteSuccess} Email sent successfully to ${ownerName}.`;
+  }
+  
+  // Default case - acknowledge both invite creation and delivery status
+  return `${inviteSuccess} ${deliveryInfo.label}: ${deliveryInfo.detail}`;
+}
+
 function TeamSlotRow({ 
   slot, 
   busyAction, 
@@ -863,17 +889,17 @@ function TeamSlotRow({
           <div>
             <div className="text-sm text-slate-300">
               {comprehensiveStatus === "invite_pending" ? "Invited" :
-               comprehensiveStatus === "invite_delivery_failed" ? "Invite Failed" :
-               comprehensiveStatus === "invite_not_configured" ? "Delivery Issue" :
+               comprehensiveStatus === "invite_delivery_failed" ? "Invite Created" :
+               comprehensiveStatus === "invite_not_configured" ? "Invite Created" :
                comprehensiveStatus === "invite_revoked" ? "Revoked" :
                comprehensiveStatus === "invite_expired" ? "Expired" : "Invited"}
             </div>
             <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
             {comprehensiveStatus === "invite_delivery_failed" && slot.inviteDeliveryDetail && (
-              <div className="text-xs text-orange-400 mt-1">{slot.inviteDeliveryDetail}</div>
+              <div className="text-xs text-orange-400 mt-1">Email delivery failed. {slot.inviteDeliveryDetail}</div>
             )}
             {comprehensiveStatus === "invite_not_configured" && slot.inviteDeliveryDetail && (
-              <div className="text-xs text-yellow-400 mt-1">{slot.inviteDeliveryDetail}</div>
+              <div className="text-xs text-blue-400 mt-1">Email delivery disabled in this environment. Invite is valid and can be copied or resent.</div>
             )}
           </div>
         ) : (
