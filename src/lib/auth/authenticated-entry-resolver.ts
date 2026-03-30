@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export type AuthenticatedEntryResolution = 
   | {
       kind: "no_league_access";
-      route: "/my-leagues" | "/select-league";
+      route: "/my-leagues";
       context: {
         hasLeagues: false;
         totalLeagues: 0;
@@ -29,7 +29,7 @@ export type AuthenticatedEntryResolution =
     }
   | {
       kind: "multiple_league_choice";
-      route: "/my-leagues" | "/select-league";
+      route: "/my-leagues";
       context: {
         hasLeagues: true;
         totalLeagues: number;
@@ -64,7 +64,7 @@ export async function resolveAuthenticatedEntry(
   if (accessibleContexts.length === 0) {
     return {
       kind: "no_league_access",
-      route: "/select-league",
+      route: "/my-leagues",
       context: {
         hasLeagues: false,
         totalLeagues: 0,
@@ -126,7 +126,7 @@ export async function resolveAuthenticatedEntry(
 
   return {
     kind: "multiple_league_choice",
-    route: "/select-league",
+    route: "/my-leagues",
     context: {
       hasLeagues: true,
       totalLeagues: resolvedContexts.length,

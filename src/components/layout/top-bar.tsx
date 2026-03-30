@@ -219,7 +219,7 @@ export function TopBar(props: {
                 <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
                   {hasActiveLeague
                     ? multipleLeagues
-                      ? "Switch leagues here or open the full picker."
+                      ? "Switch leagues here or return to your account hub."
                       : "This account has one accessible league."
                     : props.availableLeagues.length > 0
                       ? "Choose a league to continue."
@@ -236,7 +236,7 @@ export function TopBar(props: {
                 }}
                 data-testid="header-league-picker-link"
               >
-                {multipleLeagues ? "All Leagues" : hasActiveLeague ? "League Home" : "Choose League"}
+                {multipleLeagues ? "Account Hub" : hasActiveLeague ? "League Home" : "Choose League"}
               </Link>
             </div>
 
@@ -278,10 +278,10 @@ export function TopBar(props: {
               data-testid="header-league-switcher-apply"
             >
               {props.switchingLeague
-                ? "Opening..."
+                ? "Entering..."
                 : hasActiveLeague
                   ? "Switch League"
-                  : "Open League"}
+                  : "Enter League"}
             </button>
           </div>
         </div>

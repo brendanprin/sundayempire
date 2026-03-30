@@ -352,13 +352,13 @@ export default function MyLeaguesPage() {
 
   const heading =
     orderedLeagues.length === 0
-      ? "My Leagues"
-      : "My Leagues";
+      ? "Dynasty Football Hub"
+      : "Dynasty Football Hub";
   
   const description =
     orderedLeagues.length === 0
-      ? "You're signed in but don't have access to any leagues yet. Create a new league or join one to get started."
-      : `Manage your ${orderedLeagues.length} league${orderedLeagues.length === 1 ? "" : "s"} and open the workspace you want to use.`;
+      ? "Welcome to your dynasty football account. Create a new league or join an existing one to get started."
+      : `Welcome back! Choose from your ${orderedLeagues.length} league${orderedLeagues.length === 1 ? "" : "s"} below to continue playing dynasty football.`;
 
   // Show loading until resolver check is complete
   if (!resolverChecked) {
@@ -374,10 +374,10 @@ export default function MyLeaguesPage() {
                 SundayEmpire
               </p>
               <h1 className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                Checking Access
+                Account Overview
               </h1>
-              <p className="text-lg" style={{ color: "var(--muted-foreground)" }}>
-                Determining your league memberships and context...
+              <p className="mt-2 text-lg" style={{ color: "var(--muted-foreground)" }}>
+                Loading your dynasty football account and leagues...
               </p>
             </header>
 
@@ -431,7 +431,7 @@ export default function MyLeaguesPage() {
                   className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                   data-testid="create-league-button"
                 >
-                  Create League
+                  Create New League
                 </button>
               )}
             </div>
@@ -517,10 +517,10 @@ export default function MyLeaguesPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white">
-                    No Leagues Found
+                    Ready to Start Playing?
                   </h3>
                   <p className="mt-2 text-sm max-w-md mx-auto" style={{ color: "var(--muted-foreground)" }}>
-                    You'll need to create a new league or join an existing one to access the app.
+                    Start your dynasty football journey by creating a new league or joining an existing one with friends.
                   </p>
                 </div>
                 
@@ -531,7 +531,7 @@ export default function MyLeaguesPage() {
                       onClick={createNewLeague}
                       className="rounded-md bg-[var(--brand-accent-primary)] px-6 py-3 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
                     >
-                      Create League
+                      Create New League
                     </button>
                     <div className="flex gap-2">
                       <input
@@ -619,7 +619,7 @@ export default function MyLeaguesPage() {
                               Opening...
                             </span>
                           ) : (
-                            "Open League"
+                            "Enter League"
                           )}
                         </button>
                       </div>

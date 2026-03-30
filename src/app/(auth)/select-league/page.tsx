@@ -344,13 +344,13 @@ export default function MyLeaguesDirectoryPage() {
                 className="text-3xl font-bold"
                 style={{ color: "var(--foreground)" }}
               >
-                Loading Your Leagues
+                Account Overview
               </h1>
               <p
                 className="text-lg"
                 style={{ color: "var(--muted-foreground)" }}
               >
-                Checking your league memberships and access...
+                Loading your dynasty football account and leagues...
               </p>
             </header>
 
@@ -374,13 +374,13 @@ export default function MyLeaguesDirectoryPage() {
 
   const heading =
     orderedLeagues.length === 0
-      ? "My Leagues"
-      : "My Leagues";
+      ? "Dynasty Football Hub"
+      : "Dynasty Football Hub";
   
   const description =
     orderedLeagues.length === 0
-      ? "You're signed in but don't have access to any leagues yet. Create a new league or contact a commissioner to get started."
-      : `Manage your ${orderedLeagues.length} league${orderedLeagues.length === 1 ? "" : "s"} and open the workspace you want to use.`;
+      ? "Welcome to your dynasty football account. Create a new league or join an existing one to get started."
+      : `Welcome back! Choose from your ${orderedLeagues.length} league${orderedLeagues.length === 1 ? "" : "s"} below to continue playing dynasty football.`;
 
   return (
     <div className="min-h-screen bg-[var(--brand-midnight-navy)] text-[var(--foreground)]">
@@ -416,7 +416,7 @@ export default function MyLeaguesDirectoryPage() {
                   className="ml-6 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
                   data-testid="create-league-button"
                 >
-                  {creatingLeague ? "Creating..." : "Create League"}
+                  Create New League
                 </button>
               )}
             </div>
@@ -498,13 +498,13 @@ export default function MyLeaguesDirectoryPage() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-white">
-                  No Leagues Found
+                  Ready to Start Playing?
                 </h3>
                 <p
                   className="text-sm max-w-md mx-auto"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  You'll need to join an existing league or create a new one to access the app.
+                  Start your dynasty football journey by creating a new league or joining an existing one with friends.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                   <button
@@ -513,7 +513,7 @@ export default function MyLeaguesDirectoryPage() {
                     disabled={creatingLeague}
                     className="rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50"
                   >
-                    {creatingLeague ? "Creating..." : "Create League"}
+                          {creatingLeague ? "Creating..." : "Create New League"}
                   </button>
                   <button
                     type="button"
@@ -594,10 +594,10 @@ export default function MyLeaguesDirectoryPage() {
                           {activatingLeagueId === league.id ? (
                             <span className="flex items-center justify-center gap-2">
                               <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
-                              Opening...
+                              Entering...
                             </span>
                           ) : (
-                            "Open League"
+                            "Enter League"
                           )}
                         </button>
                       </div>

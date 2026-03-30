@@ -24,13 +24,13 @@ export default function DashboardRedirectPage() {
           className="text-2xl font-semibold"
           style={{ color: "var(--foreground)" }}
         >
-          Redirecting to My Leagues
+          Redirecting to Account Hub
         </h2>
         <p
           className="text-sm"
           style={{ color: "var(--muted-foreground)" }}
         >
-          Taking you to your account-level league directory...
+          Taking you to your dynasty football account page...
         </p>
       </header>
 
@@ -42,7 +42,7 @@ export default function DashboardRedirectPage() {
           color: "var(--muted-foreground)",
         }}
       >
-        Redirecting to the new My Leagues page...
+        Redirecting to your dynasty football account hub...
       </div>
     </div>
   );
