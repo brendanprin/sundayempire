@@ -524,7 +524,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           }}
         />
 
-        <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-start">
+        <div className="mt-2 flex flex-col gap-4 xl:flex-row xl:items-start">
           <SideNav
             sections={sideNavSections}
             onLinkSelect={(sectionId, link) => {

@@ -94,7 +94,7 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
   const visibleAlerts = dashboard.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status"));
 
   return (
-    <div className="space-y-6" data-testid="league-bootstrap-dashboard">
+    <div className="space-y-4" data-testid="league-bootstrap-dashboard">
       <PageHeaderBand
         eyebrow="New League Setup"
         eyebrowTestId="bootstrap-dashboard-eyebrow"

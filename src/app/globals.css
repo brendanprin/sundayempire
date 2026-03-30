@@ -321,7 +321,7 @@ body {
 
 .shell-page-header {
   overflow: hidden;
-  padding: 1.5rem;
+  padding: 1rem;
   background:
     linear-gradient(140deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.94) 56%, rgba(12, 74, 110, 0.18)),
     var(--shell-surface-strong);
@@ -330,7 +330,7 @@ body {
 
 .shell-page-header__grid {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 @media (min-width: 1024px) {

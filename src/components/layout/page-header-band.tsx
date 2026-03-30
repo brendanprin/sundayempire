@@ -27,11 +27,11 @@ export function PageHeaderBand(props: {
           <p className="shell-kicker" data-testid={props.eyebrowTestId}>
             {props.eyebrow}
           </p>
-          <HeadingTag className="shell-page-header__title mt-3" data-testid={props.titleTestId}>
+          <HeadingTag className="shell-page-header__title mt-2" data-testid={props.titleTestId}>
             {props.title}
           </HeadingTag>
-          <p className="shell-page-header__description mt-3">{props.description}</p>
-          {props.supportingContent ? <div className="mt-4">{props.supportingContent}</div> : null}
+          <p className="shell-page-header__description mt-2">{props.description}</p>
+          {props.supportingContent ? <div className="mt-3">{props.supportingContent}</div> : null}
         </div>
         {props.aside ? <div>{props.aside}</div> : null}
       </div>

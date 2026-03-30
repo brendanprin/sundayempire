@@ -1068,7 +1068,7 @@ export default function LeagueLandingDashboardPage() {
       ) : null}
 
       {dashboard && !(dashboard.viewer.leagueRole === "COMMISSIONER" && dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete) ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {dashboard.viewer.leagueRole === "COMMISSIONER" &&
           (founderSetupLoading || founderSetupError || !founderSetup || !founderSetup.isComplete) ? (
             <section

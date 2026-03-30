@@ -60,7 +60,7 @@ export function TopBar(props: {
 
   return (
     <header
-      className="shell-panel shell-top-bar px-5 py-5 md:px-6"
+      className="shell-panel shell-top-bar px-5 py-3 md:px-6"
       style={{
         backgroundColor: "var(--brand-surface-elevated)",
         borderColor: "var(--brand-structure-muted)",
@@ -73,7 +73,7 @@ export function TopBar(props: {
             <BrandBadge variant="default" size="sm" />
             <p className="shell-kicker">Dynasty League App</p>
           </div>
-          <div className="mt-3">
+          <div className="mt-2">
             <h1
               className="text-2xl font-semibold md:text-3xl"
               style={{ color: "var(--foreground)" }}
@@ -81,7 +81,7 @@ export function TopBar(props: {
               {props.consoleTitle}
             </h1>
             <p
-              className="mt-2 text-sm font-medium"
+              className="mt-1 text-sm font-medium"
               style={{ color: "var(--muted-foreground)" }}
               data-testid="role-context-league-name"
             >
