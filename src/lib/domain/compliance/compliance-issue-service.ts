@@ -326,18 +326,29 @@ export function createComplianceIssueService(
     now?: Date;
   }) {
     const now = input.now ?? new Date();
-    const season = await client.season.findFirst({
-      where: {
-        id: input.seasonId,
-        leagueId: input.leagueId,
-      },
-      select: {
-        id: true,
-        phase: true,
-      },
-    });
+    const [season, league] = await Promise.all([
+      client.season.findFirst({
+        where: {
+          id: input.seasonId,
+          leagueId: input.leagueId,
+        },
+        select: {
+          id: true,
+          phase: true,
+        },
+      }),
+      client.league.findFirst({
+        where: {
+          id: input.leagueId,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
-    if (!season) {
+    if (!season || !league) {
       return { created: 0, updated: 0, resolved: 0 };
     }
 
@@ -374,7 +385,18 @@ export function createComplianceIssueService(
 
     for (const deadline of deadlines) {
       const diffMs = deadline.scheduledAt.getTime() - now.getTime();
-      const overdue = diffMs <= 0;
+      const baseOverdue = diffMs <= 0;
+      
+      // Skip deadlines that were scheduled before the league existed (default placeholders)
+      // These represent seeded defaults, not real configured deadlines
+      const deadlinePreDatesLeague = deadline.scheduledAt.getTime() < league.createdAt.getTime();
+      const isConfiguredDeadline = deadline.sourceType !== "CONSTITUTION_DEFAULT" || !deadlinePreDatesLeague;
+      
+      // Only treat as truly overdue if:
+      // 1. The deadline time has passed, AND
+      // 2. Either the deadline was configured after league creation OR it's been explicitly updated from defaults
+      const overdue = baseOverdue && isConfiguredDeadline;
+      
       const maxReminderDays = Array.isArray(deadline.reminderOffsetsJson)
         ? deadline.reminderOffsetsJson
             .map((value) => Number(value))
@@ -382,7 +404,7 @@ export function createComplianceIssueService(
             .sort((a, b) => b - a)[0] ?? 1
         : 1;
       const reminderWindowMs = maxReminderDays * 24 * 60 * 60 * 1000;
-      const approaching = !overdue && diffMs <= reminderWindowMs;
+      const approaching = !baseOverdue && diffMs <= reminderWindowMs && isConfiguredDeadline;
 
       const relevant = overdue || approaching;
       const fingerprint = buildDeadlineIssueFingerprint({

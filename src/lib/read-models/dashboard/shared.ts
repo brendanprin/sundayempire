@@ -157,6 +157,63 @@ export function calculateDeadlineUrgency(scheduledAt: Date, now: Date): {
   };
 }
 
+export function calculateContextAwareDeadlineUrgency(
+  scheduledAt: Date,
+  sourceType: string,
+  leagueCreatedAt: Date,
+  now: Date,
+): {
+  urgency: DeadlineUrgency;
+  overdue: boolean;
+  daysUntilDue: number;
+} {
+  const diffMs = scheduledAt.getTime() - now.getTime();
+  const daysUntilDue = Math.ceil(diffMs / DAY_MS);
+  
+  // Check if this is a default placeholder that predates league creation
+  const deadlinePreDatesLeague = scheduledAt.getTime() < leagueCreatedAt.getTime();
+  const isDefaultPlaceholder = sourceType === "CONSTITUTION_DEFAULT" && deadlinePreDatesLeague;
+
+  if (diffMs < 0) {
+    // Only mark as overdue if this is a real configured deadline, not a default placeholder
+    if (isDefaultPlaceholder) {
+      return {
+        urgency: "upcoming",
+        overdue: false,
+        daysUntilDue,
+      };
+    }
+    
+    return {
+      urgency: "overdue",
+      overdue: true,
+      daysUntilDue,
+    };
+  }
+
+  if (diffMs <= DAY_MS) {
+    return {
+      urgency: "today",
+      overdue: false,
+      daysUntilDue,
+    };
+  }
+
+  if (diffMs <= 7 * DAY_MS) {
+    return {
+      urgency: "soon",
+      overdue: false,
+      daysUntilDue,
+    };
+  }
+
+  return {
+    urgency: "upcoming",
+    overdue: false,
+    daysUntilDue,
+  };
+}
+
 export function compareDeadlinesByUrgency(
   left: { urgency: DeadlineUrgency; scheduledAt: string; deadlineType: string },
   right: { urgency: DeadlineUrgency; scheduledAt: string; deadlineType: string },
@@ -213,6 +270,7 @@ export async function resolveLeagueSeasonContext(
       id: true,
       name: true,
       description: true,
+      createdAt: true,
       seasons: {
         orderBy: { year: "desc" },
         select: {

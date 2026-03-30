@@ -57,13 +57,22 @@ function buildAlerts(input: {
   }
 
   if (input.deadlineSummary.summary.overdueCount > 0) {
+    // During initial setup, contextualize deadline alerts as setup guidance rather than critical operational issues
+    const isSetupPhase = input.leagueStatus.alertLevel === "setup_required";
+    
     alerts.push({
       id: "deadline-overdue",
-      level: "critical",
-      title: "Rules & Deadlines need attention.",
-      description: `${input.deadlineSummary.summary.overdueCount} deadline${
-        input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
-      } have passed and still need action.`,
+      level: isSetupPhase ? "warning" : "critical",
+      title: isSetupPhase 
+        ? "Setup-related deadlines need configuration."
+        : "Rules & Deadlines need attention.",
+      description: isSetupPhase
+        ? `${input.deadlineSummary.summary.overdueCount} deadline${
+            input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
+          } need to be reviewed and configured as part of initial setup.`
+        : `${input.deadlineSummary.summary.overdueCount} deadline${
+            input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
+          } have passed and still need action.`,
       href: "/rules",
     });
   } else if (input.deadlineSummary.upcomingDeadlines.some((deadline) => deadline.urgency === "today")) {

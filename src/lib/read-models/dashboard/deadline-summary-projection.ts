@@ -1,4 +1,4 @@
-import { DashboardProjectionDbClient, calculateDeadlineUrgency, compareDeadlinesByUrgency, normalizeReminderOffsets, openIssueStatuses, resolveLeagueSeasonContext } from "@/lib/read-models/dashboard/shared";
+import { DashboardProjectionDbClient, calculateDeadlineUrgency, calculateContextAwareDeadlineUrgency, compareDeadlinesByUrgency, normalizeReminderOffsets, openIssueStatuses, resolveLeagueSeasonContext } from "@/lib/read-models/dashboard/shared";
 import { DeadlineSummaryItem, DeadlineSummaryProjection } from "@/lib/read-models/dashboard/types";
 import { toLegacyLeaguePhase } from "@/lib/domain/lifecycle/phase-compat";
 import { prisma } from "@/lib/prisma";
@@ -91,7 +91,12 @@ export function createDeadlineSummaryProjection(client: DashboardProjectionDbCli
       }
 
       const items: DeadlineSummaryItem[] = deadlines.map((deadline) => {
-        const urgency = calculateDeadlineUrgency(deadline.scheduledAt, now);
+        const urgency = calculateContextAwareDeadlineUrgency(
+          deadline.scheduledAt, 
+          deadline.sourceType,
+          context.league.createdAt,
+          now
+        );
         return {
           id: deadline.id,
           deadlineType: deadline.deadlineType,
