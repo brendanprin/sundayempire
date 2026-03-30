@@ -428,16 +428,13 @@ export default function CreateLeaguePage() {
             <div className="space-y-6" data-testid="league-create-review-step">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-                  Review Your League Settings
+                  Review Your League
                 </h3>
                 
-                <div className="grid gap-4">
+                <div className="grid gap-3">
                   <div className="flex justify-between items-start py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
                     <div>
                       <p className="font-medium" style={{ color: "var(--foreground)" }}>League Name</p>
-                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        The display name for your dynasty football league
-                      </p>
                     </div>
                     <p className="font-medium" style={{ color: "var(--foreground)" }}>{name}</p>
                   </div>
@@ -445,62 +442,76 @@ export default function CreateLeaguePage() {
                   <div className="flex justify-between items-start py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
                     <div>
                       <p className="font-medium" style={{ color: "var(--foreground)" }}>Season Year</p>
-                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        The year your dynasty season will take place
-                      </p>
                     </div>
                     <p className="font-medium" style={{ color: "var(--foreground)" }}>{seasonYear}</p>
                   </div>
                   
-                  {description.trim() && (
-                    <div className="flex justify-between items-start py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
-                      <div>
-                        <p className="font-medium" style={{ color: "var(--foreground)" }}>Description</p>
-                        <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                          League description for new members
-                        </p>
-                      </div>
-                      <p className="font-medium max-w-xs text-right" style={{ color: "var(--foreground)" }}>
-                        {description}
-                      </p>
-                    </div>
-                  )}
-                  
                   <div className="flex justify-between items-start py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
                     <div>
-                      <p className="font-medium" style={{ color: "var(--foreground)" }}>Commissioner</p>
-                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        Who will manage this league
-                      </p>
+                      <p className="font-medium" style={{ color: "var(--foreground)" }}>Description</p>
                     </div>
-                    <p className="font-medium" style={{ color: "var(--foreground)" }}>
-                      {designatedCommissionerEmail.trim() || "You"}
+                    <p className="font-medium text-right max-w-xs" style={{ 
+                      color: description.trim() ? "var(--foreground)" : "var(--muted-foreground)" 
+                    }}>
+                      {description.trim() || "Not provided"}
                     </p>
                   </div>
                   
-                  {!description.trim() && !designatedCommissionerEmail.trim() && (
-                    <div className="py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
-                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        <em>No optional details added — you can configure these later in League Settings.</em>
-                      </p>
+                  <div className="flex justify-between items-start py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
+                    <div>
+                      <p className="font-medium" style={{ color: "var(--foreground)" }}>Initial Commissioner</p>
                     </div>
-                  )}
+                    <p className="font-medium text-right" style={{ color: "var(--foreground)" }}>
+                      You (your account)
+                    </p>
+                  </div>
+                  
+                  <div className="flex justify-between items-start py-3" style={{ borderColor: "var(--brand-structure-muted)" }}>
+                    <div>
+                      <p className="font-medium" style={{ color: "var(--foreground)" }}>Alternate Commissioner</p>
+                    </div>
+                    <p className="font-medium text-right" style={{ 
+                      color: designatedCommissionerEmail.trim() ? "var(--foreground)" : "var(--muted-foreground)" 
+                    }}>
+                      {designatedCommissionerEmail.trim() || "None"}
+                    </p>
+                  </div>
                 </div>
               </div>
               
-              <div className="rounded-lg border p-4" style={{ 
+              <div className="rounded-lg border p-5" style={{ 
                 borderColor: "var(--brand-structure-muted)", 
                 backgroundColor: "var(--brand-surface-card)" 
               }}>
-                <h4 className="font-medium mb-2" style={{ color: "var(--foreground)" }}>
+                <h4 className="font-semibold mb-3" style={{ color: "var(--foreground)" }}>
                   What happens when you create this league?
                 </h4>
-                <ul className="text-sm space-y-1" style={{ color: "var(--muted-foreground)" }}>
-                  <li>• Your league will be created with the settings above</li>
-                  <li>• You'll be taken to the league dashboard to start setup</li>
-                  <li>• You can invite members, create teams, and configure rules</li>
-                  <li>• Your league will be ready for dynasty football action</li>
-                </ul>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="font-medium mb-1" style={{ color: "var(--foreground)" }}>League Setup:</p>
+                    <p style={{ color: "var(--muted-foreground)" }}>
+                      Your <strong>{name}</strong> league will be created for the {seasonYear} season and become your active league.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium mb-1" style={{ color: "var(--foreground)" }}>Your Role:</p>
+                    <p style={{ color: "var(--muted-foreground)" }}>
+                      You'll be the league commissioner with full administrative rights. 
+                      {designatedCommissionerEmail.trim() ? 
+                        ` An invitation will be sent to ${designatedCommissionerEmail.trim()} to become an alternate commissioner.` : 
+                        " You can add other commissioners later in League Settings."
+                      }
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium mb-1" style={{ color: "var(--foreground)" }}>What's Next:</p>
+                    <p style={{ color: "var(--muted-foreground)" }}>
+                      You'll be taken to your league dashboard where you can invite members, set up teams, configure rules, and start building your dynasty football league.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
