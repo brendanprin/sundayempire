@@ -13,6 +13,7 @@ const SUITE_COMMANDS = {
   sprint9: "node --test --import tsx tests/auction/*.test.ts tests/drafts/*.test.ts",
   sprint10: "node --test --import tsx tests/sync/*.test.ts",
   sprint11: "node --test --import tsx tests/activity/*.test.ts",
+  teams: "node --test --import tsx tests/teams/*.test.ts",
 };
 
 const DEFAULT_SUITE_ORDER = [
@@ -28,6 +29,7 @@ const DEFAULT_SUITE_ORDER = [
   "sprint9",
   "sprint10",
   "sprint11",
+  "teams",
 ];
 
 function normalizeSuiteName(rawName) {
