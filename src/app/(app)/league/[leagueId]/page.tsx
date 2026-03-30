@@ -23,6 +23,7 @@ import { MirrorOnlyBanner } from "@/components/layout/mirror-only-banner";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
 import { ApiRequestError, requestJson } from "@/lib/client-request";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
+import { getDashboardModuleGates, shouldPrioritizeSetup } from "@/lib/dashboard/module-readiness-gates";
 import { LOGIN_ERROR_SESSION_EXPIRED, buildLoginPath } from "@/lib/return-to";
 import { trackUiEvent } from "@/lib/ui-analytics";
 import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboard/types";
@@ -838,6 +839,8 @@ export default function LeagueLandingDashboardPage() {
   const dashboardActionItems = dashboard
     ? buildDashboardActionItems({ dashboard, draftsHome, tradesHome })
     : [];
+  const moduleGates = dashboard ? getDashboardModuleGates(dashboard) : null;
+  const prioritizeSetup = dashboard ? shouldPrioritizeSetup(dashboard) : false;
   const firstDashboardAction = dashboardActionItems[0] ?? null;
   const prioritizeSecondaryActivity = dashboard
     ? dashboard.viewer.leagueRole === "COMMISSIONER" || !dashboard.viewer.hasTeamAccess
@@ -1521,19 +1524,22 @@ export default function LeagueLandingDashboardPage() {
             itemTestIdPrefix="league-landing-alert"
           />
 
-          <DashboardHealthSummaryRow
-            items={buildDashboardHealthItems({ dashboard, draftsHome, tradesHome })}
-            testId="dashboard-health-summary-row"
-          />
+          {!prioritizeSetup && (
+            <DashboardHealthSummaryRow
+              items={buildDashboardHealthItems({ dashboard, draftsHome, tradesHome })}
+              testId="dashboard-health-summary-row"
+            />
+          )}
 
-          <section className="space-y-4" data-testid="dashboard-secondary-zone">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-600">Secondary Context</p>
-              <h2 className="mt-1 text-lg font-medium text-slate-200">Reference surfaces after priority actions</h2>
-              <p className="mt-1 text-sm text-slate-400" data-testid="dashboard-secondary-priority-copy">
-                Recommended next: {secondaryRecommendationLabel}
-              </p>
-            </div>
+          {!prioritizeSetup && (
+            <section className="space-y-4" data-testid="dashboard-secondary-zone">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-600">Secondary Context</p>
+                <h2 className="mt-1 text-lg font-medium text-slate-200">Reference surfaces after priority actions</h2>
+                <p className="mt-1 text-sm text-slate-400" data-testid="dashboard-secondary-priority-copy">
+                  Recommended next: {secondaryRecommendationLabel}
+                </p>
+              </div>
 
             <div 
               className="rounded-xl border border-slate-800/40 bg-slate-900/20 p-6 space-y-6" 
@@ -1664,6 +1670,7 @@ export default function LeagueLandingDashboardPage() {
               </div>
             </div>
           </section>
+          )}
         </div>
       ) : null}
     </div>
