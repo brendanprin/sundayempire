@@ -298,7 +298,9 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
           </p>
           <h2 className="mt-1 text-xl font-bold text-sky-100">Build Your League</h2>
           <p className="mt-2 text-sky-50/80">
-            Add teams for other members and send invites so they can join your league.
+            {founderSetup?.isComplete 
+              ? "Team creation forms and invite management tools for expanding your league."
+              : "Add teams for other members and send invites so they can join your league."}
           </p>
         </div>
 

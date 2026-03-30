@@ -77,6 +77,11 @@ export function DashboardActionCenter(props: {
   const remainingActions = filteredActions.slice(1);
   const mobileActions = filteredActions.slice(0, 3);
 
+  // Determine which checklist items should be de-emphasized because they're already the primary action
+  const primaryActionChecklistId = primaryAction?.id.startsWith('setup-') 
+    ? primaryAction.id.replace('setup-', '')
+    : primaryAction?.id;
+
   return (
     <section className="space-y-4" data-testid="dashboard-priority-zone">
       <div className="max-w-3xl">
@@ -146,10 +151,14 @@ export function DashboardActionCenter(props: {
 
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {props.setupChecklist.items.map((item) => {
-                // De-emphasize founder setup when there's a dedicated section
+                // De-emphasize checklist items when they're featured as the primary action
                 const isFounderSetupWithDedicatedSection = props.hasFounderSetupSection && item.id === "founder-team-status";
+                const isPrimaryActionDuplicate = item.id === primaryActionChecklistId && primaryAction && item.status === "INCOMPLETE";
                 const isPrimaryIncomplete =
-                  props.setupChecklist?.primaryIncompleteItemId === item.id && item.status !== "COMPLETE" && !isFounderSetupWithDedicatedSection;
+                  props.setupChecklist?.primaryIncompleteItemId === item.id && 
+                  item.status !== "COMPLETE" && 
+                  !isFounderSetupWithDedicatedSection &&
+                  !isPrimaryActionDuplicate;
                 const itemTone =
                   item.status === "COMPLETE"
                     ? "border-emerald-700/40 bg-emerald-950/20 text-emerald-100"
@@ -169,34 +178,41 @@ export function DashboardActionCenter(props: {
                   <article
                     key={item.id}
                     className={`rounded-xl border px-3 py-3 text-sm ${
-                      isFounderSetupWithDedicatedSection ? 
-                        "border-slate-700/40 bg-slate-950/20 text-slate-300 opacity-75" : 
-                        itemTone
+                      isFounderSetupWithDedicatedSection || isPrimaryActionDuplicate
+                        ? "border-slate-700/40 bg-slate-950/20 text-slate-300 opacity-75" 
+                        : itemTone
                     }`}
                     data-testid={`dashboard-setup-checklist-item-${item.id}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{item.title}</p>
-                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection ? (
+                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection && !isPrimaryActionDuplicate ? (
                           <p
                             className="mt-1 text-[11px] uppercase tracking-wide text-sky-200"
                             data-testid={`dashboard-setup-checklist-next-${item.id}`}
                           >
                             Next recommended step
                           </p>
+                        ) : isPrimaryActionDuplicate ? (
+                          <p
+                            className="mt-1 text-[11px] uppercase tracking-wide text-slate-400"
+                            data-testid={`dashboard-setup-checklist-primary-${item.id}`}
+                          >
+                            See primary action above
+                          </p>
                         ) : null}
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <span
                           className={`rounded-full border border-current/40 px-2 py-0.5 text-[11px] uppercase tracking-wide ${
-                            isFounderSetupWithDedicatedSection ? "text-slate-400" : ""
+                            isFounderSetupWithDedicatedSection || isPrimaryActionDuplicate ? "text-slate-400" : ""
                           }`}
                           data-testid={`dashboard-setup-checklist-status-${item.id}`}
                         >
                           {statusLabel}
                         </span>
-                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection ? (
+                        {isPrimaryIncomplete && !isFounderSetupWithDedicatedSection && !isPrimaryActionDuplicate ? (
                           <span className="rounded-full border border-sky-500/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-sky-200">
                             Start here
                           </span>
@@ -204,11 +220,15 @@ export function DashboardActionCenter(props: {
                       </div>
                     </div>
                     <p className={`mt-2 text-xs opacity-90 ${
-                      isFounderSetupWithDedicatedSection ? "text-slate-400" : ""
+                      isFounderSetupWithDedicatedSection || isPrimaryActionDuplicate ? "text-slate-400" : ""
                     }`}>
-                      {isFounderSetupWithDedicatedSection ? "See founder setup section above" : item.description}
+                      {isFounderSetupWithDedicatedSection 
+                        ? "See founder setup section above" 
+                        : isPrimaryActionDuplicate
+                          ? "Complete the primary action above to mark this step as done"
+                          : item.description}
                     </p>
-                    {item.href && item.ctaLabel && !isFounderSetupWithDedicatedSection ? (
+                    {item.href && item.ctaLabel && !isFounderSetupWithDedicatedSection && !isPrimaryActionDuplicate ? (
                       <Link
                         href={item.href}
                         className="mt-3 inline-flex rounded-md border border-current/50 px-2.5 py-1.5 text-xs font-medium transition hover:border-current"
