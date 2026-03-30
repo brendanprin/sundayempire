@@ -46,6 +46,14 @@ export default function LandingPage() {
               <p className="mt-6 text-lg md:text-xl" style={{ color: "var(--muted-foreground)" }}>
                 The control center for contract leagues. Manage caps, validate trades, track picks, and run commissioner operations with confidence.
               </p>
+              <div className="mt-6 rounded-lg border p-4" style={{ backgroundColor: "var(--brand-surface-muted)", borderColor: "var(--brand-structure-muted)" }}>
+                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                  ⚡ MVP Access
+                </p>
+                <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  Currently invite-only. Connect with a league commissioner or existing member to receive access.
+                </p>
+              </div>
               <div className="mt-8">
                 <Link href="/login">
                   <Button variant="primary" size="lg">
@@ -126,6 +134,30 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Access Path Section */}
+      <section className="px-6 py-16" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-2xl font-bold">How to get access</h2>
+          <p className="mt-4 text-lg" style={{ color: "var(--muted-foreground)" }}>
+            SundayEmpire is currently invite-only during MVP development
+          </p>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="rounded-xl border p-6" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
+              <h3 className="font-semibold">Join an existing league</h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                Ask your league commissioner to send you an invitation through the platform. They can add you as a team manager or general member.
+              </p>
+            </div>
+            <div className="rounded-xl border p-6" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
+              <h3 className="font-semibold">Start a new league</h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                Connect with existing SundayEmpire users who can help you get commissioner access to create and manage a new league.
+              </p>
             </div>
           </div>
         </div>
@@ -233,9 +265,9 @@ export default function LandingPage() {
               >
                 1
               </div>
-              <h3 className="mt-4 font-semibold">Log in</h3>
+              <h3 className="mt-4 font-semibold">Get invited</h3>
               <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Access your league workspace with your existing account.
+                Join through league invitations to access your workspace.
               </p>
             </div>
             
@@ -398,7 +430,7 @@ export default function LandingPage() {
           <div className="mt-8">
             <Link href="/login">
               <Button variant="primary" size="lg">
-                Log in / Sign up
+                Sign in
               </Button>
             </Link>
           </div>

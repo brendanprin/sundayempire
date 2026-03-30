@@ -490,7 +490,7 @@ export default function LoginPage() {
         ? "Request a fresh sign-in link for yourself, or use the demo switcher only when local/test mode enables it."
         : returnTo.startsWith("/invite")
           ? "Enter the invited email address and we'll send a one-time sign-in link so you can accept the league invite."
-          : "We'll email you a secure sign-in link. Works for new accounts and existing users.");
+          : "We'll email you a secure sign-in link. Access requires a league invite or existing account.");
 
   // Handle resending magic link
   async function handleResendMagicLink() {
