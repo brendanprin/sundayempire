@@ -8,6 +8,17 @@ import { PageHeaderBand } from "@/components/layout/page-header-band";
 type TeamSlotStatus = "filled" | "pending_invite" | "open";
 type InviteStatus = "pending" | "expired" | "accepted" | "revoked" | null;
 
+// Comprehensive status that combines team + invite + delivery state
+type ComprehensiveSlotStatus = 
+  | "open_slot"                    // No team, no invite
+  | "team_created_no_owner"        // Team exists, no owner assigned
+  | "invite_pending"               // Invite sent and pending
+  | "invite_delivery_failed"       // Invite failed to deliver
+  | "invite_not_configured"        // Delivery system not set up
+  | "owner_joined"                 // Owner has joined
+  | "invite_revoked"               // Invite was revoked
+  | "invite_expired";              // Invite has expired
+
 export type TeamSlot = {
   id: string;
   slotNumber: number;
@@ -21,6 +32,9 @@ export type TeamSlot = {
   inviteId: string | null;
   teamId: string | null;
   ownerId: string | null;
+  // Enhanced invite delivery information
+  inviteDeliveryState?: "sent" | "captured" | "logged" | "failed" | "not_configured" | "unknown" | null;
+  inviteDeliveryDetail?: string | null;
 };
 
 function LeagueSizeControl({ 
@@ -113,10 +127,10 @@ function LeagueSizeControl({
 export type LeagueMembersSummary = {
   totalSlots: number;
   filledSlots: number;
+  openSlots: number;
+  pendingInvites: number;
   createdTeams: number;
   claimedTeams: number;
-  pendingInvites: number;
-  openSlots: number;
   leagueName: string;
   canChangeSize: boolean;
 };
@@ -146,31 +160,100 @@ interface LeagueMembersWorkspaceProps {
   onChangeLeagueSize?: (newSize: number) => Promise<void>;
 }
 
-function getStatusBadge(status: TeamSlotStatus, inviteStatus: InviteStatus) {
-  if (status === "filled") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
-        Filled
-      </span>
-    );
+// Determine comprehensive status combining team, invite, and delivery states
+function getComprehensiveStatus(slot: TeamSlot): ComprehensiveSlotStatus {
+  // Owner has joined (filled slot with owner)
+  if (slot.status === "filled" && slot.ownerName) {
+    return "owner_joined";
   }
   
-  if (status === "pending_invite") {
-    const badgeColor = inviteStatus === "pending" ? "bg-amber-400/10 text-amber-400 ring-amber-400/20" : "bg-red-400/10 text-red-400 ring-red-400/20";
-    const badgeText = inviteStatus === "pending" ? "Invited" : inviteStatus === "expired" ? "Expired" : "Revoked";
+  // Team created but no owner assigned yet
+  if (slot.teamName && !slot.ownerName && !slot.ownerEmail) {
+    return "team_created_no_owner";
+  }
+  
+  // Handle invite states
+  if (slot.status === "pending_invite" || slot.ownerEmail) {
+    if (slot.inviteStatus === "revoked") {
+      return "invite_revoked";
+    }
+    if (slot.inviteStatus === "expired") {
+      return "invite_expired";
+    }
+    if (slot.inviteDeliveryState === "failed") {
+      return "invite_delivery_failed";
+    }
+    if (slot.inviteDeliveryState === "not_configured") {
+      return "invite_not_configured";
+    }
+    return "invite_pending";
+  }
+  
+  // Default to open slot
+  return "open_slot";
+}
+
+function getStatusBadge(slot: TeamSlot) {
+  const comprehensiveStatus = getComprehensiveStatus(slot);
+  
+  switch (comprehensiveStatus) {
+    case "owner_joined":
+      return (
+        <span className="inline-flex items-center rounded-full bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
+          Owner Joined
+        </span>
+      );
     
-    return (
-      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${badgeColor}`}>
-        {badgeText}
-      </span>
-    );
+    case "team_created_no_owner":
+      return (
+        <span className="inline-flex items-center rounded-full bg-blue-400/10 px-2 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-400/20">
+          Team Created / No Owner
+        </span>
+      );
+    
+    case "invite_pending":
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-inset ring-amber-400/20">
+          Invite Pending
+        </span>
+      );
+    
+    case "invite_delivery_failed":
+      return (
+        <span className="inline-flex items-center rounded-full bg-orange-400/10 px-2 py-1 text-xs font-medium text-orange-400 ring-1 ring-inset ring-orange-400/20">
+          Invite Delivery Failed
+        </span>
+      );
+    
+    case "invite_not_configured":
+      return (
+        <span className="inline-flex items-center rounded-full bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
+          Delivery Unavailable
+        </span>
+      );
+    
+    case "invite_revoked":
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20">
+          Invite Revoked
+        </span>
+      );
+    
+    case "invite_expired":
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-400/20">
+          Invite Expired
+        </span>
+      );
+    
+    case "open_slot":
+    default:
+      return (
+        <span className="inline-flex items-center rounded-full bg-slate-400/10 px-2 py-1 text-xs font-medium text-slate-400 ring-1 ring-inset ring-slate-400/20">
+          Open Slot
+        </span>
+      );
   }
-  
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-400/10 px-2 py-1 text-xs font-medium text-slate-400 ring-1 ring-inset ring-slate-400/20">
-      Open
-    </span>
-  );
 }
 
 function TeamSlotActions({
@@ -186,309 +269,40 @@ function TeamSlotActions({
   onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
 }) {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showInviteForm, setShowInviteForm] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
-  
-  const [createTeamName, setCreateTeamName] = useState("");
-  const [createTeamAbbreviation, setCreateTeamAbbreviation] = useState("");
-  const [createDivisionLabel, setCreateDivisionLabel] = useState(slot.divisionLabel || "");
-  
-  const [inviteOwnerName, setInviteOwnerName] = useState("");
-  const [inviteOwnerEmail, setInviteOwnerEmail] = useState("");
-  const [inviteTeamName, setInviteTeamName] = useState("");
-  const [inviteTeamAbbreviation, setInviteTeamAbbreviation] = useState("");
-  const [inviteDivisionLabel, setInviteDivisionLabel] = useState(slot.divisionLabel || "");
-  
-  const [editTeamName, setEditTeamName] = useState(slot.teamName || "");
-  const [editTeamAbbreviation, setEditTeamAbbreviation] = useState(slot.teamAbbreviation || "");
-  const [editDivisionLabel, setEditDivisionLabel] = useState(slot.divisionLabel || "");
+  if (slot.status === "open") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => onCreateTeam(slot.slotNumber, { name: "", abbreviation: "", divisionLabel: "" })}
+          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+          disabled={Boolean(busyAction)}
+        >
+          Create Team
+        </button>
+        <button
+          onClick={() => onInviteMember(slot.slotNumber, { ownerName: "", ownerEmail: "", teamName: "", teamAbbreviation: "", divisionLabel: "" })}
+          className="rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500"
+          disabled={Boolean(busyAction)}
+        >
+          Send Invite
+        </button>
+      </div>
+    );
+  }
 
-  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onCreateTeam(slot.slotNumber, {
-      name: createTeamName.trim(),
-      abbreviation: createTeamAbbreviation.trim(),
-      divisionLabel: createDivisionLabel.trim()
-    });
-    setShowCreateForm(false);
-    setCreateTeamName("");
-    setCreateTeamAbbreviation("");
-    setCreateDivisionLabel(slot.divisionLabel || "");
-  };
+  if (slot.status === "filled" && slot.teamId) {
+    return (
+      <button
+        onClick={() => onEditTeam(slot.teamId!, { name: slot.teamName || "", abbreviation: slot.teamAbbreviation || "", divisionLabel: slot.divisionLabel || "" })}
+        className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-500"
+        disabled={Boolean(busyAction)}
+      >
+        Edit Team
+      </button>
+    );
+  }
 
-  const handleInviteSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await onInviteMember(slot.slotNumber, {
-      ownerName: inviteOwnerName.trim(),
-      ownerEmail: inviteOwnerEmail.trim(),
-      teamName: inviteTeamName.trim(),
-      teamAbbreviation: inviteTeamAbbreviation.trim(),
-      divisionLabel: inviteDivisionLabel.trim()
-    });
-    setShowInviteForm(false);
-    setInviteOwnerName("");
-    setInviteOwnerEmail("");
-    setInviteTeamName("");
-    setInviteTeamAbbreviation("");
-    setInviteDivisionLabel(slot.divisionLabel || "");
-  };
-
-  const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (slot.teamId) {
-      await onEditTeam(slot.teamId, {
-        name: editTeamName.trim(),
-        abbreviation: editTeamAbbreviation.trim(),
-        divisionLabel: editDivisionLabel.trim()
-      });
-      setShowEditForm(false);
-    }
-  };
-
-  return (
-    <>
-      <tr className="border-b border-slate-800/60">
-        <td className="p-3 text-sm font-medium text-slate-300">
-          {slot.slotNumber}
-        </td>
-        <td className="p-3 text-sm text-slate-100">
-          {slot.teamName ? (
-            <div>
-              <div className="font-medium">{slot.teamName}</div>
-              {slot.teamAbbreviation && (
-                <div className="text-xs text-slate-400">{slot.teamAbbreviation}</div>
-              )}
-            </div>
-          ) : (
-            <span className="text-slate-500 italic">No team</span>
-          )}
-        </td>
-        <td className="p-3 text-sm text-slate-100">
-          {slot.divisionLabel || <span className="text-slate-500 italic">None</span>}
-        </td>
-        <td className="p-3 text-sm text-slate-100">
-          {slot.ownerName ? (
-            <div>
-              <div className="font-medium">{slot.ownerName}</div>
-              {slot.ownerEmail && (
-                <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
-              )}
-            </div>
-          ) : (
-            <span className="text-slate-500 italic">No owner</span>
-          )}
-        </td>
-        <td className="p-3">
-          {getStatusBadge(slot.status, slot.inviteStatus)}
-        </td>
-        <td className="p-3">
-          <div className="flex flex-wrap gap-1">
-            {slot.status === "open" && (
-              <>
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="rounded bg-sky-600/20 px-2 py-1 text-xs font-medium text-sky-300 hover:bg-sky-600/30"
-                  disabled={Boolean(busyAction)}
-                >
-                  Add Team
-                </button>
-                <button
-                  onClick={() => setShowInviteForm(true)}
-                  className="rounded bg-emerald-600/20 px-2 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-600/30"
-                  disabled={Boolean(busyAction)}
-                >
-                  Invite
-                </button>
-              </>
-            )}
-            {slot.status === "filled" && slot.teamId && (
-              <button
-                onClick={() => setShowEditForm(true)}
-                className="rounded bg-slate-600/20 px-2 py-1 text-xs font-medium text-slate-300 hover:bg-slate-600/30"
-                disabled={Boolean(busyAction)}
-              >
-                Edit
-              </button>
-            )}
-            {slot.status === "pending_invite" && slot.inviteStatus === "expired" && (
-              <button
-                onClick={() => setShowInviteForm(true)}
-                className="rounded bg-amber-600/20 px-2 py-1 text-xs font-medium text-amber-300 hover:bg-amber-600/30"
-                disabled={Boolean(busyAction)}
-              >
-                Re-invite
-              </button>
-            )}
-          </div>
-        </td>
-      </tr>
-
-      {/* Create Team Form Row */}
-      {showCreateForm && (
-        <tr className="bg-sky-950/20 border-b border-slate-800/60">
-          <td className="p-3 text-xs text-slate-400">#{slot.slotNumber}</td>
-          <td colSpan={5} className="p-3">
-            <form onSubmit={handleCreateSubmit} className="space-y-3">
-              <h4 className="text-sm font-medium text-sky-300">Create Team for Slot {slot.slotNumber}</h4>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <input
-                  value={createTeamName}
-                  onChange={(e) => setCreateTeamName(e.target.value)}
-                  placeholder="Team name"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                  required
-                />
-                <input
-                  value={createTeamAbbreviation}
-                  onChange={(e) => setCreateTeamAbbreviation(e.target.value)}
-                  placeholder="Abbreviation"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 uppercase"
-                />
-                <input
-                  value={createDivisionLabel}
-                  onChange={(e) => setCreateDivisionLabel(e.target.value)}
-                  placeholder="Division"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="rounded bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-500"
-                  disabled={Boolean(busyAction)}
-                >
-                  Create Team
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="rounded bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-500"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </td>
-        </tr>
-      )}
-
-      {/* Invite Member Form Row */}
-      {showInviteForm && (
-        <tr className="bg-emerald-950/20 border-b border-slate-800/60">
-          <td className="p-3 text-xs text-slate-400">#{slot.slotNumber}</td>
-          <td colSpan={5} className="p-3">
-            <form onSubmit={handleInviteSubmit} className="space-y-3">
-              <h4 className="text-sm font-medium text-emerald-300">Invite Member + Create Team for Slot {slot.slotNumber}</h4>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={inviteOwnerName}
-                  onChange={(e) => setInviteOwnerName(e.target.value)}
-                  placeholder="Owner name"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                  required
-                />
-                <input
-                  type="email"
-                  value={inviteOwnerEmail}
-                  onChange={(e) => setInviteOwnerEmail(e.target.value)}
-                  placeholder="Owner email"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                  required
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <input
-                  value={inviteTeamName}
-                  onChange={(e) => setInviteTeamName(e.target.value)}
-                  placeholder="Team name"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                  required
-                />
-                <input
-                  value={inviteTeamAbbreviation}
-                  onChange={(e) => setInviteTeamAbbreviation(e.target.value)}
-                  placeholder="Abbreviation"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 uppercase"
-                />
-                <input
-                  value={inviteDivisionLabel}
-                  onChange={(e) => setInviteDivisionLabel(e.target.value)}
-                  placeholder="Division"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="rounded bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500"
-                  disabled={Boolean(busyAction)}
-                >
-                  Create Team + Send Invite
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowInviteForm(false)}
-                  className="rounded bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-500"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </td>
-        </tr>
-      )}
-
-      {/* Edit Team Form Row */}
-      {showEditForm && (
-        <tr className="bg-slate-950/40 border-b border-slate-800/60">
-          <td className="p-3 text-xs text-slate-400">#{slot.slotNumber}</td>
-          <td colSpan={5} className="p-3">
-            <form onSubmit={handleEditSubmit} className="space-y-3">
-              <h4 className="text-sm font-medium text-slate-300">Edit Team in Slot {slot.slotNumber}</h4>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <input
-                  value={editTeamName}
-                  onChange={(e) => setEditTeamName(e.target.value)}
-                  placeholder="Team name"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                  required
-                />
-                <input
-                  value={editTeamAbbreviation}
-                  onChange={(e) => setEditTeamAbbreviation(e.target.value)}
-                  placeholder="Abbreviation"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 uppercase"
-                />
-                <input
-                  value={editDivisionLabel}
-                  onChange={(e) => setEditDivisionLabel(e.target.value)}
-                  placeholder="Division"
-                  className="rounded border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="rounded bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-500"
-                  disabled={Boolean(busyAction)}
-                >
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditForm(false)}
-                  className="rounded bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-500"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </td>
-        </tr>
-      )}
-    </>
-  );
+  return <span className="text-xs text-slate-500">No actions</span>;
 }
 
 function TeamSlotRow({ 
@@ -504,6 +318,8 @@ function TeamSlotRow({
   onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
 }) {
+  const comprehensiveStatus = getComprehensiveStatus(slot);
+  
   return (
     <tr className="hover:bg-slate-800/30 transition-colors">
       <td className="p-3 text-sm font-medium text-slate-200">
@@ -523,19 +339,35 @@ function TeamSlotRow({
       </td>
       <td className="p-3">
         {slot.ownerName ? (
+          // Owner has joined
           <div>
-            <div className="text-sm text-slate-100">{slot.ownerName}</div>
+            <div className="text-sm font-medium text-slate-100">{slot.ownerName}</div>
             {slot.ownerEmail && (
               <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
             )}
           </div>
         ) : slot.ownerEmail ? (
+          // Invited but not yet joined
           <div>
-            <div className="text-sm text-slate-300">Invited</div>
+            <div className="text-sm text-slate-300">
+              {comprehensiveStatus === "invite_pending" ? "Invited" :
+               comprehensiveStatus === "invite_delivery_failed" ? "Invite Failed" :
+               comprehensiveStatus === "invite_not_configured" ? "Delivery Issue" :
+               comprehensiveStatus === "invite_revoked" ? "Revoked" :
+               comprehensiveStatus === "invite_expired" ? "Expired" : "Invited"}
+            </div>
             <div className="text-xs text-slate-400">{slot.ownerEmail}</div>
+            {comprehensiveStatus === "invite_delivery_failed" && slot.inviteDeliveryDetail && (
+              <div className="text-xs text-orange-400 mt-1">{slot.inviteDeliveryDetail}</div>
+            )}
+            {comprehensiveStatus === "invite_not_configured" && slot.inviteDeliveryDetail && (
+              <div className="text-xs text-yellow-400 mt-1">{slot.inviteDeliveryDetail}</div>
+            )}
           </div>
         ) : (
-          <span className="text-sm text-slate-500 italic">No owner</span>
+          <span className="text-sm text-slate-500 italic">
+            {comprehensiveStatus === "team_created_no_owner" ? "No owner assigned" : "No owner"}
+          </span>
         )}
       </td>
       <td className="p-3">
@@ -544,7 +376,7 @@ function TeamSlotRow({
         )}
       </td>
       <td className="p-3">
-        {getStatusBadge(slot.status, slot.inviteStatus)}
+        {getStatusBadge(slot)}
       </td>
       <td className="p-3">
         <TeamSlotActions
@@ -624,49 +456,8 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
         </div>
       </div>
 
-      {/* Status Summary Bar */}
-      <div className="rounded-xl bg-slate-900/40 border border-slate-700/60 p-6">
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-slate-100">{summary.totalSlots}</div>
-            <div className="text-sm text-slate-400">Total Slots</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-400">{summary.filledSlots}</div>
-            <div className="text-sm text-slate-400">Teams Filled</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-amber-400">{summary.pendingInvites}</div>
-            <div className="text-sm text-slate-400">Pending Invites</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-slate-400">{summary.openSlots}</div>
-            <div className="text-sm text-slate-400">Open Slots</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Status Messages */}
-      {props.setupOpsError && (
-        <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-sm text-red-100">
-          {props.setupOpsError}
-        </div>
-      )}
-      {props.setupOpsMessage && (
-        <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-100">
-          {props.setupOpsMessage}
-        </div>
-      )}
-
       {/* Team Slots Table */}
-      <div className="rounded-xl border border-slate-700/60 bg-slate-900/20 overflow-hidden">
-        <div className="bg-slate-800/40 px-6 py-4 border-b border-slate-700/60">
-          <h3 className="text-lg font-medium text-slate-100">Team Slots & Members</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Manage team assignments, send invites, and track league membership status.
-          </p>
-        </div>
-
+      <div className="rounded-xl border border-slate-700/60 bg-slate-900/20">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-800/20">
@@ -678,10 +469,10 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
                   Team
                 </th>
                 <th className="p-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Division
+                  Owner/Manager
                 </th>
                 <th className="p-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Owner/Manager
+                  Division
                 </th>
                 <th className="p-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                   Status
@@ -717,67 +508,64 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
             <div>
               <h4 className="text-sm font-medium text-slate-100">Bulk Team Import (CSV)</h4>
               <p className="mt-1 text-xs text-slate-400">
-                Import multiple teams and invites at once. Headers: ownerName, ownerEmail, teamName, teamAbbreviation, divisionLabel
+                Import multiple teams and invitations at once using CSV format.
               </p>
             </div>
-
-            <textarea
-              value={props.setupBulkCsvText}
-              onChange={(event) => props.setSetupBulkCsvText(event.target.value)}
-              className="min-h-[7rem] w-full rounded-md border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100"
-              placeholder="ownerName,ownerEmail,teamName,teamAbbreviation,divisionLabel&#10;Alex Owner,alex@example.com,Empire East,EME,East"
-            />
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={props.onSetupBulkValidate}
-                className="rounded-md bg-sky-600/20 border border-sky-600/40 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:cursor-not-allowed disabled:opacity-60"
+            
+            <div className="space-y-3">
+              <textarea
+                value={props.setupBulkCsvText}
+                onChange={(e) => props.setSetupBulkCsvText(e.target.value)}
+                placeholder="team_name,owner_name,owner_email,abbreviation,division&#10;Team Alpha,John Doe,john@example.com,ALPH,North&#10;Team Beta,Jane Smith,jane@example.com,BETA,South"
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 font-mono"
+                rows={6}
                 disabled={Boolean(props.setupBulkBusyAction)}
-              >
-                {props.setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
-              </button>
-              <button
-                type="button"
-                onClick={props.onSetupBulkApply}
-                className="rounded-md bg-emerald-600/20 border border-emerald-600/40 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-600/30 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={Boolean(props.setupBulkBusyAction) || !props.setupBulkValidation || props.setupBulkValidation.summary.validRows === 0}
-              >
-                {props.setupBulkBusyAction === "apply" ? "Applying..." : "Apply Valid Rows"}
-              </button>
+              />
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={props.onSetupBulkValidate}
+                  className="rounded bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500"
+                  disabled={Boolean(props.setupBulkBusyAction) || !props.setupBulkCsvText.trim()}
+                >
+                  {props.setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
+                </button>
+                
+                {props.setupBulkValidation && (
+                  <button
+                    onClick={props.onSetupBulkApply}
+                    className="rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-500"
+                    disabled={Boolean(props.setupBulkBusyAction)}
+                  >
+                    {props.setupBulkBusyAction === "apply" ? "Importing..." : "Import Teams"}
+                  </button>
+                )}
+              </div>
             </div>
 
             {props.setupBulkError && (
-              <div className="rounded-lg border border-red-800/60 bg-red-950/30 px-3 py-2 text-xs text-red-100">
+              <div className="rounded bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
                 {props.setupBulkError}
               </div>
             )}
+            
             {props.setupBulkMessage && (
-              <div className="rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100">
+              <div className="rounded bg-green-500/10 border border-green-500/20 p-3 text-sm text-green-400">
                 {props.setupBulkMessage}
               </div>
             )}
           </div>
         </div>
 
-        {/* Invite Management */}
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/20 p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-sm font-medium text-slate-100">Invite Management</h4>
-            <span className="rounded-full border border-amber-600/50 px-2 py-0.5 text-xs text-amber-300">
-              {props.invites.filter((invite) => invite.status === "pending").length} pending
-            </span>
-          </div>
-          
-          <InviteManagementPanel
-            invites={props.invites}
-            copyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
-            busyAction={props.setupOpsBusyAction}
-            onResend={props.onSetupInviteResend}
-            onRevoke={props.onSetupInviteRevoke}
-            onCopyFreshLink={props.onSetupCopyFreshInviteLink}
-          />
-        </div>
+        {/* Existing Invites Management */}
+        <InviteManagementPanel
+          invites={props.invites}
+          copyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
+          busyAction={props.setupOpsBusyAction}
+          onResend={props.onSetupInviteResend}
+          onRevoke={props.onSetupInviteRevoke}
+          onCopyFreshLink={props.onSetupCopyFreshInviteLink}
+        />
       </div>
     </div>
   );

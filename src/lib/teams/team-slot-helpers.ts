@@ -30,13 +30,15 @@ export function buildTeamSlotsFromDashboard(
       inviteId: null,
       teamId: `team-${i}`, // Placeholder
       ownerId: null,
+      inviteDeliveryState: null,
+      inviteDeliveryDetail: null,
     };
     teamSlots.push(teamSlot);
   }
   
-  // Create slots for pending invites
-  const pendingInvites = invites.filter(invite => invite.status === "pending");
-  pendingInvites.forEach((invite, index) => {
+  // Create slots for all invites (pending, expired, revoked)
+  const allInvites = invites.filter(invite => invite.status !== "accepted");
+  allInvites.forEach((invite, index) => {
     const slotNumber = existingTeamCount + index + 1;
     const teamSlot: TeamSlot = {
       id: `slot-${slotNumber}`,
@@ -51,6 +53,9 @@ export function buildTeamSlotsFromDashboard(
       inviteId: invite.id,
       teamId: invite.team?.id || null,
       ownerId: invite.owner?.id || null,
+      // Add delivery information
+      inviteDeliveryState: invite.delivery?.state || null,
+      inviteDeliveryDetail: invite.delivery?.detail || null,
     };
     teamSlots.push(teamSlot);
   });
@@ -71,6 +76,8 @@ export function buildTeamSlotsFromDashboard(
       inviteId: null,
       teamId: null,
       ownerId: null,
+      inviteDeliveryState: null,
+      inviteDeliveryDetail: null,
     };
     teamSlots.push(teamSlot);
   }
