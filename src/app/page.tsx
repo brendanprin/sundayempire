@@ -24,7 +24,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 py-16 md:py-24 overflow-hidden">
+      <section className="relative px-6 py-20 md:py-28 overflow-hidden">
         {/* Subtle Brand Watermark */}
         <div className="absolute inset-0 flex items-center justify-end pointer-events-none">
           <Image
@@ -38,26 +38,31 @@ export default function LandingPage() {
         </div>
         
         <div className="relative mx-auto max-w-7xl">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
             <div className="flex flex-col justify-center">
-              <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-                Dynasty league operations, simplified
+              <h1 className="text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
+                Dynasty league operations
               </h1>
-              <p className="mt-6 text-lg md:text-xl" style={{ color: "var(--muted-foreground)" }}>
-                The control center for contract leagues. Manage caps, validate trades, track picks, and run commissioner operations with confidence.
+              <p className="mt-6 text-xl md:text-2xl" style={{ color: "var(--muted-foreground)" }}>
+                Control center for contract leagues. Validate trades, manage caps, track picks.
               </p>
-              <div className="mt-6 rounded-lg border p-4" style={{ backgroundColor: "var(--brand-surface-muted)", borderColor: "var(--brand-structure-muted)" }}>
-                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-                  ⚡ MVP Access
+              <div className="mt-8 rounded-lg border p-5" style={{ backgroundColor: "var(--brand-surface-muted)", borderColor: "var(--brand-structure-muted)" }}>
+                <p className="text-base font-medium" style={{ color: "var(--foreground)" }}>
+                  ⚡ Ready to Use
                 </p>
-                <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  Currently invite-only. Connect with a league commissioner or existing member to receive access.
+                <p className="mt-2 text-base" style={{ color: "var(--muted-foreground)" }}>
+                  Sign in to access your leagues or create a new one. Join existing leagues with an invite.
                 </p>
               </div>
-              <div className="mt-8">
+              <div className="mt-10 flex gap-4">
                 <Link href="/login">
-                  <Button variant="primary" size="lg">
+                  <Button variant="primary" size="lg" className="text-lg px-8 py-4">
                     Sign in
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="secondary" size="lg" className="text-lg px-6 py-4">
+                    I have an invite
                   </Button>
                 </Link>
               </div>
@@ -139,300 +144,111 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Access Path Section */}
-      <section className="px-6 py-16" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
-        <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-2xl font-bold">How to get access</h2>
-          <p className="mt-4 text-lg" style={{ color: "var(--muted-foreground)" }}>
-            SundayEmpire is currently invite-only during MVP development
-          </p>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <div className="rounded-xl border p-6" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
-              <h3 className="font-semibold">Join an existing league</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Ask your league commissioner to send you an invitation through the platform. They can add you as a team manager or general member.
+      {/* Access Paths */}
+      <section className="px-6 py-20" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
+        <div className="mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">Choose your access path</h2>
+            <p className="mt-4 text-lg" style={{ color: "var(--muted-foreground)" }}>
+              Three ways to get started with dynasty league operations
+            </p>
+          </div>
+          
+          <div className="grid gap-8 md:grid-cols-3">
+            {/* Returning User */}
+            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
+              <h3 className="text-xl font-semibold">Returning User</h3>
+              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
+                You already have league access and want to sign in to your dashboard.
               </p>
+              <div className="mt-6">
+                <Link href="/login">
+                  <Button variant="primary" size="lg" className="w-full">
+                    Sign in
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="rounded-xl border p-6" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
-              <h3 className="font-semibold">Start a new league</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Connect with existing SundayEmpire users who can help you get commissioner access to create and manage a new league.
+            
+            {/* Have Invite */}
+            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
+              <h3 className="text-xl font-semibold">Have an Invite</h3>
+              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
+                Commissioner sent you an invite link to join their league as team manager or member.
               </p>
+              <div className="mt-6">
+                <Link href="/login">
+                  <Button variant="secondary" size="lg" className="w-full">
+                    Join with invite
+                  </Button>
+                </Link>
+              </div>
             </div>
+            
+            {/* Start League */}
+            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
+              <h3 className="text-xl font-semibold">Start New League</h3>
+              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
+                Create your own league and become commissioner. Invite managers and set up teams.
+              </p>
+              <div className="mt-6">
+                <Link href="/login">
+                  <Button variant="primary" size="lg" className="w-full">
+                    Create league
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+            All paths require account sign-in • No approval needed • Start using immediately
           </div>
         </div>
       </section>
 
-      {/* Value Strip - 3 Columns */}
-      <section className="px-6 py-16">
+      {/* Core Value Proposition */}
+      <section className="px-6 py-20">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-3">
             <div 
-              className="rounded-xl p-6 text-center border"
+              className="rounded-xl p-8 text-center border"
               style={{
                 backgroundColor: "var(--brand-surface-card)",
                 borderColor: "var(--brand-structure-muted)"
               }}
             >
-              <h3 className="text-lg font-semibold">Know what matters next</h3>
-              <p className="mt-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Dashboard intelligence that highlights deadlines, blocked trades, and cap violations.
+              <h3 className="text-xl font-semibold">Know what matters next</h3>
+              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
+                Dashboard intelligence highlights deadlines, blocked trades, and cap violations.
               </p>
             </div>
             
             <div 
-              className="rounded-xl p-6 text-center border"
+              className="rounded-xl p-8 text-center border"
               style={{
                 backgroundColor: "var(--brand-surface-card)",
                 borderColor: "var(--brand-structure-muted)"
               }}
             >
-              <h3 className="text-lg font-semibold">Make legal moves with confidence</h3>
-              <p className="mt-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Real-time validation for trades, contracts, and draft picks. No more rule violations.
+              <h3 className="text-xl font-semibold">Make legal moves with confidence</h3>
+              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
+                Real-time validation for trades, contracts, and draft picks. No rule violations.
               </p>
             </div>
             
             <div 
-              className="rounded-xl p-6 text-center border"
+              className="rounded-xl p-8 text-center border"
               style={{
                 backgroundColor: "var(--brand-surface-card)",
                 borderColor: "var(--brand-structure-muted)"
               }}
             >
-              <h3 className="text-lg font-semibold">Run the league transparently</h3>
-              <p className="mt-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
+              <h3 className="text-xl font-semibold">Run transparent operations</h3>
+              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
                 Commissioner tools with full audit logs. Every decision is tracked and visible.
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Built for Both Sides */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-3xl font-bold">Built for both sides of the league</h2>
-          <div className="mt-12 grid gap-8 lg:grid-cols-2">
-            <div 
-              className="rounded-xl p-8 border"
-              style={{
-                backgroundColor: "var(--brand-surface-elevated)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="text-xl font-semibold">For Managers</h3>
-              <ul className="mt-4 space-y-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                <li>• Submit legally compliant trades instantly</li>
-                <li>• Monitor cap space and contract deadlines</li>
-                <li>• Track rookie pick values and ownership</li>
-                <li>• View transparent league activity timeline</li>
-              </ul>
-            </div>
-            
-            <div 
-              className="rounded-xl p-8 border"
-              style={{
-                backgroundColor: "var(--brand-surface-elevated)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="text-xl font-semibold">For Commissioners</h3>
-              <ul className="mt-4 space-y-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                <li>• Review and approve trades with full context</li>
-                <li>• Run draft sessions and manage pick trades</li>
-                <li>• Enforce salary caps and contract compliance</li>
-                <li>• Access comprehensive audit and reporting tools</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works - 4 Steps */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-3xl font-bold">How it works</h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-4">
-            <div className="text-center">
-              <div 
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold border"
-                style={{
-                  backgroundColor: "var(--brand-accent-soft)",
-                  borderColor: "var(--brand-accent-primary)",
-                  color: "var(--brand-accent-primary)"
-                }}
-              >
-                1
-              </div>
-              <h3 className="mt-4 font-semibold">Get invited</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Join through league invitations to access your workspace.
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div 
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold border"
-                style={{
-                  backgroundColor: "var(--brand-accent-soft)",
-                  borderColor: "var(--brand-accent-primary)",
-                  color: "var(--brand-accent-primary)"
-                }}
-              >
-                2
-              </div>
-              <h3 className="mt-4 font-semibold">See what needs attention</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Dashboard shows pending trades, deadlines, and priority actions.
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div 
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold border"
-                style={{
-                  backgroundColor: "var(--brand-accent-soft)",
-                  borderColor: "var(--brand-accent-primary)",
-                  color: "var(--brand-accent-primary)"
-                }}
-              >
-                3
-              </div>
-              <h3 className="mt-4 font-semibold">Take a legal action</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Submit trades, manage contracts, or make draft selections.
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div 
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold border"
-                style={{
-                  backgroundColor: "var(--brand-accent-soft)",
-                  borderColor: "var(--brand-accent-primary)",
-                  color: "var(--brand-accent-primary)"
-                }}
-              >
-                4
-              </div>
-              <h3 className="mt-4 font-semibold">Keep the league moving</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                All members see transparent activity, maintaining league trust.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Grid - 6 Cards */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-3xl font-bold">Core features</h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Dashboard</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Unified view of league status, pending actions, and priority deadlines.
-              </p>
-            </div>
-            
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Contracts & Cap</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Real-time salary cap tracking with contract validation and deadline alerts.
-              </p>
-            </div>
-            
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Trade Validation</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Instant rule compliance checking for all proposed trades and moves.
-              </p>
-            </div>
-            
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Rookie Picks & Draft</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Draft session management with pick tracking and trade support.
-              </p>
-            </div>
-            
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Commissioner Operations</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                League setup, ruleset management, and administrative oversight tools.
-              </p>
-            </div>
-            
-            <div 
-              className="rounded-xl p-6 border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
-              <h3 className="font-semibold">Activity & Audit</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Complete transaction history with transparent decision tracking.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Closing CTA Section */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-6 flex justify-center">
-            <Image
-              src="/brand/badge/sundayempire-logo-badge.png"
-              alt="SundayEmpire"
-              width={48}
-              height={48}
-              className="opacity-80"
-            />
-          </div>
-          <h2 className="text-3xl font-bold">Ready to streamline your dynasty league?</h2>
-          <p className="mt-4 text-lg" style={{ color: "var(--muted-foreground)" }}>
-            Join commissioners and managers who trust SundayEmpire for legal, transparent league operations.
-          </p>
-          <div className="mt-8">
-            <Link href="/login">
-              <Button variant="primary" size="lg">
-                Sign in
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
