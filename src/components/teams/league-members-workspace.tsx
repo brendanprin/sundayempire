@@ -560,43 +560,94 @@ function TeamSetupModes({
 
         {/* Bulk Import Mode */}
         {activeMode === 'bulk' && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-200">
-                CSV Data
-              </label>
-              <p className="text-xs text-slate-400">
-                Upload data in format: team_name,owner_name,owner_email,abbreviation,division
-              </p>
-              <textarea
-                value={setupBulkCsvText}
-                onChange={(e) => setSetupBulkCsvText(e.target.value)}
-                placeholder="team_name,owner_name,owner_email,abbreviation,division&#10;Lightning Bolts,John Smith,john@example.com,LB,North&#10;Thunder Hawks,Jane Doe,jane@example.com,TH,South"
-                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 font-mono"
-                rows={8}
-                disabled={Boolean(setupBulkBusyAction)}
-              />
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={onSetupBulkValidate}
-                className="rounded bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-500 disabled:opacity-50"
-                disabled={Boolean(setupBulkBusyAction) || !setupBulkCsvText.trim()}
-              >
-                {setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
-              </button>
+          <div className="space-y-6">
+            {/* Step 1: CSV Input */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-medium text-slate-200">
+                  1
+                </div>
+                <h5 className="text-sm font-medium text-slate-200">Paste CSV Data</h5>
+              </div>
               
-              {setupBulkValidation && (
-                <button
-                  onClick={onSetupBulkApply}
-                  className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
+              <div className="space-y-2 pl-9">
+                <p className="text-xs text-slate-400">
+                  Format: team_name,owner_name,owner_email,abbreviation,division
+                </p>
+                <textarea
+                  value={setupBulkCsvText}
+                  onChange={(e) => setSetupBulkCsvText(e.target.value)}
+                  placeholder="team_name,owner_name,owner_email,abbreviation,division&#10;Lightning Bolts,John Smith,john@example.com,LB,North&#10;Thunder Hawks,Jane Doe,jane@example.com,TH,South"
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 font-mono"
+                  rows={8}
                   disabled={Boolean(setupBulkBusyAction)}
-                >
-                  {setupBulkBusyAction === "apply" ? "Importing..." : "Import All Teams"}
-                </button>
-              )}
+                />
+                
+                <div className="flex justify-start">
+                  <button
+                    onClick={onSetupBulkValidate}
+                    className="rounded bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                    disabled={Boolean(setupBulkBusyAction) || !setupBulkCsvText.trim()}
+                  >
+                    {setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Step 2: Validation Results */}
+            {setupBulkValidation && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-600 text-xs font-medium text-white">
+                    2
+                  </div>
+                  <h5 className="text-sm font-medium text-slate-200">Review Import Summary</h5>
+                </div>
+                
+                <div className="pl-9 space-y-4">
+                  {/* Import Summary */}
+                  <div className="rounded-lg border border-slate-600 bg-slate-800/50 p-4">
+                    <h6 className="text-sm font-medium text-slate-100 mb-3">Import Summary</h6>
+                    <ImportSummary validation={setupBulkValidation} />
+                  </div>
+
+                  {/* Row-by-Row Details */}
+                  <div className="space-y-2">
+                    <h6 className="text-sm font-medium text-slate-200">Row Details</h6>
+                    <div className="rounded-lg border border-slate-600 bg-slate-800/50">
+                      <ImportRowDetails validation={setupBulkValidation} />
+                    </div>
+                  </div>
+
+                  {/* Step 3: Apply Changes */}
+                  <div className="pt-2">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-medium text-slate-200">
+                        3
+                      </div>
+                      <h5 className="text-sm font-medium text-slate-200">Apply Changes</h5>
+                    </div>
+                    
+                    <div className="pl-9">
+                      <button
+                        onClick={onSetupBulkApply}
+                        className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
+                        disabled={Boolean(setupBulkBusyAction) || !hasValidRows(setupBulkValidation)}
+                      >
+                        {setupBulkBusyAction === "apply" ? "Importing..." : `Import ${getValidRowCount(setupBulkValidation)} Valid Teams`}
+                      </button>
+                      
+                      {!hasValidRows(setupBulkValidation) && (
+                        <p className="mt-2 text-xs text-red-400">
+                          No valid rows found. Please fix validation errors before importing.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {setupBulkError && (
               <div className="rounded bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
@@ -612,6 +663,160 @@ function TeamSetupModes({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Helper functions for CSV import summary
+function getValidRowCount(validation: any): number {
+  if (!validation || !Array.isArray(validation.rows)) return 0;
+  return validation.rows.filter((row: any) => row.valid).length;
+}
+
+function getInvalidRowCount(validation: any): number {
+  if (!validation || !Array.isArray(validation.rows)) return 0;
+  return validation.rows.filter((row: any) => !row.valid).length;
+}
+
+function hasValidRows(validation: any): boolean {
+  return getValidRowCount(validation) > 0;
+}
+
+function getTeamsToCreateCount(validation: any): number {
+  if (!validation || !Array.isArray(validation.rows)) return 0;
+  return validation.rows.filter((row: any) => row.valid).length;
+}
+
+function getOwnersToInviteCount(validation: any): number {
+  if (!validation || !Array.isArray(validation.rows)) return 0;
+  return validation.rows.filter((row: any) => row.valid && row.data?.owner_email).length;
+}
+
+function getDuplicatesCount(validation: any): number {
+  if (!validation || !Array.isArray(validation.rows)) return 0;
+  return validation.rows.filter((row: any) => 
+    row.errors?.some((error: string) => error.toLowerCase().includes('duplicate'))
+  ).length;
+}
+
+function ImportSummary({ validation }: { validation: any }) {
+  const totalRows = validation?.rows?.length || 0;
+  const validRows = getValidRowCount(validation);
+  const invalidRows = getInvalidRowCount(validation);
+  const teamsToCreate = getTeamsToCreateCount(validation);
+  const ownersToInvite = getOwnersToInviteCount(validation);
+  const duplicates = getDuplicatesCount(validation);
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+      <div>
+        <div className="text-slate-400">Total Rows</div>
+        <div className="font-medium text-slate-100">{totalRows}</div>
+      </div>
+      <div>
+        <div className="text-slate-400">Valid Rows</div>
+        <div className="font-medium text-green-400">{validRows}</div>
+      </div>
+      <div>
+        <div className="text-slate-400">Invalid Rows</div>
+        <div className="font-medium text-red-400">{invalidRows}</div>
+      </div>
+      <div>
+        <div className="text-slate-400">Teams to Create</div>
+        <div className="font-medium text-blue-400">{teamsToCreate}</div>
+      </div>
+      <div>
+        <div className="text-slate-400">Owners to Invite</div>
+        <div className="font-medium text-amber-400">{ownersToInvite}</div>
+      </div>
+      <div>
+        <div className="text-slate-400">Duplicates/Conflicts</div>
+        <div className="font-medium text-red-400">{duplicates}</div>
+      </div>
+    </div>
+  );
+}
+
+function ImportRowDetails({ validation }: { validation: any }) {
+  if (!validation || !Array.isArray(validation.rows)) {
+    return (
+      <div className="p-4 text-sm text-slate-400">
+        No validation data available
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-slate-700">
+      {validation.rows.map((row: any, index: number) => (
+        <div key={index} className="p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-slate-400">Row {index + 1}</span>
+                {row.valid ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
+                    ✓ Valid
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">
+                    ✗ Invalid
+                  </span>
+                )}
+              </div>
+              
+              {/* Row Data */}
+              {row.data && (
+                <div className="text-xs text-slate-300 mb-2">
+                  <span className="font-medium">{row.data.team_name || 'No team name'}</span>
+                  {row.data.owner_name && (
+                    <>
+                      <span className="text-slate-500"> • </span>
+                      <span>{row.data.owner_name}</span>
+                    </>
+                  )}
+                  {row.data.owner_email && (
+                    <>
+                      <span className="text-slate-500"> • </span>
+                      <span>{row.data.owner_email}</span>
+                    </>
+                  )}
+                  {row.data.abbreviation && (
+                    <>
+                      <span className="text-slate-500"> • </span>
+                      <span>{row.data.abbreviation}</span>
+                    </>
+                  )}
+                  {row.data.division && (
+                    <>
+                      <span className="text-slate-500"> • </span>
+                      <span>{row.data.division}</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Errors */}
+              {row.errors && row.errors.length > 0 && (
+                <div className="space-y-1">
+                  {row.errors.map((error: string, errorIndex: number) => (
+                    <div key={errorIndex} className="text-xs text-red-400">
+                      • {error}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Success Details */}
+              {row.valid && row.actions && (
+                <div className="text-xs text-green-400">
+                  Will create: {row.actions.join(', ')}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
