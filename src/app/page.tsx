@@ -6,17 +6,17 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}>
       {/* Header / Top Bar */}
-      <header className="border-b px-6 py-4" style={{ borderColor: "var(--brand-structure-muted)" }}>
+      <header className="border-b px-6 py-5" style={{ borderColor: "var(--brand-structure-muted)" }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Image
             src="/brand/wordmark/sundayempire-logo-primary-wordmark.png"
             alt="SundayEmpire"
-            width={180}
-            height={48}
+            width={200}
+            height={53}
             priority
           />
           <Link href="/login">
-            <Button variant="primary" size="lg">
+            <Button variant="primary" size="lg" className="text-lg px-8 py-3 font-semibold">
               Sign in
             </Button>
           </Link>
@@ -24,7 +24,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 py-20 md:py-28 overflow-hidden">
+      <section className="relative px-6 py-16 md:py-20 overflow-hidden">
         {/* Subtle Brand Watermark */}
         <div className="absolute inset-0 flex items-center justify-end pointer-events-none">
           <Image
@@ -43,28 +43,13 @@ export default function LandingPage() {
               <h1 className="text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
                 Dynasty league operations
               </h1>
-              <p className="mt-6 text-xl md:text-2xl" style={{ color: "var(--muted-foreground)" }}>
+              <p className="mt-6 text-xl md:text-2xl leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Control center for contract leagues. Validate trades, manage caps, track picks.
               </p>
-              <div className="mt-8 rounded-lg border p-5" style={{ backgroundColor: "var(--brand-surface-muted)", borderColor: "var(--brand-structure-muted)" }}>
-                <p className="text-base font-medium" style={{ color: "var(--foreground)" }}>
-                  ⚡ Ready to Use
+              <div className="mt-6">
+                <p className="text-lg" style={{ color: "var(--muted-foreground)" }}>
+                  Manage your leagues, start a new one, or join via invite
                 </p>
-                <p className="mt-2 text-base" style={{ color: "var(--muted-foreground)" }}>
-                  Sign in to access your leagues or create a new one. Join existing leagues with an invite.
-                </p>
-              </div>
-              <div className="mt-10 flex gap-4">
-                <Link href="/login">
-                  <Button variant="primary" size="lg" className="text-lg px-8 py-4">
-                    Sign in
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="secondary" size="lg" className="text-lg px-6 py-4">
-                    I have an invite
-                  </Button>
-                </Link>
               </div>
             </div>
             
@@ -116,11 +101,11 @@ export default function LandingPage() {
                             color: "var(--status-warning-text)"
                           }}
                         >
-                          Trade Review
+                          Commissioner Review
                         </div>
-                        <h4 className="font-semibold text-sm">Cap violation in Wilson ↔ Chen trade</h4>
+                        <h4 className="font-semibold text-sm">Hawks exceed soft cap in trade proposal</h4>
                         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          Wilson exceeds cap by $2.1M • Due: 2h 14m
+                          $267 total cap hit over $245 limit • Due: 3h 42m
                         </p>
                       </div>
                       <div 
@@ -146,9 +131,9 @@ export default function LandingPage() {
                       }}
                     >
                       <div className="space-y-1">
-                        <h4 className="font-medium text-sm">Draft pick assignments</h4>
+                        <h4 className="font-medium text-sm">Settlement queue</h4>
                         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          2 teams missing 2026 2nd round picks
+                          2 approved trade proposals awaiting processing
                         </p>
                       </div>
                       <div 
@@ -165,9 +150,9 @@ export default function LandingPage() {
                       }}
                     >
                       <div className="space-y-1">
-                        <h4 className="font-medium text-sm">League setup completion</h4>
+                        <h4 className="font-medium text-sm">Pick ownership assignment</h4>
                         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          8 of 12 teams configured • 4 pending invites
+                          2026 R2 (#18) ownership requires transfer
                         </p>
                       </div>
                       <div 
@@ -183,108 +168,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Access Paths */}
-      <section className="px-6 py-20" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold">Choose your access path</h2>
-            <p className="mt-4 text-lg" style={{ color: "var(--muted-foreground)" }}>
-              Three ways to get started with dynasty league operations
-            </p>
-          </div>
-          
-          <div className="grid gap-8 md:grid-cols-3">
-            {/* Returning User */}
-            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
-              <h3 className="text-xl font-semibold">Returning User</h3>
-              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
-                You already have league access and want to sign in to your dashboard.
-              </p>
-              <div className="mt-6">
-                <Link href="/login">
-                  <Button variant="primary" size="lg" className="w-full">
-                    Sign in
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            
-            {/* Have Invite */}
-            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
-              <h3 className="text-xl font-semibold">Have an Invite</h3>
-              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
-                Commissioner sent you an invite link to join their league as team manager or member.
-              </p>
-              <div className="mt-6">
-                <Link href="/login">
-                  <Button variant="secondary" size="lg" className="w-full">
-                    Join with invite
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            
-            {/* Start League */}
-            <div className="rounded-xl border p-8 text-center" style={{ backgroundColor: "var(--brand-surface-elevated)", borderColor: "var(--brand-structure-muted)" }}>
-              <h3 className="text-xl font-semibold">Start New League</h3>
-              <p className="mt-3 text-base" style={{ color: "var(--muted-foreground)" }}>
-                Create your own league and become commissioner. Invite managers and set up teams.
-              </p>
-              <div className="mt-6">
-                <Link href="/login">
-                  <Button variant="primary" size="lg" className="w-full">
-                    Create league
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
-            All paths require account sign-in • No approval needed • Start using immediately
-          </div>
+      {/* Core Value Proposition */}
+      <section className="px-6 py-14" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
+        <div className="mx-auto max-w-5xl text-center">
+          <h2 className="text-3xl md:text-4xl font-bold">Built for operational control</h2>
+          <p className="mt-4 text-xl" style={{ color: "var(--foreground)" }}>
+            Dynasty league management that prioritizes compliance, transparency, and commissioner confidence.
+          </p>
         </div>
       </section>
 
-      {/* Core Value Proposition */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-7xl">
+      {/* Key Benefits */}
+      <section className="px-6 py-12">
+        <div className="mx-auto max-w-6xl">
           <div className="grid gap-8 md:grid-cols-3">
-            <div 
-              className="rounded-xl p-8 text-center border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
+            <div className="text-center">
               <h3 className="text-xl font-semibold">Know what matters next</h3>
-              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
+              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Dashboard intelligence highlights deadlines, blocked trades, and cap violations.
               </p>
             </div>
             
-            <div 
-              className="rounded-xl p-8 text-center border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
+            <div className="text-center">
               <h3 className="text-xl font-semibold">Make legal moves with confidence</h3>
-              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
+              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Real-time validation for trades, contracts, and draft picks. No rule violations.
               </p>
             </div>
             
-            <div 
-              className="rounded-xl p-8 text-center border"
-              style={{
-                backgroundColor: "var(--brand-surface-card)",
-                borderColor: "var(--brand-structure-muted)"
-              }}
-            >
+            <div className="text-center">
               <h3 className="text-xl font-semibold">Run transparent operations</h3>
-              <p className="mt-4 text-base" style={{ color: "var(--muted-foreground)" }}>
+              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Commissioner tools with full audit logs. Every decision is tracked and visible.
               </p>
             </div>
@@ -292,10 +206,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Minimal Footer */}
-      <footer className="border-t px-6 py-8" style={{ borderColor: "var(--brand-structure-muted)" }}>
+      {/* Footer */}
+      <footer className="border-t px-6 py-10" style={{ borderColor: "var(--brand-structure-muted)" }}>
         <div className="mx-auto max-w-7xl text-center">
-          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+          <p className="text-base" style={{ color: "var(--muted-foreground)" }}>
             © 2026 SundayEmpire. Dynasty league operations platform.
           </p>
         </div>
