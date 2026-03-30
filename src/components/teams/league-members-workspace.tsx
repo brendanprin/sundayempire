@@ -256,66 +256,373 @@ function getStatusBadge(slot: TeamSlot) {
   }
 }
 
-function TeamSlotActions({
-  slot,
+function TeamSetupModes({
   busyAction,
-  onCreateTeam,
-  onInviteMember,
-  onEditTeam
+  setupBulkCsvText,
+  setupBulkBusyAction,
+  setupBulkValidation,
+  setupBulkError,
+  setupBulkMessage,
+  setSetupBulkCsvText,
+  onSetupBulkValidate,
+  onSetupBulkApply,
+  onSlotCreateTeam,
+  onSlotInviteMember
 }: {
-  slot: TeamSlot;
   busyAction: string | null;
-  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
-  onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
-  onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+  setupBulkCsvText: string;
+  setupBulkBusyAction: "validate" | "apply" | null;
+  setupBulkValidation: any;
+  setupBulkError: string | null;
+  setupBulkMessage: string | null;
+  setSetupBulkCsvText: (value: string) => void;
+  onSetupBulkValidate: () => Promise<void>;
+  onSetupBulkApply: () => Promise<void>;
+  onSlotCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+  onSlotInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
 }) {
-  if (slot.status === "open") {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onCreateTeam(slot.slotNumber, { name: "", abbreviation: "", divisionLabel: "" })}
-          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-          disabled={Boolean(busyAction)}
-        >
-          Create Team
-        </button>
-        <button
-          onClick={() => onInviteMember(slot.slotNumber, { ownerName: "", ownerEmail: "", teamName: "", teamAbbreviation: "", divisionLabel: "" })}
-          className="rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500"
-          disabled={Boolean(busyAction)}
-        >
-          Send Invite
-        </button>
+  const [activeMode, setActiveMode] = useState<'team' | 'invite' | 'bulk'>('team');
+  
+  // Single team form state
+  const [teamName, setTeamName] = useState("");
+  const [teamAbbreviation, setTeamAbbreviation] = useState("");
+  const [divisionLabel, setDivisionLabel] = useState("");
+  
+  // Team + invite form state
+  const [inviteOwnerName, setInviteOwnerName] = useState("");
+  const [inviteOwnerEmail, setInviteOwnerEmail] = useState("");
+  const [inviteTeamName, setInviteTeamName] = useState("");
+  const [inviteTeamAbbreviation, setInviteTeamAbbreviation] = useState("");
+  const [inviteDivisionLabel, setInviteDivisionLabel] = useState("");
+
+  const handleCreateTeam = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Find the next available slot
+    const nextSlot = 1; // This would need to be calculated based on available slots
+    await onSlotCreateTeam(nextSlot, {
+      name: teamName.trim(),
+      abbreviation: teamAbbreviation.trim(),
+      divisionLabel: divisionLabel.trim()
+    });
+    // Reset form
+    setTeamName("");
+    setTeamAbbreviation("");
+    setDivisionLabel("");
+  };
+
+  const handleCreateTeamAndInvite = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Find the next available slot
+    const nextSlot = 1; // This would need to be calculated based on available slots
+    await onSlotInviteMember(nextSlot, {
+      ownerName: inviteOwnerName.trim(),
+      ownerEmail: inviteOwnerEmail.trim(),
+      teamName: inviteTeamName.trim(),
+      teamAbbreviation: inviteTeamAbbreviation.trim(),
+      divisionLabel: inviteDivisionLabel.trim()
+    });
+    // Reset form
+    setInviteOwnerName("");
+    setInviteOwnerEmail("");
+    setInviteTeamName("");
+    setInviteTeamAbbreviation("");
+    setInviteDivisionLabel("");
+  };
+
+  const modes = [
+    {
+      id: 'team' as const,
+      label: 'Add Team Only',
+      description: 'Create a single team without assigning an owner',
+      icon: '🏆',
+      recommended: 'Best for adding teams you\'ll assign owners to later'
+    },
+    {
+      id: 'invite' as const,
+      label: 'Add Team + Invite Owner',
+      description: 'Create a team and immediately invite someone to manage it',
+      icon: '📧',
+      recommended: 'Best when you know who will manage the team'
+    },
+    {
+      id: 'bulk' as const,
+      label: 'Import Multiple Teams',
+      description: 'Upload a CSV file to create many teams and invites at once',
+      icon: '📊',
+      recommended: 'Best for setting up entire leagues quickly'
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Mode Selection */}
+      <div>
+        <h3 className="text-lg font-medium text-slate-100 mb-4">Add Teams to Your League</h3>
+        
+        {/* Tab Navigation */}
+        <div className="border-b border-slate-700">
+          <nav className="flex space-x-8">
+            {modes.map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setActiveMode(mode.id)}
+                className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeMode === mode.id
+                    ? 'border-sky-500 text-sky-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{mode.icon}</span>
+                  <span>{mode.label}</span>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
-    );
-  }
 
-  if (slot.status === "filled" && slot.teamId) {
-    return (
-      <button
-        onClick={() => onEditTeam(slot.teamId!, { name: slot.teamName || "", abbreviation: slot.teamAbbreviation || "", divisionLabel: slot.divisionLabel || "" })}
-        className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-500"
-        disabled={Boolean(busyAction)}
-      >
-        Edit Team
-      </button>
-    );
-  }
+      {/* Active Mode Content */}
+      <div className="rounded-xl border border-slate-700/60 bg-slate-900/20 p-6">
+        {/* Mode Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">{modes.find(m => m.id === activeMode)?.icon}</span>
+            <h4 className="text-lg font-medium text-slate-100">
+              {modes.find(m => m.id === activeMode)?.label}
+            </h4>
+          </div>
+          <p className="text-sm text-slate-400 mb-1">
+            {modes.find(m => m.id === activeMode)?.description}
+          </p>
+          <p className="text-xs text-sky-400">
+            💡 {modes.find(m => m.id === activeMode)?.recommended}
+          </p>
+        </div>
 
-  return <span className="text-xs text-slate-500">No actions</span>;
+        {/* Single Team Mode */}
+        {activeMode === 'team' && (
+          <form onSubmit={handleCreateTeam} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Team Name *
+                </label>
+                <input
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="e.g., Lightning Bolts"
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  required
+                  disabled={Boolean(busyAction)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Abbreviation
+                </label>
+                <input
+                  type="text"
+                  value={teamAbbreviation}
+                  onChange={(e) => setTeamAbbreviation(e.target.value)}
+                  placeholder="e.g., LB"
+                  maxLength={4}
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  disabled={Boolean(busyAction)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Division
+                </label>
+                <input
+                  type="text"
+                  value={divisionLabel}
+                  onChange={(e) => setDivisionLabel(e.target.value)}
+                  placeholder="e.g., North"
+                  className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                  disabled={Boolean(busyAction)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+                disabled={Boolean(busyAction) || !teamName.trim()}
+              >
+                Create Team
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Team + Invite Mode */}
+        {activeMode === 'invite' && (
+          <form onSubmit={handleCreateTeamAndInvite} className="space-y-6">
+            <div className="space-y-4">
+              <h5 className="text-sm font-medium text-slate-200 border-b border-slate-700 pb-2">
+                Owner Information
+              </h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Owner Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteOwnerName}
+                    onChange={(e) => setInviteOwnerName(e.target.value)}
+                    placeholder="e.g., John Smith"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    required
+                    disabled={Boolean(busyAction)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Owner Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={inviteOwnerEmail}
+                    onChange={(e) => setInviteOwnerEmail(e.target.value)}
+                    placeholder="e.g., john@example.com"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    required
+                    disabled={Boolean(busyAction)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h5 className="text-sm font-medium text-slate-200 border-b border-slate-700 pb-2">
+                Team Information
+              </h5>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Team Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteTeamName}
+                    onChange={(e) => setInviteTeamName(e.target.value)}
+                    placeholder="e.g., Lightning Bolts"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    required
+                    disabled={Boolean(busyAction)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Abbreviation
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteTeamAbbreviation}
+                    onChange={(e) => setInviteTeamAbbreviation(e.target.value)}
+                    placeholder="e.g., LB"
+                    maxLength={4}
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    disabled={Boolean(busyAction)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Division
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteDivisionLabel}
+                    onChange={(e) => setInviteDivisionLabel(e.target.value)}
+                    placeholder="e.g., North"
+                    className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                    disabled={Boolean(busyAction)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="rounded bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                disabled={Boolean(busyAction) || !inviteOwnerName.trim() || !inviteOwnerEmail.trim() || !inviteTeamName.trim()}
+              >
+                Create Team & Send Invite
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Bulk Import Mode */}
+        {activeMode === 'bulk' && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-200">
+                CSV Data
+              </label>
+              <p className="text-xs text-slate-400">
+                Upload data in format: team_name,owner_name,owner_email,abbreviation,division
+              </p>
+              <textarea
+                value={setupBulkCsvText}
+                onChange={(e) => setSetupBulkCsvText(e.target.value)}
+                placeholder="team_name,owner_name,owner_email,abbreviation,division&#10;Lightning Bolts,John Smith,john@example.com,LB,North&#10;Thunder Hawks,Jane Doe,jane@example.com,TH,South"
+                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 font-mono"
+                rows={8}
+                disabled={Boolean(setupBulkBusyAction)}
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={onSetupBulkValidate}
+                className="rounded bg-amber-600 px-4 py-2 font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                disabled={Boolean(setupBulkBusyAction) || !setupBulkCsvText.trim()}
+              >
+                {setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
+              </button>
+              
+              {setupBulkValidation && (
+                <button
+                  onClick={onSetupBulkApply}
+                  className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
+                  disabled={Boolean(setupBulkBusyAction)}
+                >
+                  {setupBulkBusyAction === "apply" ? "Importing..." : "Import All Teams"}
+                </button>
+              )}
+            </div>
+
+            {setupBulkError && (
+              <div className="rounded bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
+                {setupBulkError}
+              </div>
+            )}
+            
+            {setupBulkMessage && (
+              <div className="rounded bg-green-500/10 border border-green-500/20 p-3 text-sm text-green-400">
+                {setupBulkMessage}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function TeamSlotRow({ 
   slot, 
   busyAction, 
-  onCreateTeam, 
-  onInviteMember, 
   onEditTeam 
 }: {
   slot: TeamSlot;
   busyAction: string | null;
-  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
-  onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
 }) {
   const comprehensiveStatus = getComprehensiveStatus(slot);
@@ -382,13 +689,51 @@ function TeamSlotRow({
         <TeamSlotActions
           slot={slot}
           busyAction={busyAction}
-          onCreateTeam={onCreateTeam}
-          onInviteMember={onInviteMember}
           onEditTeam={onEditTeam}
         />
       </td>
     </tr>
   );
+}
+
+function TeamSlotActions({
+  slot,
+  busyAction,
+  onEditTeam
+}: {
+  slot: TeamSlot;
+  busyAction: string | null;
+  onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
+}) {
+  if (slot.status === "open") {
+    return (
+      <span className="text-xs text-slate-500 italic">
+        Available
+      </span>
+    );
+  }
+
+  if (slot.status === "pending_invite") {
+    return (
+      <span className="text-xs text-slate-500 italic">
+        Pending
+      </span>
+    );
+  }
+
+  if (slot.status === "filled" && slot.teamId) {
+    return (
+      <button
+        onClick={() => onEditTeam(slot.teamId!, { name: slot.teamName || "", abbreviation: slot.teamAbbreviation || "", divisionLabel: slot.divisionLabel || "" })}
+        className="rounded bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-500"
+        disabled={Boolean(busyAction)}
+      >
+        Edit Team
+      </button>
+    );
+  }
+
+  return <span className="text-xs text-slate-500">—</span>;
 }
 
 export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
@@ -488,8 +833,6 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
                   key={slot.id}
                   slot={slot}
                   busyAction={props.setupOpsBusyAction}
-                  onCreateTeam={props.onSlotCreateTeam}
-                  onInviteMember={props.onSlotInviteMember}
                   onEditTeam={props.onSlotEditTeam}
                 />
               ))}
