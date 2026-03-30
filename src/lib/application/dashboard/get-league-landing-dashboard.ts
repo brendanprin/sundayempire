@@ -60,21 +60,29 @@ function buildAlerts(input: {
     // During initial setup, contextualize deadline alerts as setup guidance rather than critical operational issues
     const isSetupPhase = input.leagueStatus.alertLevel === "setup_required";
     
-    alerts.push({
-      id: "deadline-overdue",
-      level: isSetupPhase ? "warning" : "critical",
-      title: isSetupPhase 
-        ? "Setup-related deadlines need configuration."
-        : "Rules & Deadlines need attention.",
-      description: isSetupPhase
-        ? `${input.deadlineSummary.summary.overdueCount} deadline${
-            input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
-          } need to be reviewed and configured as part of initial setup.`
-        : `${input.deadlineSummary.summary.overdueCount} deadline${
-            input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
-          } have passed and still need action.`,
-      href: "/rules",
-    });
+    // Check if all overdue items are just unconfigured defaults
+    const hasRealOverdueDeadlines = input.deadlineSummary.upcomingDeadlines.some(
+      (deadline) => deadline.overdue && deadline.sourceType !== "CONSTITUTION_DEFAULT"
+    );
+    
+    // Only show deadline alerts if there are real overdue deadlines OR if we're past setup phase
+    if (hasRealOverdueDeadlines || !isSetupPhase) {
+      alerts.push({
+        id: "deadline-overdue",
+        level: isSetupPhase ? "warning" : "critical",
+        title: isSetupPhase 
+          ? "Setup-related deadlines need configuration."
+          : "Rules & Deadlines need attention.",
+        description: isSetupPhase
+          ? `${input.deadlineSummary.summary.overdueCount} deadline${
+              input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
+            } need to be reviewed and configured as part of initial setup.`
+          : `${input.deadlineSummary.summary.overdueCount} deadline${
+              input.deadlineSummary.summary.overdueCount === 1 ? "" : "s"
+            } have passed and still need action.`,
+        href: "/rules",
+      });
+    }
   } else if (input.deadlineSummary.upcomingDeadlines.some((deadline) => deadline.urgency === "today")) {
     alerts.push({
       id: "deadline-today",

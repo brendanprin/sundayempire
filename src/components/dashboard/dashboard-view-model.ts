@@ -502,13 +502,29 @@ export function buildDashboardChangeItems(
 export function buildDashboardDeadlineCards(
   dashboard: LeagueLandingDashboardProjection,
 ): DashboardDeadlineCardItem[] {
-  return dashboard.deadlineSummary.upcomingDeadlines.slice(0, 3).map((deadline) => ({
+  // Filter out unconfigured default deadlines unless they're truly relevant
+  const relevantDeadlines = dashboard.deadlineSummary.upcomingDeadlines
+    .filter((deadline) => {
+      // Show all non-default deadlines
+      if (deadline.sourceType !== "CONSTITUTION_DEFAULT") {
+        return true;
+      }
+      
+      // For defaults, only show if they're within a reasonable timeframe and not just placeholders
+      // This prevents showing "overdue" defaults that are really just unconfigured placeholders
+      return deadline.urgency !== "overdue" && deadline.daysUntilDue <= 30;
+    })
+    .slice(0, 3);
+    
+  return relevantDeadlines.map((deadline) => ({
     id: deadline.id,
-    title: formatEnumLabel(deadline.deadlineType),
+    title: deadline.sourceType === "CONSTITUTION_DEFAULT" 
+      ? `${formatEnumLabel(deadline.deadlineType)} (not configured)`
+      : formatEnumLabel(deadline.deadlineType),
     subtitle: `${formatLeaguePhaseLabel(deadline.phase)} · ${formatDate(deadline.scheduledAt)}`,
     detail: `${countLabel(deadline.openIssueCount, "linked issue")} · ${daysUntilLabel(deadline.daysUntilDue)}`,
-    badge: formatEnumLabel(deadline.urgency),
-    tone: toneForUrgency(deadline.urgency),
+    badge: deadline.sourceType === "CONSTITUTION_DEFAULT" ? "Setup needed" : formatEnumLabel(deadline.urgency),
+    tone: deadline.sourceType === "CONSTITUTION_DEFAULT" ? "default" : toneForUrgency(deadline.urgency),
   }));
 }
 

@@ -170,13 +170,13 @@ export function calculateContextAwareDeadlineUrgency(
   const diffMs = scheduledAt.getTime() - now.getTime();
   const daysUntilDue = Math.ceil(diffMs / DAY_MS);
   
-  // Check if this is a default placeholder that predates league creation
-  const deadlinePreDatesLeague = scheduledAt.getTime() < leagueCreatedAt.getTime();
-  const isDefaultPlaceholder = sourceType === "CONSTITUTION_DEFAULT" && deadlinePreDatesLeague;
+  // Treat all CONSTITUTION_DEFAULT deadlines as non-urgent placeholders until explicitly configured
+  // This prevents new leagues from showing false "overdue" states for unconfigured defaults
+  const isUnconfiguredDefault = sourceType === "CONSTITUTION_DEFAULT";
 
   if (diffMs < 0) {
     // Only mark as overdue if this is a real configured deadline, not a default placeholder
-    if (isDefaultPlaceholder) {
+    if (isUnconfiguredDefault) {
       return {
         urgency: "upcoming",
         overdue: false,
@@ -187,6 +187,15 @@ export function calculateContextAwareDeadlineUrgency(
     return {
       urgency: "overdue",
       overdue: true,
+      daysUntilDue,
+    };
+  }
+
+  // For unconfigured defaults, keep them as low-priority "upcoming" regardless of timing
+  if (isUnconfiguredDefault) {
+    return {
+      urgency: "upcoming",
+      overdue: false,
       daysUntilDue,
     };
   }
