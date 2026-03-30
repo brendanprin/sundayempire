@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireAuthenticatedUser } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { ACTIVE_LEAGUE_COOKIE, AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth-constants";
 import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
 import { parseLeagueIdFromReturnTo } from "@/lib/return-to";
 
 export async function GET(request: NextRequest) {
-  const user = await requireAuthenticatedUser(request);
+  const user = await getAuthenticatedUser(request);
   if (!user) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }
