@@ -145,6 +145,10 @@ function derivePrimarySetupAction(input: {
     return null;
   }
 
+  // Create context-aware titles that show progression
+  const justCompletedStep = getJustCompletedStep(input.items, firstIncomplete.id);
+  const progressionTitle = getSetupProgressionTitle(firstIncomplete.id, justCompletedStep);
+
   const tone: "default" | "warning" | "critical" | "accent" =
     input.seasonPhase === "PRESEASON_SETUP"
       ? firstIncomplete.status === "INCOMPLETE_POSTPONED"
@@ -154,13 +158,50 @@ function derivePrimarySetupAction(input: {
 
   return {
     id: `setup-${firstIncomplete.id}`,
-    title: `Setup Next: ${firstIncomplete.title}`,
+    title: progressionTitle || `Setup Next: ${firstIncomplete.title}`,
     description: `${firstIncomplete.description} Current phase: ${phaseLabel}.`,
     href: firstIncomplete.href,
     ctaLabel: firstIncomplete.ctaLabel,
     tone,
     phaseLabel,
   };
+}
+
+/**
+ * Determine what step was just completed to provide progression context
+ */
+function getJustCompletedStep(
+  items: LeagueSetupChecklistItem[], 
+  currentIncompleteId: string
+): string | null {
+  const currentIndex = items.findIndex(item => item.id === currentIncompleteId);
+  if (currentIndex <= 0) return null;
+  
+  const previousItem = items[currentIndex - 1];
+  return previousItem?.status === "COMPLETE" ? previousItem.id : null;
+}
+
+/**
+ * Generate progression-focused titles that emphasize the setup flow
+ */
+function getSetupProgressionTitle(
+  currentStepId: string, 
+  justCompletedStep: string | null
+): string | null {
+  // Special progression messaging for key sequential steps
+  if (currentStepId === "invite-members" && justCompletedStep === "add-teams") {
+    return "Next: Invite Members to Join Your League";
+  }
+  
+  if (currentStepId === "review-settings-rules" && justCompletedStep === "invite-members") {
+    return "Next: Review League Rules & Settings";
+  }
+  
+  if (currentStepId === "draft-prep-readiness" && justCompletedStep === "review-settings-rules") {
+    return "Next: Prepare Draft Operations";
+  }
+  
+  return null;
 }
 
 async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
@@ -274,7 +315,7 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
       id: "add-teams",
       title: "Add teams",
       description: addTeamsComplete
-        ? `${input.leagueDashboard.summary.teamCount} teams are already created.`
+        ? `${input.leagueDashboard.summary.teamCount} teams created ✓ Ready to invite members.`
         : `Only ${input.leagueDashboard.summary.teamCount} team${input.leagueDashboard.summary.teamCount === 1 ? "" : "s"} found. Add at least one more team to start league play.`,
       status: addTeamsComplete ? "COMPLETE" : "INCOMPLETE",
       href: addTeamsComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
@@ -283,12 +324,14 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
     },
     {
       id: "invite-members",
-      title: "Invite members",
+      title: "Invite members", 
       description: inviteMembersComplete
         ? pendingInviteCount > 0
           ? `${pendingInviteCount} pending invite${pendingInviteCount === 1 ? "" : "s"} sent and setup is moving.`
           : `${input.leagueDashboard.summary.membershipCount} league memberships are active.`
-        : "No owner/member has joined yet beyond the founder. Send your first invite.",
+        : addTeamsComplete 
+          ? "Teams are ready → Now send invites so members can join and claim their teams."
+          : "No owner/member has joined yet beyond the founder. Send your first invite.",
       status: inviteMembersComplete ? "COMPLETE" : "INCOMPLETE",
       href: inviteMembersComplete ? null : `/league/${input.leagueId}#setup-bootstrap-panel`,
       ctaLabel: inviteMembersComplete ? null : "Invite Members",
@@ -299,7 +342,9 @@ async function readSetupChecklist(client: DashboardProjectionDbClient, input: {
       title: "Review settings and rules",
       description: reviewSettingsComplete
         ? `Rules are reviewed for ${formatLeaguePhaseLabel(seasonPhase)}.`
-        : "Review league settings and rules before opening draft operations.",
+        : inviteMembersComplete
+          ? "Members are joining → Now review league settings and rules before draft operations."
+          : "Review league settings and rules before opening draft operations.",
       status: reviewSettingsComplete ? "COMPLETE" : "INCOMPLETE",
       href: reviewSettingsComplete ? null : "/rules",
       ctaLabel: reviewSettingsComplete ? null : "Review Rules",

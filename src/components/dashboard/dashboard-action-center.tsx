@@ -128,6 +128,7 @@ export function DashboardActionCenter(props: {
           testId="dashboard-setup-checklist"
         >
           <div className="space-y-4">
+            {/* Setup Flow Progress */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p
                 className="text-xs text-amber-100/90"
@@ -139,6 +140,21 @@ export function DashboardActionCenter(props: {
                 {props.setupChecklist.completionPercent}% complete
               </span>
             </div>
+            
+            {/* Setup Sequence Guide */}
+            {props.setupChecklist.completionPercent < 100 && (
+              <div className="rounded-md border border-amber-700/30 bg-amber-950/20 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-amber-200/80 mb-1">
+                  Setup Sequence
+                </p>
+                <p className="text-xs text-amber-100/90 leading-relaxed">
+                  <span className="inline-flex items-center gap-1">
+                    Founder Team → Add Teams → Invite Members → Review Rules → Draft Prep
+                  </span>
+                </p>
+              </div>
+            )}
+            
             <div
               className="h-1.5 overflow-hidden rounded-full border border-amber-700/40 bg-amber-950/40"
               aria-hidden
@@ -192,7 +208,9 @@ export function DashboardActionCenter(props: {
                             className="mt-1 text-[11px] uppercase tracking-wide text-sky-200"
                             data-testid={`dashboard-setup-checklist-next-${item.id}`}
                           >
-                            Next recommended step
+                            {item.id === "invite-members" && props.setupChecklist?.items.find(i => i.id === "add-teams")?.status === "COMPLETE"
+                              ? "Next after teams: Invite members"
+                              : "Next recommended step"}
                           </p>
                         ) : isPrimaryActionDuplicate ? (
                           <p
