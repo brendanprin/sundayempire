@@ -148,7 +148,7 @@ export default function CreateLeaguePage() {
       case "basics":
         return "Start by giving your league a name and setting the season year.";
       case "options":
-        return "Add optional details to customize your league setup.";
+        return "Add optional details or skip ahead — you can always configure these later in League Settings.";
       case "review":
         return "Review your settings and create your dynasty football league.";
       default:
@@ -352,6 +352,18 @@ export default function CreateLeaguePage() {
 
           {step === "options" && (
             <div className="space-y-6">
+              <div className="rounded-lg border p-4 mb-6" style={{ 
+                borderColor: "var(--brand-structure-muted)", 
+                backgroundColor: "var(--brand-surface-card)" 
+              }}>
+                <p className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+                  These are completely optional
+                </p>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  You can skip this step and configure these settings later in League Settings after your league is created.
+                </p>
+              </div>
+
               <div>
                 <label 
                   htmlFor="description"
@@ -385,7 +397,7 @@ export default function CreateLeaguePage() {
                   className="block text-sm font-semibold mb-2" 
                   style={{ color: "var(--foreground)" }}
                 >
-                  Commissioner Email <span className="text-xs font-normal text-gray-400">(Optional)</span>
+                  Alternate Commissioner <span className="text-xs font-normal text-gray-400">(Optional)</span>
                 </label>
                 <input
                   id="commissioner-email"
@@ -406,7 +418,7 @@ export default function CreateLeaguePage() {
                   </p>
                 )}
                 <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  Leave blank to make yourself the league commissioner.
+                  Leave blank to make yourself the commissioner. You can transfer ownership later in League Settings.
                 </p>
               </div>
             </div>
@@ -462,9 +474,17 @@ export default function CreateLeaguePage() {
                       </p>
                     </div>
                     <p className="font-medium" style={{ color: "var(--foreground)" }}>
-                      {designatedCommissionerEmail.trim() || "You (current user)"}
+                      {designatedCommissionerEmail.trim() || "You"}
                     </p>
                   </div>
+                  
+                  {!description.trim() && !designatedCommissionerEmail.trim() && (
+                    <div className="py-3 border-b" style={{ borderColor: "var(--brand-structure-muted)" }}>
+                      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                        <em>No optional details added — you can configure these later in League Settings.</em>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -527,16 +547,17 @@ export default function CreateLeaguePage() {
                   <button
                     type="button"
                     onClick={() => setStep("review")}
-                    className="px-6 py-2.5 text-sm font-medium transition-colors rounded-lg hover:bg-[var(--brand-structure-muted)]"
-                    style={{ color: "var(--foreground)" }}
+                    className="rounded-lg bg-[var(--brand-accent-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)]"
+                    data-testid="league-create-skip-options"
                   >
                     Skip for Now
                   </button>
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    disabled={!isOptionsValid()}
-                    className="rounded-lg bg-[var(--brand-accent-primary)] px-6 py-2.5 text-sm font-semibold text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={designatedCommissionerEmail.trim().length > 0 && !isOptionsValid()}
+                    className="px-6 py-2.5 text-sm font-medium transition-colors rounded-lg hover:bg-[var(--brand-structure-muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: "var(--foreground)" }}
                     data-testid="league-create-next-review"
                   >
                     Continue to Review
