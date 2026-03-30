@@ -9,6 +9,7 @@ import {
 import { GlobalAlertStrip } from "@/components/layout/global-alert-strip";
 import { MirrorOnlyBanner } from "@/components/layout/mirror-only-banner";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
+import { NewLeagueChecklist } from "@/components/dashboard/new-league-checklist";
 import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboard/types";
 
 type FounderSetupStatus = "COMPLETE" | "INCOMPLETE_REQUIRED" | "INCOMPLETE_POSTPONED";
@@ -91,27 +92,6 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
   
   const mirrorOnly = dashboard.leagueDashboard.status.mirrorOnly;
   const visibleAlerts = dashboard.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status"));
-  
-  const completedSteps = [
-    founderSetup?.isComplete,
-    dashboard.leagueDashboard.summary.teamCount >= 2,
-    dashboard.leagueDashboard.summary.membershipCount >= 2 || setupInvites.some(invite => invite.status === "pending"),
-  ].filter(Boolean).length;
-  
-  const totalSteps = 3;
-  const progressPercent = Math.round((completedSteps / totalSteps) * 100);
-
-  const nextStepTitle = !founderSetup?.isComplete
-    ? "Set up your founder team" 
-    : dashboard.leagueDashboard.summary.teamCount < 2
-    ? "Add additional teams"
-    : "Invite league members";
-
-  const nextStepDescription = !founderSetup?.isComplete
-    ? "Complete commissioner + team-owner setup to establish your dual role."
-    : dashboard.leagueDashboard.summary.teamCount < 2  
-    ? "Create teams for other league members to join."
-    : "Send invites so members can join and claim their teams.";
 
   return (
     <div className="space-y-6" data-testid="league-bootstrap-dashboard">
@@ -124,7 +104,7 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         supportingContent={
           <div className="flex flex-wrap items-center gap-3">
             <span className="shell-chip shell-chip--accent">
-              {completedSteps}/{totalSteps} bootstrap steps complete
+              {dashboard.setupChecklist.completedItemCount}/{dashboard.setupChecklist.totalItemCount} setup tasks complete
             </span>
             <span className="shell-chip shell-chip--neutral">
               Season {dashboard.leagueDashboard.season?.year ?? "Setup"}
@@ -149,40 +129,12 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         itemTestIdPrefix="bootstrap-dashboard-alert"
       />
 
-      {/* Simplified Progress Indicator */}
-      <div
-        className="rounded-xl border border-slate-600/40 bg-slate-950/40 p-4"
-        data-testid="bootstrap-progress-overview"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-base font-medium text-slate-200">League Setup Progress</h2>
-            <div className="flex items-center gap-2 text-sm text-slate-300">
-              <span className={founderSetup?.isComplete ? "text-emerald-400" : "text-amber-400"}>
-                {founderSetup?.isComplete ? "✓" : "1"} Founder
-              </span>
-              <span className="text-slate-600">·</span>
-              <span className={dashboard.leagueDashboard.summary.teamCount >= 2 ? "text-emerald-400" : "text-slate-400"}>
-                {dashboard.leagueDashboard.summary.teamCount >= 2 ? "✓" : "2"} Teams
-              </span>
-              <span className="text-slate-600">·</span>
-              <span className={dashboard.leagueDashboard.summary.membershipCount >= 2 ? "text-emerald-400" : "text-slate-400"}>
-                {dashboard.leagueDashboard.summary.membershipCount >= 2 ? "✓" : "3"} Members
-              </span>
-            </div>
-          </div>
-          <div className="rounded-full border border-slate-500/60 bg-slate-900/60 px-3 py-1 text-sm text-slate-300">
-            {progressPercent}% Complete
-          </div>
-        </div>
-        
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800/60">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
+      {/* Canonical Setup Progress */}
+      <NewLeagueChecklist 
+        checklist={dashboard.setupChecklist} 
+        prominence="primary"
+        testId="bootstrap-progress-overview" 
+      />
 
       {/* Primary Action: Founder Team Setup */}
       {!founderSetup?.isComplete && (
@@ -585,7 +537,7 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         </div>
       </div>
 
-      {progressPercent >= 100 && (
+      {dashboard.setupChecklist.isComplete && (
         <div className="rounded-xl border border-emerald-600/50 bg-emerald-950/30 p-6 text-center">
           <h3 className="text-lg font-bold text-emerald-100">🎉 Bootstrap Complete!</h3>
           <p className="mt-2 text-emerald-50/80">
