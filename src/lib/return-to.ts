@@ -86,3 +86,24 @@ export function buildLoginPath(input: {
   const query = params.toString();
   return query.length > 0 ? `/login?${query}` : "/login";
 }
+
+export function buildDevLoginPath(input: {
+  returnTo?: string | null;
+  switchSession?: boolean;
+  error?: string | null;
+}) {
+  const params = new URLSearchParams();
+  const normalized = normalizeReturnTo(input.returnTo ?? null);
+  if (normalized) {
+    params.set(RETURN_TO_PARAM, normalized);
+  }
+  if (input.switchSession) {
+    params.set(SWITCH_SESSION_PARAM, "1");
+  }
+  if (input.error?.trim()) {
+    params.set(LOGIN_ERROR_PARAM, input.error.trim());
+  }
+
+  const query = params.toString();
+  return query.length > 0 ? `/dev/login?${query}` : "/dev/login";
+}

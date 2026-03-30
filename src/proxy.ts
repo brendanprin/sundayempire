@@ -57,6 +57,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(returnTo, request.url));
   }
 
+  if (pathname === "/dev/login") {
+    if (!hasSession) {
+      return NextResponse.next();
+    }
+
+    const switchRequested = request.nextUrl.searchParams.get(SWITCH_SESSION_PARAM) === "1";
+    const sessionExpired = request.nextUrl.searchParams.get(LOGIN_ERROR_PARAM) === LOGIN_ERROR_SESSION_EXPIRED;
+    if (switchRequested || sessionExpired) {
+      return NextResponse.next();
+    }
+
+    const returnTo = normalizeReturnTo(request.nextUrl.searchParams.get(RETURN_TO_PARAM)) ?? "/my-leagues";
+    return NextResponse.redirect(new URL(returnTo, request.url));
+  }
+
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
     const returnTo = normalizeReturnTo(`${pathname}${search}`) ?? "/my-leagues";

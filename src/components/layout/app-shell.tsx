@@ -9,6 +9,7 @@ import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import {
   LOGIN_ERROR_SESSION_EXPIRED,
   buildLoginPath,
+  buildDevLoginPath,
   buildReturnToPath,
 } from "@/lib/return-to";
 import { trackUiEvent } from "@/lib/ui-analytics";
@@ -406,7 +407,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             : "Signed in as yourself. Choose the league workspace you want to open.";
   const seasonPhaseLabel = leaguePhase ? formatLeaguePhaseLabel(leaguePhase) : null;
   const demoSwitchAccountHref = demoAuthEnabled
-    ? buildLoginPath({
+    ? buildDevLoginPath({
         returnTo: buildReturnToPath(pathname),
         switchSession: true,
       })
