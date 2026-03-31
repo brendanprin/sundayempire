@@ -67,6 +67,8 @@ function Section(props: {
   items: TradeProposalSummary[];
   testId: string;
   id?: string;
+  tier?: 1 | 2 | 3;
+  eyebrow?: string;
   compact?: boolean;
   limit?: number;
   className?: string;
@@ -78,8 +80,10 @@ function Section(props: {
     <DashboardCard
       title={props.title}
       description={props.description}
+      eyebrow={props.eyebrow}
       testId={props.testId}
       id={props.id}
+      tier={props.tier}
       className={props.className}
     >
       {props.items.length === 0 ? (
@@ -450,7 +454,8 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         <CommissionerEmptyStateBanner allEmpty={totalTrades === 0} canCreate={canCreate} />
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* Tier 1: Commissioner-critical queues */}
+      <div className={`grid gap-4 ${isCommissioner ? "xl:grid-cols-2" : ""}`}>
         <Section
           title={priorityTitle}
           description={priorityDescription}
@@ -458,75 +463,88 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           items={priorityItems}
           testId="trades-home-priority-section"
           id="section-priority"
+          tier={1}
+          eyebrow={isCommissioner ? "Commissioner Action" : "Your Action"}
         />
-        {settlementSection ? (
-          <Section {...settlementSection} />
-        ) : (
+        {isCommissioner && settlementSection ? (
           <Section
-            title="Draft Proposals"
-            description="Editable trade packages that should be saved, validated, and submitted when ready."
-            emptyMessage="No draft trade proposals."
-            items={props.data.sections.drafts}
-            testId="trades-home-drafts-section"
-            id="section-drafts"
+            {...settlementSection}
+            tier={1}
+            eyebrow="Commissioner Action"
           />
+        ) : null}
+      </div>
+
+      {/* Tier 2: Active trade tracking */}
+      <div className="grid gap-4 xl:grid-cols-2">
+        {isCommissioner ? (
+          <>
+            <Section
+              title="Open Trade Proposals"
+              description="Submitted or recently updated proposals actively moving through the workflow."
+              emptyMessage="No open proposals are currently active."
+              items={props.data.sections.outgoing}
+              testId="trades-home-open-section"
+              id="section-open"
+              tier={2}
+              compact
+              limit={4}
+            />
+            <Section
+              {...secondaryRoleSection}
+              tier={2}
+              compact
+              limit={4}
+            />
+          </>
+        ) : (
+          <>
+            <Section
+              {...secondaryRoleSection}
+              tier={2}
+              compact
+              limit={4}
+            />
+            <Section
+              title="Open Trade Proposals"
+              description="Submitted or recently updated proposals actively moving through the workflow."
+              emptyMessage="No open proposals are currently active."
+              items={props.data.sections.outgoing}
+              testId="trades-home-open-section"
+              id="section-open"
+              tier={2}
+              compact
+              limit={4}
+            />
+          </>
         )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.85fr]">
-        <Section
-          title="Open Trade Proposals"
-          description="Submitted or recently updated proposals that your team is actively moving through the workflow."
-          emptyMessage="No open proposals are currently active."
-          items={props.data.sections.outgoing}
-          testId="trades-home-open-section"
-          id="section-open"
-          compact
-          limit={4}
-        />
-        <Section
-          {...secondaryRoleSection}
-          compact
-          limit={4}
-        />
-        <div className="space-y-4">
-          {settlementSection ? (
-            <Section
-              title="Draft Proposals"
-              description="Editable packages that still need validation or submission."
-              emptyMessage="No draft trade proposals."
-              items={props.data.sections.drafts}
-              testId="trades-home-drafts-section"
-              id="section-drafts"
-              compact
-              limit={3}
-            />
-          ) : null}
-
-          <Section
-            title="Recent Trade History"
-            description="Closed proposals for quick context without dropping far below the active queues."
-            emptyMessage="No closed trade proposals yet."
-            items={props.data.sections.closed}
-            testId="trades-home-history-section"
-            id="section-closed"
-            compact
-            limit={4}
-          />
-        </div>
-      </div>
-
-      {!settlementSection ? (
+      {/* Tier 3: Low-priority / reference */}
+      <div className="grid gap-4 xl:grid-cols-2">
         <Section
           title="Draft Proposals"
           description="Editable packages that still need validation or submission."
           emptyMessage="No draft trade proposals."
           items={props.data.sections.drafts}
           testId="trades-home-drafts-section"
+          id="section-drafts"
+          tier={3}
           compact
           limit={4}
         />
-      ) : null}
+        <Section
+          title="Recent Trade History"
+          description="Closed proposals for quick context without dropping far below the active queues."
+          emptyMessage="No closed trade proposals yet."
+          items={props.data.sections.closed}
+          testId="trades-home-history-section"
+          id="section-closed"
+          tier={3}
+          compact
+          limit={4}
+        />
+      </div>
 
     </div>
   );
