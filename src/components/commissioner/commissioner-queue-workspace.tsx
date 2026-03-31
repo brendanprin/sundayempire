@@ -1,15 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
 import { UrgentOperationsQueue } from "@/components/commissioner/urgent-operations-queue";
 import { PhaseReadinessPanel } from "@/components/commissioner/phase-readiness-panel";
 import { ComplianceOversightPanel } from "@/components/commissioner/compliance-oversight-panel";
 import { ContractOperationsPanel } from "@/components/commissioner/contract-operations-panel";
-import { StickySubnav } from "@/components/layout/sticky-subnav";
 import type { LeagueSummaryPayload } from "@/types/league";
 import type { TradeHomeResponse } from "@/types/trade-workflow";
 import type { RemediationRecord } from "@/lib/compliance/remediation";
+
+type WorkspaceTab = "dashboard" | "operations";
 
 // Type definitions for commissioner workspace data
 type CommissionerData = {
@@ -61,19 +62,20 @@ export function CommissionerQueueWorkspace(props: {
   testId?: string;
 }) {
   const { league, teams } = props.data;
-  
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("dashboard");
+
   // Calculate queue metrics for header context
   const urgentCount = teams.filter(team => team.complianceStatus === "error").length;
   const reviewCount = teams.filter(team => team.complianceStatus === "warning").length;
-  const tradeQueueCount = (props.data.tradeOperations?.summary?.reviewQueue || 0) + 
+  const tradeQueueCount = (props.data.tradeOperations?.summary?.reviewQueue || 0) +
                          (props.data.tradeOperations?.summary?.settlementQueue || 0);
-  
+
   const totalUrgentWork = urgentCount + tradeQueueCount;
-  const queueStatus = totalUrgentWork > 0 
+  const queueStatus = totalUrgentWork > 0
     ? `${totalUrgentWork} urgent item${totalUrgentWork === 1 ? "" : "s"}`
     : "Queue current";
 
-  const headerDescription = league 
+  const headerDescription = league
     ? `Commissioner operations for ${league.league.name} Season ${league.season.year}. ${queueStatus}, ${teams.length} teams in scope.`
     : "Loading commissioner workspace...";
 
@@ -108,14 +110,47 @@ export function CommissionerQueueWorkspace(props: {
         }
       />
 
-      <StickySubnav
-        testId="commissioner-queue-subnav"
-        items={[
-          { href: "#action-center", label: "Action Center" },
-          { href: "#compliance-oversight", label: "League Health" },
-          { href: "#contract-operations", label: "Contracts & Tools" },
-        ]}
-      />
+      {/* Tab switcher */}
+      <div
+        className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1"
+        role="tablist"
+        aria-label="Commissioner workspace"
+        data-testid="commissioner-workspace-tabs"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "dashboard"}
+          data-testid="commissioner-tab-dashboard"
+          onClick={() => setActiveTab("dashboard")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "dashboard"
+              ? "bg-slate-800 text-slate-100"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Dashboard
+          {totalUrgentWork > 0 && (
+            <span className="ml-2 inline-flex items-center rounded-full bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300">
+              {totalUrgentWork}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "operations"}
+          data-testid="commissioner-tab-operations"
+          onClick={() => setActiveTab("operations")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "operations"
+              ? "bg-slate-800 text-slate-100"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Operations Console
+        </button>
+      </div>
 
       {props.error ? (
         <div
@@ -135,86 +170,87 @@ export function CommissionerQueueWorkspace(props: {
         </div>
       ) : null}
 
-      {/* PRIMARY: Action Center — dominant above-the-fold section */}
-      <section
-        id="action-center"
-        className="scroll-mt-24 space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-5 ring-1 ring-slate-700/50"
-        data-testid="action-center-section"
-      >
-        <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
-          <div>
-            <h2 className="text-base font-semibold text-slate-100">Action Center</h2>
-            <p className="mt-0.5 text-xs text-slate-400">What to do right now</p>
-          </div>
-          {totalUrgentWork > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-red-900/50 px-3 py-1 text-xs font-medium text-red-200">
-              {totalUrgentWork} item{totalUrgentWork === 1 ? "" : "s"} need attention
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-200">
-              All clear
-            </span>
-          )}
+      {/* DASHBOARD TAB: Decision layer — queue and league health */}
+      {activeTab === "dashboard" && (
+        <div className="space-y-6">
+          <section
+            id="action-center"
+            className="scroll-mt-24 space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-5 ring-1 ring-slate-700/50"
+            data-testid="action-center-section"
+          >
+            <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-100">Action Center</h2>
+                <p className="mt-0.5 text-xs text-slate-400">What to do right now</p>
+              </div>
+              {totalUrgentWork > 0 ? (
+                <span className="inline-flex items-center rounded-full bg-red-900/50 px-3 py-1 text-xs font-medium text-red-200">
+                  {totalUrgentWork} item{totalUrgentWork === 1 ? "" : "s"} need attention
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-200">
+                  All clear
+                </span>
+              )}
+            </div>
+
+            <UrgentOperationsQueue
+              data={props.data}
+              actions={props.actions}
+              testId="urgent-queue"
+            />
+
+            <PhaseReadinessPanel
+              data={props.data}
+              actions={props.actions}
+              testId="phase-readiness"
+            />
+          </section>
+
+          <section
+            id="compliance-oversight"
+            className="scroll-mt-24 space-y-3"
+            data-testid="league-health-section"
+          >
+            <div className="flex items-center gap-2 px-1">
+              <h2 className="text-sm font-medium text-slate-400">League Health</h2>
+              <div className="h-px flex-1 bg-slate-800" />
+            </div>
+            <ComplianceOversightPanel
+              data={props.data}
+              actions={props.actions}
+              testId="compliance-oversight-panel"
+            />
+          </section>
         </div>
+      )}
 
-        <UrgentOperationsQueue
-          data={props.data}
-          actions={props.actions}
-          testId="urgent-queue"
-        />
-
-        <PhaseReadinessPanel
-          data={props.data}
-          actions={props.actions}
-          testId="phase-readiness"
-        />
-      </section>
-
-      {/* SECONDARY: League Health — context panels */}
-      <section
-        id="compliance-oversight"
-        className="scroll-mt-24 space-y-3"
-        data-testid="league-health-section"
-      >
-        <div className="flex items-center gap-2 px-1">
-          <h2 className="text-sm font-medium text-slate-400">League Health</h2>
-          <div className="h-px flex-1 bg-slate-800" />
-        </div>
-        <ComplianceOversightPanel
-          data={props.data}
-          actions={props.actions}
-          testId="compliance-oversight-panel"
-        />
-      </section>
-
-      {/* TERTIARY: Deep Workspaces — demoted, for intentional use */}
-      <section
-        id="contract-operations"
-        className="scroll-mt-24 space-y-3"
-        data-testid="deep-workspace-section"
-      >
-        <div className="flex items-center gap-2 px-1">
-          <h2 className="text-sm font-medium text-slate-500">Contracts &amp; Tools</h2>
-          <div className="h-px flex-1 bg-slate-800/60" />
-        </div>
-        <div className="rounded-lg border border-slate-800/60 bg-slate-950/20 p-4">
-          <div className="mb-3">
-            <h3 className="text-sm font-medium text-slate-400">Contract Operations</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Commissioner-only contract maintenance and roster intervention tools.
-            </p>
-          </div>
-          <ContractOperationsPanel />
-        </div>
-
+      {/* OPERATIONS CONSOLE TAB: Execution layer — tables, forms, admin tools */}
+      {activeTab === "operations" && (
         <div
-          id="workspace-admin"
-          className="scroll-mt-24"
-          data-testid="workspace-admin-section"
+          className="space-y-4"
+          id="contract-operations"
+          data-testid="deep-workspace-section"
         >
-          {props.children}
+          <div className="rounded-lg border border-slate-800/60 bg-slate-950/20 p-4">
+            <div className="mb-3">
+              <h3 className="text-sm font-medium text-slate-400">Contract Operations</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Commissioner-only contract maintenance and roster intervention tools.
+              </p>
+            </div>
+            <ContractOperationsPanel />
+          </div>
+
+          <div
+            id="workspace-admin"
+            className="space-y-4"
+            data-testid="workspace-admin-section"
+          >
+            {props.children}
+          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }
