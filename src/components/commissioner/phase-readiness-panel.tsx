@@ -129,29 +129,13 @@ export function PhaseReadinessPanel(props: {
         )}
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {/* Next Phase + Transition Action */}
+          {/* Next Phase */}
           <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Next Phase</p>
             <p className="mt-2 text-lg font-semibold text-slate-100">
               {formatLeaguePhaseLabel(nextPhase)}
             </p>
-
-            {isReadyForTransition ? (
-              <div className="mt-3">
-                <Button
-                  type="button"
-                  onClick={() => props.actions.onPhaseTransition(nextPhase)}
-                  disabled={props.actions.busyAction !== null}
-                  variant="primary"
-                  size="sm"
-                  data-testid="phase-transition-button"
-                >
-                  {props.actions.busyAction === `phase:${nextPhase}`
-                    ? "Transitioning..."
-                    : `Advance to ${formatLeaguePhaseLabel(nextPhase)}`}
-                </Button>
-              </div>
-            ) : (
+            {!isReadyForTransition && (
               <div className="mt-3 space-y-1">
                 <p className="text-xs text-red-300">
                   Resolve {blockingTeams} blocking team{blockingTeams === 1 ? "" : "s"} first
@@ -233,6 +217,43 @@ export function PhaseReadinessPanel(props: {
             })}
           </div>
         </div>
+
+        {/* Phase Transition — milestone CTA, only surfaces when all checks pass */}
+        {isReadyForTransition ? (
+          <div className="mt-5 rounded-xl border border-emerald-600/60 bg-emerald-950/20 p-5 ring-1 ring-emerald-600/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                  Phase Transition Ready
+                </p>
+                <p className="mt-1 text-base font-semibold text-emerald-100">
+                  Advance to {formatLeaguePhaseLabel(nextPhase)}
+                </p>
+                <p className="mt-0.5 text-sm text-emerald-300/70">
+                  League-wide milestone — all readiness checks passed
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => props.actions.onPhaseTransition(nextPhase)}
+                disabled={props.actions.busyAction !== null}
+                variant="primary"
+                size="lg"
+                data-testid="phase-transition-button"
+              >
+                {props.actions.busyAction === `phase:${nextPhase}`
+                  ? "Transitioning…"
+                  : `Advance to ${formatLeaguePhaseLabel(nextPhase)} →`}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-red-800/40 bg-red-950/10 px-4 py-3">
+            <p className="text-xs text-red-300">
+              Phase transition is locked until all blocking compliance issues are resolved.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
