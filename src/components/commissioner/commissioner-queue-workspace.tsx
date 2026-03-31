@@ -175,20 +175,34 @@ export function CommissionerQueueWorkspace(props: {
         <div className="space-y-6">
           <section
             id="action-center"
-            className="scroll-mt-24 space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-5 ring-1 ring-slate-700/50"
+            className={`scroll-mt-24 space-y-4 rounded-xl border p-5 ${
+              totalUrgentWork > 0
+                ? "border-red-600/70 bg-red-950/20 ring-1 ring-red-600/30"
+                : "border-slate-700 bg-slate-900/60 ring-1 ring-slate-700/50"
+            }`}
             data-testid="action-center-section"
           >
-            <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${
+              totalUrgentWork > 0 ? "border-red-800/50" : "border-slate-700/60"
+            }`}>
               <div>
-                <h2 className="text-base font-semibold text-slate-100">Action Center</h2>
-                <p className="mt-0.5 text-xs text-slate-400">What to do right now</p>
+                <h2 className={`text-base font-semibold ${
+                  totalUrgentWork > 0 ? "text-red-100" : "text-slate-100"
+                }`}>
+                  Action Center
+                </h2>
+                <p className={`mt-0.5 text-xs ${
+                  totalUrgentWork > 0 ? "text-red-400" : "text-slate-400"
+                }`}>
+                  {totalUrgentWork > 0 ? "Urgent work requires your attention" : "What to do right now"}
+                </p>
               </div>
               {totalUrgentWork > 0 ? (
-                <span className="inline-flex items-center rounded-full bg-red-900/50 px-3 py-1 text-xs font-medium text-red-200">
-                  {totalUrgentWork} item{totalUrgentWork === 1 ? "" : "s"} need attention
+                <span className="inline-flex items-center rounded-full bg-red-700 px-3 py-1 text-xs font-bold text-white">
+                  {totalUrgentWork} URGENT
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-200">
+                <span className="inline-flex items-center rounded-full bg-emerald-800/70 px-3 py-1 text-xs font-semibold text-emerald-200">
                   All clear
                 </span>
               )}

@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
-import { formatEnumLabel } from "@/lib/format-label";
 import { Button } from "@/components/ui/button";
 
 type PhaseReadinessData = {
   league: {
     league: { id: string; name: string };
-    season: { 
+    season: {
       phase: "PRESEASON" | "REGULAR_SEASON" | "PLAYOFFS" | "OFFSEASON";
       year: number;
       regularSeasonWeeks: number;
@@ -31,36 +30,36 @@ type PhaseReadinessActions = {
 
 const PHASE_TRANSITIONS = {
   PRESEASON: "REGULAR_SEASON",
-  REGULAR_SEASON: "PLAYOFFS", 
+  REGULAR_SEASON: "PLAYOFFS",
   PLAYOFFS: "OFFSEASON",
-  OFFSEASON: "PRESEASON"
+  OFFSEASON: "PRESEASON",
 } as const;
 
 const PHASE_READINESS_CHECKS = {
   PRESEASON: [
     "All teams have complete rosters",
-    "Draft setup is complete", 
+    "Draft setup is complete",
     "Waiver processing is configured",
-    "No blocking compliance issues"
+    "No blocking compliance issues",
   ],
   REGULAR_SEASON: [
     "Regular season games are configured",
     "Lineup requirements are met",
     "Trade window is active",
-    "No blocking compliance issues"
+    "No blocking compliance issues",
   ],
   PLAYOFFS: [
     "Playoff bracket is set",
     "Trade deadline has passed",
-    "Roster locks are configured", 
-    "No blocking compliance issues"
+    "Roster locks are configured",
+    "No blocking compliance issues",
   ],
   OFFSEASON: [
     "Season completion is confirmed",
     "Contract renewals are processed",
     "Draft order is determined",
-    "Rollover preparation is complete"
-  ]
+    "Rollover preparation is complete",
+  ],
 } as const;
 
 export function PhaseReadinessPanel(props: {
@@ -69,16 +68,12 @@ export function PhaseReadinessPanel(props: {
   testId?: string;
 }) {
   const { league, teams } = props.data;
-  
+
   if (!league) {
     return (
-      <section
-        id="phase-readiness"
-        className="scroll-mt-24"
-        data-testid={props.testId}
-      >
+      <section id="phase-readiness" className="scroll-mt-24" data-testid={props.testId}>
         <DashboardCard title="Phase Readiness" description="Loading league phase information...">
-          <div></div>
+          <div />
         </DashboardCard>
       </section>
     );
@@ -88,93 +83,59 @@ export function PhaseReadinessPanel(props: {
   const nextPhase = PHASE_TRANSITIONS[currentPhase];
   const readinessChecks = PHASE_READINESS_CHECKS[currentPhase];
   const blockingTeams = teams.filter(team => team.complianceStatus === "error").length;
-  
-  // Determine phase readiness status
-  const hasBlockingIssues = blockingTeams > 0;
-  const isReadyForTransition = !hasBlockingIssues; // Simplified readiness check
-  
-  const readinessStatus = isReadyForTransition
-    ? "ready"
-    : hasBlockingIssues 
-      ? "blocked"
-      : "in-progress";
-
-  const statusConfig = {
-    ready: {
-      tone: "emerald",
-      label: "Ready for Transition",
-      description: "All readiness checks passed"
-    },
-    blocked: {
-      tone: "red", 
-      label: "Transition Blocked",
-      description: `${blockingTeams} team${blockingTeams === 1 ? " has" : "s have"} blocking issues`
-    },
-    "in-progress": {
-      tone: "amber",
-      label: "Phase In Progress", 
-      description: "Some readiness checks still pending"
-    }
-  };
-
-  const config = statusConfig[readinessStatus];
+  const isReadyForTransition = blockingTeams === 0;
 
   return (
-    <section
-      id="phase-readiness"
-      className="scroll-mt-24"
-      data-testid={props.testId}
-    >
-      <DashboardCard 
-        title="Phase Readiness"
-        description="Current phase transition readiness assessment"
-        className={`border-${config.tone}-700/60 bg-${config.tone}-950/20`}
-      >
-        <div>
-          <div className="flex items-center justify-between">
-            <div></div>
-            <span className={`inline-flex items-center rounded-full bg-${config.tone}-900/50 px-3 py-1 text-sm font-medium text-${config.tone}-200`}>
-              {config.label}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {/* Current Phase Status */}
-          <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Current Phase</p>
-              <span className="inline-flex items-center rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-300">
+    <section id="phase-readiness" className="scroll-mt-24" data-testid={props.testId}>
+      <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Phase Readiness
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-slate-100">
+              {formatLeaguePhaseLabel(currentPhase)}
+              <span className="ml-2 text-xs font-normal text-slate-400">
                 Season {league.season.year}
               </span>
-            </div>
-            <p className="mt-2 text-lg font-semibold text-slate-100">
-              {formatLeaguePhaseLabel(currentPhase)}
             </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {config.description}
-            </p>
-            <div className="mt-3">
-              <Link
-                href="/rules"
-                className="inline-flex text-xs text-sky-300 hover:text-sky-200"
-                data-testid="phase-rules-link"
-              >
-                Review Deadlines & Rules →
-              </Link>
-            </div>
           </div>
 
-          {/* Next Phase Preparation */}
+          {isReadyForTransition ? (
+            <span className="rounded-full bg-emerald-800/70 px-3 py-1 text-xs font-semibold text-emerald-200">
+              Ready to Advance
+            </span>
+          ) : (
+            <span className="rounded-full bg-red-700 px-3 py-1 text-xs font-bold text-white">
+              TRANSITION BLOCKED
+            </span>
+          )}
+        </div>
+
+        {/* Blocked warning banner */}
+        {!isReadyForTransition && (
+          <div className="mt-3 flex items-center gap-3 rounded-md border border-red-600/60 bg-red-950/50 px-3 py-2">
+            <svg className="h-4 w-4 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <p className="text-xs font-medium text-red-200">
+              Cannot advance to {formatLeaguePhaseLabel(nextPhase)} —{" "}
+              <span className="font-bold text-red-100">
+                {blockingTeams} team{blockingTeams === 1 ? "" : "s"} have blocking compliance issues
+              </span>
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {/* Next Phase + Transition Action */}
           <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Next Phase</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Next Phase</p>
             <p className="mt-2 text-lg font-semibold text-slate-100">
               {formatLeaguePhaseLabel(nextPhase)}
             </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Transition readiness: {isReadyForTransition ? "Ready" : "Blocked"}
-            </p>
-            
+
             {isReadyForTransition ? (
               <div className="mt-3">
                 <Button
@@ -185,53 +146,94 @@ export function PhaseReadinessPanel(props: {
                   size="sm"
                   data-testid="phase-transition-button"
                 >
-                  {props.actions.busyAction === `phase:${nextPhase}` ? "Transitioning..." : `Advance to ${formatLeaguePhaseLabel(nextPhase)}`}
+                  {props.actions.busyAction === `phase:${nextPhase}`
+                    ? "Transitioning..."
+                    : `Advance to ${formatLeaguePhaseLabel(nextPhase)}`}
                 </Button>
               </div>
             ) : (
-              <div className="mt-3">
-                <span className="inline-flex items-center rounded border border-red-700/60 px-3 py-1.5 text-xs text-red-300">
-                  Transition Blocked
-                </span>
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-red-300">
+                  Resolve {blockingTeams} blocking team{blockingTeams === 1 ? "" : "s"} first
+                </p>
+                <Link
+                  href="#urgent-queue"
+                  className="inline-flex text-xs font-medium text-red-400 hover:text-red-300"
+                >
+                  View blocking issues ↑
+                </Link>
               </div>
             )}
+          </div>
+
+          {/* Schedule Reference */}
+          <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Schedule Reference
+            </p>
+            <div className="mt-2 space-y-1.5 text-xs text-slate-300">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Regular Season</span>
+                <span>{league.season.regularSeasonWeeks} weeks</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Playoffs</span>
+                <span>Weeks {league.season.playoffStartWeek}–{league.season.playoffEndWeek}</span>
+              </div>
+            </div>
+            <div className="mt-3">
+              <Link
+                href="/rules"
+                className="inline-flex text-xs text-sky-400 hover:text-sky-300"
+                data-testid="phase-rules-link"
+              >
+                Review Deadlines &amp; Rules →
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Readiness Checklist */}
         <div className="mt-4">
-          <h4 className="text-xs font-semibold text-slate-200">Readiness Checklist</h4>
-          <div className="mt-2 grid gap-2 md:grid-cols-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Readiness Checklist
+          </h4>
+          <div className="mt-2 grid gap-1.5 md:grid-cols-2">
             {readinessChecks.map((check, index) => {
-              // Simplified check status - in real implementation would check actual data
-              const isCheckPassed = check.includes("compliance") ? !hasBlockingIssues : true;
-              
+              const isCheckPassed = check.includes("compliance") ? isReadyForTransition : true;
+
               return (
                 <div
                   key={index}
-                  className="flex items-center gap-3 rounded border border-slate-800 bg-slate-950/60 p-3"
+                  className={`flex items-center gap-3 rounded border px-3 py-2 ${
+                    isCheckPassed
+                      ? "border-slate-800 bg-slate-950/60"
+                      : "border-red-800/60 bg-red-950/40"
+                  }`}
                 >
-                  <div className={`h-2 w-2 rounded-full ${isCheckPassed ? "bg-emerald-500" : "bg-amber-500"}`} />
-                  <span className="text-sm text-slate-300">{check}</span>
+                  <div
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      isCheckPassed ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  <span
+                    className={`text-xs ${
+                      isCheckPassed ? "text-slate-300" : "font-medium text-red-200"
+                    }`}
+                  >
+                    {check}
+                  </span>
                   {!isCheckPassed && (
-                    <span className="ml-auto text-xs text-amber-400">Pending</span>
+                    <span className="ml-auto shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-red-100">
+                      BLOCKED
+                    </span>
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-
-        {/* Phase Schedule Reference */}
-        <div className="mt-4 rounded-lg border border-slate-800/40 bg-slate-950/30 p-3">
-          <p className="text-xs font-semibold text-slate-200">Schedule Reference</p>
-          <div className="mt-1 grid gap-2 text-sm text-slate-400 md:grid-cols-3">
-            <span>Regular Season: {league.season.regularSeasonWeeks} weeks</span>
-            <span>Playoffs: Weeks {league.season.playoffStartWeek}-{league.season.playoffEndWeek}</span>
-            <span>Current: {formatLeaguePhaseLabel(currentPhase)}</span>
-          </div>
-        </div>
-      </DashboardCard>
+      </div>
     </section>
   );
 }
