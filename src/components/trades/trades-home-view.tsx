@@ -134,6 +134,77 @@ function Section(props: {
   );
 }
 
+function CommissionerEmptyStateBanner(props: { allEmpty: boolean; canCreate: boolean }) {
+  if (!props.allEmpty) {
+    return (
+      <section
+        className="rounded-2xl p-5"
+        style={{
+          border: "1px solid var(--brand-structure-muted)",
+          backgroundColor: "var(--brand-surface-elevated)",
+        }}
+        data-testid="trades-home-empty-state-banner"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+              All trade activity is up to date
+            </p>
+            <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+              No trades require commissioner review or settlement.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className="rounded-2xl p-5"
+      style={{
+        border: "1px solid var(--brand-structure-muted)",
+        backgroundColor: "var(--brand-surface-elevated)",
+      }}
+      data-testid="trades-home-empty-state-banner"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+            No active trades in your league
+          </p>
+          <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+            Trades are how teams improve their rosters. You can:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+            <li>• Create a trade proposal</li>
+            <li>• Ask teams to start trade discussions</li>
+          </ul>
+        </div>
+        {props.canCreate ? (
+          <Link
+            href="/trades/new"
+            className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition"
+            style={{
+              border: "1px solid rgba(14, 165, 233, 0.5)",
+              backgroundColor: "rgba(14, 165, 233, 0.1)",
+              color: "rgb(125, 211, 252)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "rgb(14, 165, 233)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "rgba(14, 165, 233, 0.5)";
+            }}
+          >
+            Open Trade Builder
+          </Link>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export function TradesHomeView(props: { data: TradeHomeResponse }) {
   const canCreate =
     props.data.viewer.leagueRole === "COMMISSIONER" || props.data.viewer.hasTeamAccess;
@@ -177,6 +248,17 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         testId: "trades-home-settlement-section",
       }
     : null;
+
+  const { summary } = props.data;
+  const totalTrades =
+    summary.reviewQueue +
+    summary.settlementQueue +
+    summary.drafts +
+    summary.requiresResponse +
+    summary.outgoing +
+    summary.closed;
+  const commissionerActionsEmpty = summary.reviewQueue === 0 && summary.settlementQueue === 0;
+  const showCommissionerEmptyBanner = isCommissioner && commissionerActionsEmpty;
 
   return (
     <div className="space-y-6" data-testid="trades-home">
@@ -279,6 +361,10 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           </DashboardCard>
         ))}
       </div>
+
+      {showCommissionerEmptyBanner ? (
+        <CommissionerEmptyStateBanner allEmpty={totalTrades === 0} canCreate={canCreate} />
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Section
