@@ -400,8 +400,8 @@ export default function LoginPage() {
             <div>
               <Link href="/" className="inline-block">
                 <img
-                  alt="Dynasty Football"
-                  src="/brand/dynasty-logo-mark.png"
+                  alt="SundayEmpire"
+                  src="/brand/badge/sundayempire-logo-badge.png"
                   className="h-10 w-auto"
                 />
               </Link>
@@ -409,7 +409,7 @@ export default function LoginPage() {
                 Sign in to your account
               </h2>
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--shell-text-secondary)" }}>
-                Dynasty Football access requires a league invite.{" "}
+                SundayEmpire access requires a league invite.{" "}
                 <Link
                   href="/"
                   className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
@@ -582,13 +582,15 @@ export default function LoginPage() {
         </div>
 
         {/* Background pattern */}
-        <div className="relative hidden w-0 flex-1 lg:block">
-          <img
-            alt="Dynasty Football Background"
-            src="/brand/dynasty-login-background.jpg"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-purple-900/30"></div>
+        <div className="relative hidden w-0 flex-1 lg:block overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-slate-800 to-purple-900/20"></div>
+          <div 
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: "url(\"data:image/svg+xml,%3csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3e%3cg fill='none' fill-rule='evenodd'%3e%3cg fill='%236366f1' fill-opacity='0.4'%3e%3ccircle cx='30' cy='30' r='2'/%3e%3c/g%3e%3c/g%3e%3c/svg%3e\")"
+            }}
+          ></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
         </div>
       </div>
 

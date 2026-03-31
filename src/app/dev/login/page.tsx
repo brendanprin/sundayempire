@@ -266,11 +266,11 @@ export default function DevLoginPage() {
               <Link
                 href="/"
                 className="flex-shrink-0"
-                aria-label="Dynasty Football home"
+                aria-label="SundayEmpire home"
               >
                 <img
-                  src="/brand/dynasty-logo-mark.png"
-                  alt="Dynasty Football"
+                  src="/brand/badge/sundayempire-logo-badge.png"
+                  alt="SundayEmpire"
                   width={40}
                   height={40}
                   className="h-10 w-10"
