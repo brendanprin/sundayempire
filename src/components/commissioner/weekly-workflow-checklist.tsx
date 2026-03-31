@@ -40,7 +40,7 @@ export function WeeklyWorkflowChecklist(props: Props) {
       <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Weekly Workflow
+            Required Weekly Actions
           </p>
           <p className="mt-0.5 text-sm font-semibold text-slate-100">
             {isAllDone ? "All steps complete" : `${completedCount} of ${totalCount} steps complete`}

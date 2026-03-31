@@ -193,12 +193,12 @@ export function CommissionerQueueWorkspace(props: {
                 <h2 className={`text-base font-semibold ${
                   totalUrgentWork > 0 ? "text-red-100" : "text-slate-100"
                 }`}>
-                  Action Center
+                  System Status
                 </h2>
                 <p className={`mt-0.5 text-xs ${
                   totalUrgentWork > 0 ? "text-red-400" : "text-slate-400"
                 }`}>
-                  {totalUrgentWork > 0 ? "Urgent work requires your attention" : "What to do right now"}
+                  {totalUrgentWork > 0 ? "System-detected issues requiring attention" : "No system issues detected"}
                 </p>
               </div>
               {totalUrgentWork > 0 ? (
