@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { requestJson } from "@/lib/client-request";
+import { NoTeamState } from "@/components/team/no-team-state";
 import {
   complianceStatusMeta,
   StandardTable,
@@ -55,6 +56,8 @@ export default function TeamsPage() {
   const [actor, setActor] = useState<AuthMeActor | null>(null);
   const role = actor?.leagueRole ?? null;
   const isUnassigned = actor !== null && actor.leagueRole === "MEMBER" && actor.teamId === null;
+  const [showOpenTeamsOnly, setShowOpenTeamsOnly] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -118,17 +121,33 @@ export default function TeamsPage() {
     });
   }, [teams, sortDirection, sortKey]);
 
+  const openTeamsCount = useMemo(
+    () => teams.filter((team) => !team.owner).length,
+    [teams]
+  );
+
   const filteredTeams = useMemo(() => {
-    if (teamFilters.compliance === "") {
-      return sortedTeams;
+    let result = sortedTeams;
+
+    if (showOpenTeamsOnly) {
+      result = result.filter((team) => !team.owner);
+    } else if (teamFilters.compliance !== "") {
+      if (teamFilters.compliance === "needs-action") {
+        result = result.filter((team) => team.complianceStatus !== "ok");
+      } else {
+        result = result.filter((team) => team.complianceStatus === teamFilters.compliance);
+      }
     }
 
-    if (teamFilters.compliance === "needs-action") {
-      return sortedTeams.filter((team) => team.complianceStatus !== "ok");
-    }
+    return result;
+  }, [sortedTeams, teamFilters.compliance, showOpenTeamsOnly]);
 
-    return sortedTeams.filter((team) => team.complianceStatus === teamFilters.compliance);
-  }, [sortedTeams, teamFilters.compliance]);
+  function handleViewOpenTeams() {
+    setShowOpenTeamsOnly(true);
+    setTimeout(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
 
   const visibleColumnIds = useMemo(
     () => visibleColumns.map((column) => column.id as TeamsColumnId),
@@ -185,35 +204,7 @@ export default function TeamsPage() {
       </div>
 
       {isUnassigned ? (
-        <div
-          className="rounded-lg border p-4"
-          style={{
-            borderColor: "rgb(30, 58, 138)",
-            backgroundColor: "rgba(23, 37, 84, 0.4)",
-          }}
-          data-testid="no-team-onboarding-banner"
-        >
-          <div className="flex items-start gap-3">
-            <svg
-              className="mt-0.5 h-5 w-5 flex-shrink-0"
-              style={{ color: "rgb(96, 165, 250)" }}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-            </svg>
-            <div>
-              <p className="text-sm font-medium" style={{ color: "rgb(191, 219, 254)" }}>
-                You don&apos;t have a team assigned yet
-              </p>
-              <p className="mt-1 text-sm" style={{ color: "rgb(147, 197, 253)" }}>
-                You&apos;re a member of this league but haven&apos;t been assigned a team. Browse the teams below or contact your commissioner to get set up.
-              </p>
-            </div>
-          </div>
-        </div>
+        <NoTeamState openTeamsCount={openTeamsCount} onViewOpenTeams={handleViewOpenTeams} />
       ) : null}
 
       {error ? (
@@ -281,6 +272,22 @@ export default function TeamsPage() {
         onMoveColumn={moveColumn}
       />
 
+      {showOpenTeamsOnly ? (
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+          <span>Showing open teams only</span>
+          <button
+            type="button"
+            onClick={() => setShowOpenTeamsOnly(false)}
+            className="rounded-full border px-2 py-0.5 text-xs transition hover:opacity-80"
+            style={{ borderColor: "var(--brand-structure-muted)", color: "var(--foreground)" }}
+            data-testid="clear-open-teams-filter"
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
+
+      <div ref={tableRef}>
       <StandardTable testId="teams-standard-table">
         <table className="min-w-full text-sm" data-testid="teams-table" data-density={tableDensity}>
           <thead className="text-slate-300">
@@ -447,13 +454,14 @@ export default function TeamsPage() {
             {filteredTeams.length === 0 ? (
               <tr>
                 <td colSpan={visibleColumnIds.length} className="px-3 py-8 text-center text-slate-400">
-                  No teams match the selected filters.
+                  {showOpenTeamsOnly ? "No unowned teams found in this league." : "No teams match the selected filters."}
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
       </StandardTable>
+      </div>
     </div>
   );
 }
