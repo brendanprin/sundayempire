@@ -218,11 +218,11 @@ export function TopBar(props: {
                 </p>
                 <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
                   {hasActiveLeague
-                    ? multipleLeagues
-                      ? "Switch leagues here or return to your account hub."
-                      : "This account has one accessible league."
+                    ? currentLeagueWorkspace
+                      ? `Active · ${formatLeagueRole(currentLeagueWorkspace.leagueRole)}${multipleLeagues ? " · Switch below." : ""}`
+                      : "League workspace is active."
                     : props.availableLeagues.length > 0
-                      ? "Choose a league to continue."
+                      ? "Select a league workspace below."
                       : "You do not have access to a league yet."}
                 </p>
               </div>

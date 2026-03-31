@@ -205,6 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [actorEmail, setActorEmail] = useState<string | null>(null);
   const [accountRole, setAccountRole] = useState<AuthMePayload["user"]["accountRole"] | null>(null);
   const [activeLeagueName, setActiveLeagueName] = useState<string | null>(null);
+  const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
   const [availableLeagues, setAvailableLeagues] = useState<TopBarLeagueWorkspace[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState("");
   const [switchingLeague, setSwitchingLeague] = useState(false);
@@ -280,6 +281,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         setAccountRole(authPayload.user.accountRole);
         setAvailableLeagues(availableLeagueRows);
         setActiveLeagueName(activeLeague?.name ?? null);
+        setActiveLeagueId(activeLeague?.id ?? null);
         setSelectedLeagueId(activeLeague?.id ?? availableLeagueRows[0]?.id ?? "");
         setDemoAuthEnabled(authPayload.demoAuthEnabled);
 
@@ -298,6 +300,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             }
 
             setActiveLeagueName(leaguePayload.league.name);
+            setActiveLeagueId(leaguePayload.league.id);
             setSelectedLeagueId(leaguePayload.league.id);
             setLeaguePhase(leaguePayload.season.phase);
             setNotificationUnreadCount(notificationSummary?.unreadCount ?? 0);
@@ -313,6 +316,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             setActor(null);
             setActiveLeagueName(null);
+            setActiveLeagueId(null);
             setLeaguePhase(null);
             setNotificationUnreadCount(null);
 
@@ -348,6 +352,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         setActorEmail(null);
         setAccountRole(null);
         setActiveLeagueName(null);
+        setActiveLeagueId(null);
         setAvailableLeagues([]);
         setSelectedLeagueId("");
         setLeaguePhase(null);
@@ -400,11 +405,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? actor.teamName
       : actor
         ? "League Workspace"
-        : availableLeagues.length === 0
-          ? "You are signed in, but this account does not belong to a league yet."
-          : availableLeagues.length === 1
-            ? "Opening your league workspace."
-            : "Signed in as yourself. Choose the league workspace you want to open.";
+        : activeLeagueName
+          ? "League workspace is active."
+          : availableLeagues.length === 0
+            ? "You are signed in, but this account does not belong to a league yet."
+            : availableLeagues.length === 1
+              ? "Opening your league workspace."
+              : "Signed in as yourself. Choose the league workspace you want to open.";
   const seasonPhaseLabel = leaguePhase ? formatLeaguePhaseLabel(leaguePhase) : null;
   const demoSwitchAccountHref = demoAuthEnabled
     ? buildLoginPath({
@@ -520,7 +527,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           notificationUnreadCount={notificationUnreadCount}
           availableLeagues={availableLeagues}
           selectedLeagueId={selectedLeagueId}
-          currentLeagueId={actor?.leagueId ?? null}
+          currentLeagueId={actor?.leagueId ?? activeLeagueId}
           switchingLeague={switchingLeague}
           signingOut={signingOut}
           demoSwitchAccountHref={demoSwitchAccountHref}
