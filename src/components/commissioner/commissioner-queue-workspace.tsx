@@ -297,19 +297,13 @@ export function CommissionerQueueWorkspace(props: {
                 }`}>
                   System Status
                 </h2>
-                <p className={`mt-0.5 text-xs ${
-                  totalUrgentWork > 0 ? "text-red-400" : "text-slate-400"
-                }`}>
-                  {totalUrgentWork > 0 ? "System-detected issues requiring attention" : "No system issues detected"}
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Urgent queue · phase readiness
                 </p>
               </div>
-              {totalUrgentWork > 0 ? (
+              {totalUrgentWork > 0 && (
                 <span className="inline-flex items-center rounded-full bg-red-700 px-3 py-1 text-xs font-bold text-white">
                   {totalUrgentWork} URGENT
-                </span>
-              ) : (
-                <span className="inline-flex items-center rounded-full bg-emerald-800/70 px-3 py-1 text-xs font-semibold text-emerald-200">
-                  All clear
                 </span>
               )}
             </div>
