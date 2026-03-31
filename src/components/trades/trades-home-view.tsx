@@ -270,8 +270,8 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     ? "Flagged proposals that need a commissioner decision before they can move forward."
     : "Submitted proposals waiting on your team to accept, decline, or review details.";
   const priorityEmpty = isCommissioner
-    ? "No proposals are currently waiting on commissioner review."
-    : "No proposals need your team right now.";
+    ? "No proposals are waiting for commissioner review. Trades flagged for review will appear here automatically."
+    : "No proposals need your attention right now. Incoming offers and submitted proposals awaiting your response will appear here.";
   const priorityItems = isCommissioner
     ? props.data.sections.reviewQueue
     : props.data.sections.requiresResponse;
@@ -279,7 +279,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     ? {
         title: "Team Response Queue",
         description: "Submitted proposals still waiting on a counterparty team response.",
-        emptyMessage: "No submitted proposals are currently waiting on a team response.",
+        emptyMessage: "No proposals are waiting on a team response. Submitted trades pending counterparty action will appear here.",
         items: props.data.sections.requiresResponse,
         testId: "trades-home-response-queue",
         id: "section-secondary",
@@ -287,7 +287,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     : {
         title: "Flagged for Commissioner Review",
         description: "Proposals that will route through commissioner review after submission.",
-        emptyMessage: "No current proposals are flagged for commissioner review.",
+        emptyMessage: "No proposals are flagged for commissioner review. Trades that require commissioner approval before settling will appear here.",
         items: props.data.sections.reviewQueue,
         testId: "trades-home-review-queue",
         id: "section-secondary",
@@ -296,7 +296,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     ? {
         title: "Settlement Queue",
         description: "Accepted and review-approved proposals waiting for commissioner settlement.",
-        emptyMessage: "No approved trade proposals are waiting to settle.",
+        emptyMessage: "No approved trades are waiting to settle. Once both teams accept a proposal and it clears review, it will appear here for you to process.",
         items: props.data.sections.settlementQueue,
         testId: "trades-home-settlement-section",
         id: "section-settlement",
@@ -482,7 +482,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
             <Section
               title="Open Trade Proposals"
               description="Submitted or recently updated proposals actively moving through the workflow."
-              emptyMessage="No open proposals are currently active."
+              emptyMessage="No trades are currently in progress. Submitted proposals moving through the workflow will appear here."
               items={props.data.sections.outgoing}
               testId="trades-home-open-section"
               id="section-open"
@@ -508,7 +508,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
             <Section
               title="Open Trade Proposals"
               description="Submitted or recently updated proposals actively moving through the workflow."
-              emptyMessage="No open proposals are currently active."
+              emptyMessage="No trades are currently in progress. Submitted proposals moving through the workflow will appear here."
               items={props.data.sections.outgoing}
               testId="trades-home-open-section"
               id="section-open"
@@ -525,7 +525,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         <Section
           title="Draft Proposals"
           description="Editable packages that still need validation or submission."
-          emptyMessage="No draft trade proposals."
+          emptyMessage="No drafts in progress. Start a trade proposal and save it as a draft to build and validate it before submitting."
           items={props.data.sections.drafts}
           testId="trades-home-drafts-section"
           id="section-drafts"
@@ -536,7 +536,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         <Section
           title="Recent Trade History"
           description="Closed proposals for quick context without dropping far below the active queues."
-          emptyMessage="No closed trade proposals yet."
+          emptyMessage="No completed trades yet. Settled and withdrawn proposals will appear here for reference."
           items={props.data.sections.closed}
           testId="trades-home-history-section"
           id="section-closed"
