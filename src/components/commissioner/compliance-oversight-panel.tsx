@@ -5,6 +5,14 @@ import { formatEnumLabel } from "@/lib/format-label";
 import { Button } from "@/components/ui/button";
 import type { RemediationRecord } from "@/lib/compliance/remediation";
 
+type ScanResultSummary = {
+  teamsEvaluated: number;
+  ok: number;
+  warning: number;
+  error: number;
+  totalFindings: number;
+};
+
 type ComplianceOversightData = {
   teams: Array<{
     id: string;
@@ -21,6 +29,7 @@ type ComplianceOversightData = {
     decision: "approve" | "deny" | "manual-review";
     publishedAt: string;
   }>;
+  lastScanResult?: ScanResultSummary | null;
 };
 
 type ComplianceOversightActions = {
@@ -33,7 +42,7 @@ export function ComplianceOversightPanel(props: {
   actions: ComplianceOversightActions;
   testId?: string;
 }) {
-  const { teams, remediationRecords, league, rulings } = props.data;
+  const { teams, remediationRecords, league, rulings, lastScanResult } = props.data;
 
   const errorTeams = teams.filter(team => team.complianceStatus === "error");
   const warningTeams = teams.filter(team => team.complianceStatus === "warning");
@@ -197,8 +206,42 @@ export function ComplianceOversightPanel(props: {
                 className="w-full"
                 data-testid="compliance-scan-button"
               >
-                {props.actions.busyAction === "compliance" ? "Scanning..." : "Run Compliance Scan"}
+                {props.actions.busyAction === "compliance" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Scanning…
+                  </span>
+                ) : "Run Compliance Scan"}
               </Button>
+              {lastScanResult && props.actions.busyAction !== "compliance" && (
+                <div
+                  className={`rounded-md border px-3 py-2 ${
+                    lastScanResult.error > 0
+                      ? "border-red-700/60 bg-red-950/30"
+                      : lastScanResult.warning > 0
+                        ? "border-amber-700/50 bg-amber-950/20"
+                        : "border-emerald-700/50 bg-emerald-950/20"
+                  }`}
+                  data-testid="compliance-scan-result"
+                >
+                  <p className={`text-xs font-medium ${
+                    lastScanResult.error > 0 ? "text-red-200" : lastScanResult.warning > 0 ? "text-amber-200" : "text-emerald-200"
+                  }`}>
+                    {lastScanResult.error === 0 && lastScanResult.warning === 0
+                      ? "Scan complete — no issues found"
+                      : `Scan complete — ${[
+                          lastScanResult.error > 0 ? `${lastScanResult.error} error${lastScanResult.error !== 1 ? "s" : ""}` : "",
+                          lastScanResult.warning > 0 ? `${lastScanResult.warning} warning${lastScanResult.warning !== 1 ? "s" : ""}` : "",
+                        ].filter(Boolean).join(", ")} detected`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {lastScanResult.teamsEvaluated} team{lastScanResult.teamsEvaluated !== 1 ? "s" : ""} evaluated
+                  </p>
+                </div>
+              )}
               <Link
                 href="/commissioner/audit"
                 className="block w-full rounded-md border border-slate-700/60 px-3 py-2 text-center text-xs text-slate-300 hover:border-slate-600 hover:text-slate-200"

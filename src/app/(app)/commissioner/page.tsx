@@ -1562,6 +1562,7 @@ export default function CommissionerPage() {
     tradeOperations,
     transactions,
     rulings,
+    lastScanResult: complianceSummary,
   };
 
   const commissionerActions = {

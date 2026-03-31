@@ -30,6 +30,13 @@ type CommissionerData = {
     name: string;
     complianceStatus: "ok" | "warning" | "error";
   }>;
+  lastScanResult?: {
+    teamsEvaluated: number;
+    ok: number;
+    warning: number;
+    error: number;
+    totalFindings: number;
+  } | null;
   remediationRecords: RemediationRecord[];
   tradeOperations: Pick<TradeHomeResponse, "summary" | "sections"> | null;
   transactions: Array<{
