@@ -274,7 +274,7 @@ const WEEKLY_CHECKLIST_ITEMS: WeeklyWorkflowItem[] = [
     id: "trade-approval-queue",
     title: "Review flagged trade proposals awaiting commissioner decision",
     description: "Clear the review queue so owners know which trade proposals can advance this week.",
-    href: "/trades",
+    href: "/trades?from=workflow&step=trade-approval-queue",
     ctaLabel: "Open Trades",
   },
   {
@@ -282,7 +282,7 @@ const WEEKLY_CHECKLIST_ITEMS: WeeklyWorkflowItem[] = [
     title: "Settle approved trade proposals",
     description:
       "Complete proposal settlement so player and pick ownership stay current before lineups lock.",
-    href: "/trades",
+    href: "/trades?from=workflow&step=trade-processing-queue",
     ctaLabel: "Open Settlement Queue",
   },
   {

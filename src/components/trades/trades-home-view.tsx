@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { TradeStatusBadge } from "@/components/trades/trade-status-badge";
 import { formatEnumLabel } from "@/lib/format-label";
@@ -185,6 +186,55 @@ function Section(props: {
   );
 }
 
+const WORKFLOW_STEP_LABELS: Record<string, string> = {
+  "trade-approval-queue": "Review flagged trade proposals",
+  "trade-processing-queue": "Settle approved trade proposals",
+};
+
+function WorkflowContextBanner(props: { step: string }) {
+  const stepLabel = WORKFLOW_STEP_LABELS[props.step] ?? "Trade management";
+  return (
+    <section
+      className="rounded-xl px-4 py-3"
+      style={{
+        border: "1px solid rgba(99, 102, 241, 0.35)",
+        backgroundColor: "rgba(99, 102, 241, 0.06)",
+      }}
+      data-testid="trades-home-workflow-context-banner"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+          style={{
+            border: "1px solid rgba(99, 102, 241, 0.5)",
+            backgroundColor: "rgba(99, 102, 241, 0.15)",
+            color: "rgb(165, 180, 252)",
+          }}
+        >
+          Weekly Workflow
+        </span>
+        <p className="text-sm" style={{ color: "rgb(199, 210, 254)" }}>
+          <span style={{ color: "var(--muted-foreground)" }}>Step: </span>
+          {stepLabel}
+        </p>
+        <Link
+          href="/commissioner"
+          className="ml-auto text-xs transition"
+          style={{ color: "var(--muted-foreground)" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "rgb(165, 180, 252)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--muted-foreground)";
+          }}
+        >
+          ← Back to checklist
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function CommissionerEmptyStateBanner(props: { allEmpty: boolean; canCreate: boolean }) {
   if (!props.allEmpty) {
     return (
@@ -330,6 +380,9 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         { label: "Closed", value: summary.closed, scrollToId: "section-closed" },
       ];
 
+  const searchParams = useSearchParams();
+  const workflowStep = searchParams.get("from") === "workflow" ? searchParams.get("step") : null;
+
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   useEffect(() => {
@@ -430,6 +483,8 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           )}
         </div>
       </section>
+
+      {workflowStep ? <WorkflowContextBanner step={workflowStep} /> : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map((card) => (
