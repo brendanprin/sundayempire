@@ -130,7 +130,7 @@ export function CommissionerQueueWorkspace(props: {
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          Dashboard
+          Overview
           {totalUrgentWork > 0 && (
             <span className="ml-2 inline-flex items-center rounded-full bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300">
               {totalUrgentWork}
@@ -149,7 +149,7 @@ export function CommissionerQueueWorkspace(props: {
               : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          Operations Console
+          Deep Operations
         </button>
       </div>
 
