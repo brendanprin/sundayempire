@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export type AuthenticatedEntryResolution = 
   | {
       kind: "no_league_access";
-      route: "/my-leagues";
+      route: "/no-access";
       context: {
         hasLeagues: false;
         totalLeagues: 0;
@@ -64,7 +64,7 @@ export async function resolveAuthenticatedEntry(
   if (accessibleContexts.length === 0) {
     return {
       kind: "no_league_access",
-      route: "/my-leagues",
+      route: "/no-access",
       context: {
         hasLeagues: false,
         totalLeagues: 0,

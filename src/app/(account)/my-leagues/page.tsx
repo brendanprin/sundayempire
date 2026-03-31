@@ -157,9 +157,8 @@ export default function MyLeaguesPage() {
         }
 
         if (resolution.kind === "no_league_access") {
-          // No leagues - show the directory for league creation
-          setShouldShowDirectory(true);
-          setResolverChecked(true);
+          // No league access - send to the dedicated no-access page
+          router.replace(resolution.route);
           return;
         }
 
