@@ -4,7 +4,7 @@ import { Button } from "@/components/ui";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}>
+    <div className="min-h-screen relative" style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}>
       {/* Header / Top Bar */}
       <header className="border-b px-6 py-5" style={{ borderColor: "var(--brand-structure-muted)" }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -179,26 +179,68 @@ export default function LandingPage() {
       </section>
 
       {/* Key Benefits */}
-      <section className="px-6 py-12">
+      <section className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold">Know what matters next</h3>
-              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
+          <div className="grid gap-12 md:grid-cols-3">
+            <div className="text-center group">
+              <div className="mb-4">
+                <div 
+                  className="mx-auto w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors duration-200"
+                  style={{ 
+                    borderColor: "var(--brand-structure-muted)",
+                    backgroundColor: "var(--brand-surface-card)"
+                  }}
+                >
+                  <div 
+                    className="w-6 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: "var(--brand-accent-primary)" }}
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Know what matters next</h3>
+              <p className="text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Dashboard intelligence highlights deadlines, blocked trades, and cap violations.
               </p>
             </div>
             
-            <div className="text-center">
-              <h3 className="text-xl font-semibold">Make legal moves with confidence</h3>
-              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
+            <div className="text-center group">
+              <div className="mb-4">
+                <div 
+                  className="mx-auto w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors duration-200"
+                  style={{ 
+                    borderColor: "var(--brand-structure-muted)",
+                    backgroundColor: "var(--brand-surface-card)"
+                  }}
+                >
+                  <div 
+                    className="w-6 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: "var(--brand-accent-primary)" }}
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Make legal moves with confidence</h3>
+              <p className="text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Real-time validation for trades, contracts, and draft picks. No rule violations.
               </p>
             </div>
             
-            <div className="text-center">
-              <h3 className="text-xl font-semibold">Run transparent operations</h3>
-              <p className="mt-3 text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
+            <div className="text-center group">
+              <div className="mb-4">
+                <div 
+                  className="mx-auto w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors duration-200"
+                  style={{ 
+                    borderColor: "var(--brand-structure-muted)",
+                    backgroundColor: "var(--brand-surface-card)"
+                  }}
+                >
+                  <div 
+                    className="w-6 h-6 rounded-full transition-colors duration-200"
+                    style={{ backgroundColor: "var(--brand-accent-primary)" }}
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Run transparent operations</h3>
+              <p className="text-lg leading-relaxed" style={{ color: "var(--foreground)" }}>
                 Commissioner tools with full audit logs. Every decision is tracked and visible.
               </p>
             </div>
@@ -206,12 +248,95 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Footer Transition */}
+      <section className="px-6 py-12 relative">
+        <div className="mx-auto max-w-7xl">
+          {/* Gradient separator */}
+          <div 
+            className="h-px w-full mb-8" 
+            style={{
+              background: "linear-gradient(90deg, transparent, var(--brand-structure-muted) 25%, var(--brand-accent-primary) 50%, var(--brand-structure-muted) 75%, transparent)",
+              opacity: "0.6"
+            }}
+          />
+          {/* Call to action zone */}
+          <div className="text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to streamline your dynasty operations?</h2>
+            <p className="text-lg mb-6" style={{ color: "var(--muted-foreground)" }}>
+              Join commissioners who trust SundayEmpire for compliant league management
+            </p>
+            <Link href="/login">
+              <Button variant="primary" size="lg" className="text-lg px-8 py-4 font-semibold">
+                Access Your Leagues
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t px-6 py-10" style={{ borderColor: "var(--brand-structure-muted)" }}>
-        <div className="mx-auto max-w-7xl text-center">
-          <p className="text-base" style={{ color: "var(--muted-foreground)" }}>
-            © 2026 SundayEmpire. Dynasty league operations platform.
-          </p>
+      <footer className="px-6 py-16 relative" style={{ backgroundColor: "var(--brand-surface-muted)" }}>
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 items-center">
+            {/* Brand Section */}
+            <div className="flex flex-col items-start">
+              <Image
+                src="/brand/wordmark/sundayempire-logo-primary-wordmark.png"
+                alt="SundayEmpire"
+                width={160}
+                height={43}
+                className="mb-3"
+              />
+              <p className="text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                Dynasty league operations platform
+              </p>
+            </div>
+            
+            {/* Links Section */}
+            <div className="flex flex-col space-y-3 md:items-center">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>
+                Get Started
+              </h3>
+              <div className="flex flex-col space-y-2 text-sm">
+                <Link 
+                  href="/login" 
+                  className="hover:underline transition-colors" 
+                  style={{ color: "var(--muted-foreground)" }}
+                >
+                  Sign in to your leagues
+                </Link>
+                <Link 
+                  href="/invite" 
+                  className="hover:underline transition-colors" 
+                  style={{ color: "var(--muted-foreground)" }}
+                >
+                  Join with invite code
+                </Link>
+              </div>
+            </div>
+            
+            {/* Copyright Section */}
+            <div className="flex flex-col items-start lg:items-end">
+              <p className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+                Built for commissioners
+              </p>
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                © 2026 SundayEmpire
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Subtle brand watermark */}
+        <div className="absolute bottom-0 right-0 pointer-events-none overflow-hidden">
+          <Image
+            src="/brand/badge/sundayempire-logo-badge.png"
+            alt=""
+            width={120}
+            height={120}
+            className="opacity-[0.02] transform translate-x-8 translate-y-8"
+            aria-hidden="true"
+          />
         </div>
       </footer>
     </div>

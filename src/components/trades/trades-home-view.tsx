@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { TradeStatusBadge } from "@/components/trades/trade-status-badge";
 import { formatEnumLabel } from "@/lib/format-label";
@@ -15,12 +16,57 @@ function formatDateTime(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
+function SummaryCard(props: {
+  label: string;
+  value: number;
+  scrollToId: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="rounded-xl p-4 text-left shadow-[0_18px_60px_rgba(15,23,42,0.25)] transition-all w-full"
+      style={{
+        border: props.isActive
+          ? "1px solid rgb(14, 165, 233)"
+          : "1px solid var(--brand-structure-muted)",
+        backgroundColor: props.isActive
+          ? "rgba(14, 165, 233, 0.07)"
+          : "var(--brand-surface-elevated)",
+        cursor: "pointer",
+      }}
+    >
+      <p
+        className="text-[11px] uppercase tracking-[0.2em]"
+        style={{ color: "var(--muted-foreground)" }}
+      >
+        Summary
+      </p>
+      <h3
+        className="mt-1 text-base font-semibold transition-colors"
+        style={{ color: props.isActive ? "rgb(125, 211, 252)" : "var(--foreground)" }}
+      >
+        {props.label}
+      </h3>
+      <p
+        className="mt-4 text-3xl font-semibold"
+        style={{ color: "var(--foreground)" }}
+      >
+        {props.value}
+      </p>
+    </button>
+  );
+}
+
 function Section(props: {
   title: string;
   description: string;
   emptyMessage: string;
   items: TradeProposalSummary[];
   testId: string;
+  id?: string;
   compact?: boolean;
   limit?: number;
   className?: string;
@@ -33,6 +79,7 @@ function Section(props: {
       title={props.title}
       description={props.description}
       testId={props.testId}
+      id={props.id}
       className={props.className}
     >
       {props.items.length === 0 ? (
@@ -231,6 +278,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         emptyMessage: "No submitted proposals are currently waiting on a team response.",
         items: props.data.sections.requiresResponse,
         testId: "trades-home-response-queue",
+        id: "section-secondary",
       }
     : {
         title: "Flagged for Commissioner Review",
@@ -238,6 +286,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         emptyMessage: "No current proposals are flagged for commissioner review.",
         items: props.data.sections.reviewQueue,
         testId: "trades-home-review-queue",
+        id: "section-secondary",
       };
   const settlementSection = isCommissioner
     ? {
@@ -246,6 +295,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         emptyMessage: "No approved trade proposals are waiting to settle.",
         items: props.data.sections.settlementQueue,
         testId: "trades-home-settlement-section",
+        id: "section-settlement",
       }
     : null;
 
@@ -259,6 +309,54 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     summary.closed;
   const commissionerActionsEmpty = summary.reviewQueue === 0 && summary.settlementQueue === 0;
   const showCommissionerEmptyBanner = isCommissioner && commissionerActionsEmpty;
+
+  const summaryCards = isCommissioner
+    ? [
+        { label: "Commissioner Review", value: summary.reviewQueue, scrollToId: "section-priority" },
+        { label: "Ready to Settle", value: summary.settlementQueue, scrollToId: "section-settlement" },
+        { label: "Draft Proposals", value: summary.drafts, scrollToId: "section-drafts" },
+        { label: "Requires Team Response", value: summary.requiresResponse, scrollToId: "section-secondary" },
+        { label: "Closed", value: summary.closed, scrollToId: "section-closed" },
+      ]
+    : [
+        { label: "Pending Actions", value: summary.requiresResponse, scrollToId: "section-priority" },
+        { label: "Draft Proposals", value: summary.drafts, scrollToId: "section-drafts" },
+        { label: "Open Proposals", value: summary.outgoing, scrollToId: "section-open" },
+        { label: "Requires Team Response", value: summary.requiresResponse, scrollToId: "section-secondary" },
+        { label: "Closed", value: summary.closed, scrollToId: "section-closed" },
+      ];
+
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ids = summaryCards.map((c) => c.scrollToId);
+    const ratios = new Map<string, number>(ids.map((id) => [id, 0]));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          ratios.set(entry.target.id, entry.intersectionRatio);
+        }
+        let bestId: string | null = null;
+        let bestRatio = 0;
+        for (const [id, ratio] of ratios) {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestId = id;
+          }
+        }
+        setActiveSection(bestRatio > 0 ? bestId : null);
+      },
+      { threshold: Array.from({ length: 11 }, (_, i) => i / 10) },
+    );
+
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="space-y-6" data-testid="trades-home">
@@ -330,35 +428,21 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {(isCommissioner
-          ? [
-              {
-                label: "Commissioner Review",
-                value: props.data.summary.reviewQueue,
-              },
-              { label: "Ready to Settle", value: props.data.summary.settlementQueue },
-              { label: "Draft Proposals", value: props.data.summary.drafts },
-              { label: "Requires Team Response", value: props.data.summary.requiresResponse },
-              { label: "Closed", value: props.data.summary.closed },
-            ]
-          : [
-              {
-                label: "Pending Actions",
-                value: props.data.summary.requiresResponse,
-              },
-              { label: "Draft Proposals", value: props.data.summary.drafts },
-              { label: "Open Proposals", value: props.data.summary.outgoing },
-              { label: "Requires Team Response", value: props.data.summary.requiresResponse },
-              { label: "Closed", value: props.data.summary.closed },
-            ]).map((item) => (
-          <DashboardCard key={item.label} title={item.label} eyebrow="Summary">
-          <p 
-            className="text-3xl font-semibold"
-            style={{ color: "var(--foreground)" }}
-          >
-            {item.value}
-          </p>
-          </DashboardCard>
+        {summaryCards.map((card) => (
+          <SummaryCard
+            key={card.label}
+            label={card.label}
+            value={card.value}
+            scrollToId={card.scrollToId}
+            isActive={activeSection === card.scrollToId}
+            onClick={() => {
+              const el = document.getElementById(card.scrollToId);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                setActiveSection(card.scrollToId);
+              }
+            }}
+          />
         ))}
       </div>
 
@@ -373,6 +457,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           emptyMessage={priorityEmpty}
           items={priorityItems}
           testId="trades-home-priority-section"
+          id="section-priority"
         />
         {settlementSection ? (
           <Section {...settlementSection} />
@@ -383,6 +468,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
             emptyMessage="No draft trade proposals."
             items={props.data.sections.drafts}
             testId="trades-home-drafts-section"
+            id="section-drafts"
           />
         )}
       </div>
@@ -394,6 +480,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           emptyMessage="No open proposals are currently active."
           items={props.data.sections.outgoing}
           testId="trades-home-open-section"
+          id="section-open"
           compact
           limit={4}
         />
@@ -410,6 +497,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
               emptyMessage="No draft trade proposals."
               items={props.data.sections.drafts}
               testId="trades-home-drafts-section"
+              id="section-drafts"
               compact
               limit={3}
             />
@@ -421,6 +509,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
             emptyMessage="No closed trade proposals yet."
             items={props.data.sections.closed}
             testId="trades-home-history-section"
+            id="section-closed"
             compact
             limit={4}
           />
@@ -438,6 +527,7 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           limit={4}
         />
       ) : null}
+
     </div>
   );
 }

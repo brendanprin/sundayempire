@@ -8,10 +8,12 @@ export function DashboardCard(props: {
   children: ReactNode;
   className?: string;
   testId?: string;
+  id?: string;
 }) {
   return (
     <section
-      className={`rounded-xl p-4 shadow-[0_18px_60px_rgba(15,23,42,0.25)] ${props.className ?? ""}`.trim()}
+      id={props.id}
+      className={`scroll-mt-6 rounded-xl p-4 shadow-[0_18px_60px_rgba(15,23,42,0.25)] ${props.className ?? ""}`.trim()}
       style={{
         border: "1px solid var(--brand-structure-muted)",
         backgroundColor: "var(--brand-surface-elevated)",
