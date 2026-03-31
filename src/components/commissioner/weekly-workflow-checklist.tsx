@@ -18,6 +18,8 @@ export type StepValidation = {
   blocked: boolean;
   /** Human-readable reason shown in the UI */
   reason: string;
+  /** Label for the manual confirmation button — makes clear what the user is confirming */
+  confirmLabel?: string;
 };
 
 type Props = {
@@ -162,7 +164,7 @@ export function WeeklyWorkflowChecklist(props: Props) {
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
-                    Confirm reviewed
+                    {systemValidation?.[nextItem.id]?.confirmLabel ?? "Confirm reviewed"}
                   </button>
                 );
               })()}

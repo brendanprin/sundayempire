@@ -816,27 +816,51 @@ export default function CommissionerPage() {
     [disputeQueue],
   );
   const tradeSettlementCount = settlementQueue.length;
-  const weeklyChecklistSystemValidation = useMemo(() => ({
-    "compliance-scan": {
-      validated: lastScanRanAt !== null,
-      blocked: false,
-      reason: lastScanRanAt !== null ? "Scan completed this session" : "Scan not yet run",
-    },
-    "trade-approval-queue": {
-      validated: tradeReviewCount === 0,
-      blocked: tradeReviewCount > 0,
-      reason: tradeReviewCount === 0
-        ? "Review queue is clear"
-        : `${tradeReviewCount} proposal${tradeReviewCount === 1 ? "" : "s"} pending review`,
-    },
-    "trade-processing-queue": {
-      validated: tradeSettlementCount === 0,
-      blocked: tradeSettlementCount > 0,
-      reason: tradeSettlementCount === 0
-        ? "Settlement queue is clear"
-        : `${tradeSettlementCount} trade${tradeSettlementCount === 1 ? "" : "s"} pending settlement`,
-    },
-  }), [lastScanRanAt, tradeReviewCount, tradeSettlementCount]);
+  const weeklyChecklistSystemValidation = useMemo(() => {
+    const phaseLabels: Record<string, string> = {
+      PRESEASON: "Preseason",
+      REGULAR_SEASON: "Regular Season",
+      PLAYOFFS: "Playoffs",
+      OFFSEASON: "Offseason",
+    };
+    const phaseLabel = league?.season.phase ? (phaseLabels[league.season.phase] ?? league.season.phase) : null;
+
+    return {
+      "phase-review": {
+        validated: false,
+        blocked: false,
+        reason: "",
+        confirmLabel: phaseLabel
+          ? `Confirm: ${phaseLabel} phase is active`
+          : "Confirm phase is active",
+      },
+      "compliance-scan": {
+        validated: lastScanRanAt !== null,
+        blocked: false,
+        reason: lastScanRanAt !== null ? "Scan completed this session" : "Scan not yet run",
+      },
+      "trade-approval-queue": {
+        validated: tradeReviewCount === 0,
+        blocked: tradeReviewCount > 0,
+        reason: tradeReviewCount === 0
+          ? "Review queue is clear"
+          : `${tradeReviewCount} proposal${tradeReviewCount === 1 ? "" : "s"} pending review`,
+      },
+      "trade-processing-queue": {
+        validated: tradeSettlementCount === 0,
+        blocked: tradeSettlementCount > 0,
+        reason: tradeSettlementCount === 0
+          ? "Settlement queue is clear"
+          : `${tradeSettlementCount} trade${tradeSettlementCount === 1 ? "" : "s"} pending settlement`,
+      },
+      "audit-health-check": {
+        validated: false,
+        blocked: false,
+        reason: "",
+        confirmLabel: "Confirm audit reviewed",
+      },
+    };
+  }, [lastScanRanAt, tradeReviewCount, tradeSettlementCount, league?.season.phase]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
