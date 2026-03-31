@@ -12,6 +12,16 @@ import type { RemediationRecord } from "@/lib/compliance/remediation";
 
 type WorkspaceTab = "dashboard" | "operations";
 
+function formatPhase(phase: string): string {
+  switch (phase) {
+    case "PRESEASON": return "Preseason";
+    case "REGULAR_SEASON": return "Regular Season";
+    case "PLAYOFFS": return "Playoffs";
+    case "OFFSEASON": return "Offseason";
+    default: return phase;
+  }
+}
+
 // Type definitions for commissioner workspace data
 type CommissionerData = {
   league: LeagueSummaryPayload | null;
@@ -72,12 +82,8 @@ export function CommissionerQueueWorkspace(props: {
                          (props.data.tradeOperations?.summary?.settlementQueue || 0);
 
   const totalUrgentWork = urgentCount + tradeQueueCount;
-  const queueStatus = totalUrgentWork > 0
-    ? `${totalUrgentWork} urgent item${totalUrgentWork === 1 ? "" : "s"}`
-    : "Queue current";
-
   const headerDescription = league
-    ? `Commissioner operations for ${league.league.name} Season ${league.season.year}. ${queueStatus}, ${teams.length} teams in scope.`
+    ? `${league.league.name} · Season ${league.season.year} · ${teams.length} teams`
     : "Loading commissioner workspace...";
 
   return (
@@ -89,6 +95,56 @@ export function CommissionerQueueWorkspace(props: {
         titleTestId="commissioner-workspace-title"
         eyebrowTestId="commissioner-workspace-eyebrow"
       />
+
+      {/* Status strip */}
+      <div
+        className="flex items-center divide-x divide-slate-800 overflow-hidden rounded-lg border border-slate-800 bg-slate-950/70 text-xs"
+        role="status"
+        aria-label="Commissioner workspace status"
+        data-testid="commissioner-status-strip"
+      >
+        <span className="flex items-center gap-1.5 px-3 py-2 font-medium text-slate-400">
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          Commissioner
+        </span>
+        <span className="flex items-center gap-1.5 px-3 py-2 text-slate-300">
+          <svg className="h-3 w-3 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+          </svg>
+          {league ? formatPhase(league.season.phase) : "—"}
+        </span>
+        <span
+          className={`flex items-center gap-1.5 px-3 py-2 font-medium ${
+            totalUrgentWork > 0 ? "text-red-400" : "text-slate-500"
+          }`}
+          data-testid="commissioner-status-strip-alerts"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+          {totalUrgentWork} {totalUrgentWork === 1 ? "alert" : "alerts"}
+        </span>
+        <span
+          className={`flex items-center gap-1.5 px-3 py-2 font-medium ${
+            totalUrgentWork > 0
+              ? "text-red-400"
+              : reviewCount > 0
+                ? "text-amber-400"
+                : "text-emerald-400"
+          }`}
+          data-testid="commissioner-status-strip-queue"
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              totalUrgentWork > 0 ? "bg-red-500" : reviewCount > 0 ? "bg-amber-500" : "bg-emerald-500"
+            }`}
+            aria-hidden
+          />
+          {totalUrgentWork > 0 ? "Blocking" : reviewCount > 0 ? "Attention needed" : "Queue clear"}
+        </span>
+      </div>
 
       {/* Tab switcher */}
       <div
