@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireAuthenticatedUser(request);
+  const user = await getAuthenticatedUser(request);
   if (!user) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }

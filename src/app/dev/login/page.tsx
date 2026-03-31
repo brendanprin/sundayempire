@@ -1,3 +1,5 @@
+"use client";
+
 // Top scenario shortcuts for quick launch
 const QUICK_LAUNCH_SCENARIOS = [
   {
@@ -16,11 +18,10 @@ const QUICK_LAUNCH_SCENARIOS = [
     getRoute: () => "/dashboard",
   },
 ];
-"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { requestJson } from "@/lib/client-request";
 import {
   RETURN_TO_PARAM,
@@ -141,18 +142,6 @@ export default function DevLoginPage() {
       setIdentities(payload.identities);
       setActiveEmail(payload.activeEmail);
 
-      const nextEmail =
-        selectedEmailRef.current ||
-        payload.activeEmail ||
-        payload.identities[0]?.email ||
-        "";
-      const nextIdentity =
-        payload.identities.find((identity) => identity.email === nextEmail) ?? null;
-
-      setSelectedEmail(nextEmail);
-      setSelectedRole(
-        nextIdentity ? toIdentityOption(nextIdentity) : payload.identities[0] ? toIdentityOption(payload.identities[0]) : null,
-      );
     } catch (loadError) {
       console.warn("Failed to load demo identities:", loadError);
     } finally {
@@ -352,7 +341,7 @@ export default function DevLoginPage() {
                 <div className="flex flex-wrap gap-2">
                   {QUICK_LAUNCH_SCENARIOS.map((scenario) => {
                     // Find first persona for this role
-                    const persona = groupedIdentities[scenario.role]?.[0];
+                    const persona = groupedIdentities[scenario.role as IdentityOption]?.[0];
                     if (!persona) return null;
                     return (
                       <button
