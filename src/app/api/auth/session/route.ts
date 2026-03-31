@@ -3,7 +3,6 @@ import { apiError } from "@/lib/api";
 import { resolvePostAuthenticationDestination } from "@/lib/auth-entry";
 import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
 import {
-  ACTIVE_LEAGUE_COOKIE,
   AUTH_SESSION_MAX_AGE_SECONDS,
   HEADER_LEAGUE_ID,
   applyAuthenticatedSessionCookies,
@@ -12,6 +11,7 @@ import {
   isDemoAuthLoginEnabled,
   revokeSessionFromRequest,
 } from "@/lib/auth";
+import { getActiveLeagueCookie } from "@/lib/auth/active-league";
 import { AUTH_MAGIC_LINK_TOKEN_PARAM } from "@/lib/auth-constants";
 import { createActorContextService } from "@/lib/application/actor-context/service";
 import { selectPreferredSeason } from "@/lib/domain/lifecycle/season-selection";
@@ -102,11 +102,7 @@ function normalizeOptionalString(value: unknown) {
 }
 
 function readRequestedLeagueId(request: NextRequest) {
-  return (
-    request.headers.get(HEADER_LEAGUE_ID)?.trim() ||
-    request.cookies.get(ACTIVE_LEAGUE_COOKIE)?.value?.trim() ||
-    null
-  );
+  return request.headers.get(HEADER_LEAGUE_ID)?.trim() || getActiveLeagueCookie(request);
 }
 
 async function listSessionMemberships(userId: string): Promise<SessionMembership[]> {

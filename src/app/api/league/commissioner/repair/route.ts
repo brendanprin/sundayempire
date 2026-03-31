@@ -2,11 +2,11 @@ import { TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import {
-  ACTIVE_LEAGUE_COOKIE,
   HEADER_LEAGUE_ID,
   getAuthActorForLeague,
   getAuthenticatedUser,
 } from "@/lib/auth";
+import { getActiveLeagueCookie } from "@/lib/auth/active-league";
 import {
   CommissionerAssignmentError,
   CommissionerIntegrityRepairError,
@@ -23,11 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
 
 function requestedLeagueIdFromRequest(request: NextRequest) {
-  return (
-    request.headers.get(HEADER_LEAGUE_ID)?.trim() ||
-    request.cookies.get(ACTIVE_LEAGUE_COOKIE)?.value?.trim() ||
-    null
-  );
+  return request.headers.get(HEADER_LEAGUE_ID)?.trim() || getActiveLeagueCookie(request);
 }
 
 type RepairScopeResolution =

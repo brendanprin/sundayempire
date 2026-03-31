@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { ACTIVE_LEAGUE_COOKIE, getAuthActorForLeague, getRequestUser } from "@/lib/auth";
+import { getAuthActorForLeague, getRequestUser } from "@/lib/auth";
+import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import { createActorContextService } from "@/lib/application/actor-context/service";
 import { selectPreferredSeason } from "@/lib/domain/lifecycle/season-selection";
 import { getActiveLeagueContext } from "@/lib/league-context";
@@ -148,12 +149,7 @@ export async function POST(request: NextRequest) {
       teamName: actor.teamName,
     },
   });
-  response.cookies.set(ACTIVE_LEAGUE_COOKIE, league.id, {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  setActiveLeagueCookie(response, league.id);
 
   return response;
 }

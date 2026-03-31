@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { ACTIVE_LEAGUE_COOKIE, HEADER_LEAGUE_ID, type AuthActor, requireLeagueRole } from "@/lib/auth";
+import { HEADER_LEAGUE_ID, type AuthActor, requireLeagueRole } from "@/lib/auth";
+import { getActiveLeagueCookie } from "@/lib/auth/active-league";
 import {
   getLeagueContextById,
   listAccessibleLeagueContextsForUser,
@@ -37,11 +38,7 @@ type ResourceNotFoundOptions = {
 };
 
 function getRequestedLeagueId(request: NextRequest) {
-  return (
-    request.headers.get(HEADER_LEAGUE_ID)?.trim() ||
-    request.cookies.get(ACTIVE_LEAGUE_COOKIE)?.value?.trim() ||
-    null
-  );
+  return request.headers.get(HEADER_LEAGUE_ID)?.trim() || getActiveLeagueCookie(request);
 }
 
 export async function requireCurrentLeagueRole(

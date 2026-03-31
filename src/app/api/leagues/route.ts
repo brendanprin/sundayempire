@@ -1,7 +1,8 @@
 import { LeagueRole, TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { ACTIVE_LEAGUE_COOKIE, requirePlatformRole } from "@/lib/auth";
+import { requirePlatformRole } from "@/lib/auth";
+import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import { createLeagueInviteService } from "@/lib/domain/auth/LeagueInviteService";
 import { assertLeagueHasOperationalCommissioner } from "@/lib/domain/league-membership/commissioner-assignment";
 import { getDefaultLifecycleDeadlines } from "@/lib/domain/lifecycle/default-deadlines";
@@ -344,12 +345,7 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 },
   );
-  response.cookies.set(ACTIVE_LEAGUE_COOKIE, created.league.id, {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  setActiveLeagueCookie(response, created.league.id);
 
   return response;
 }

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import {
-  ACTIVE_LEAGUE_COOKIE,
   AUTH_SESSION_COOKIE,
   AUTH_SESSION_MAX_AGE_SECONDS,
   requireAuthenticatedUser,
 } from "@/lib/auth";
+import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import {
   createLeagueInviteService,
   LeagueInviteAcceptanceError,
@@ -85,13 +85,7 @@ export async function POST(request: NextRequest) {
         maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
       });
     }
-    response.cookies.set(ACTIVE_LEAGUE_COOKIE, result.membership.leagueId, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30,
-    });
+    setActiveLeagueCookie(response, result.membership.leagueId);
 
     return response;
   } catch (error) {

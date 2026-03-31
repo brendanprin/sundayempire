@@ -12,6 +12,7 @@ import {
   isDemoAuthLoginEnabled,
   isLegacyAuthCompatibilityEnabled,
 } from "@/lib/auth-constants";
+import { setActiveLeagueCookie, clearActiveLeagueCookie } from "@/lib/auth/active-league";
 import {
   AuthRequiredError,
   type CreateAuthSessionInput,
@@ -104,15 +105,9 @@ export function applyAuthenticatedSessionCookies(
   });
 
   if (input.activeLeagueId) {
-    response.cookies.set(ACTIVE_LEAGUE_COOKIE, input.activeLeagueId, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure,
-      maxAge,
-    });
+    setActiveLeagueCookie(response, input.activeLeagueId);
   } else {
-    response.cookies.delete(ACTIVE_LEAGUE_COOKIE);
+    clearActiveLeagueCookie(response);
   }
 
   response.cookies.delete(AUTH_EMAIL_COOKIE);
@@ -121,7 +116,7 @@ export function applyAuthenticatedSessionCookies(
 export function clearAuthenticationCookies(response: NextResponse) {
   response.cookies.delete(AUTH_SESSION_COOKIE);
   response.cookies.delete(AUTH_EMAIL_COOKIE);
-  response.cookies.delete(ACTIVE_LEAGUE_COOKIE);
+  clearActiveLeagueCookie(response);
 }
 
 // Legacy alias retained while routes move to getAuthenticatedUser().
