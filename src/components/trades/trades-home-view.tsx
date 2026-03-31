@@ -241,18 +241,32 @@ function CommissionerEmptyStateBanner(props: { allEmpty: boolean; canCreate: boo
       <section
         className="rounded-2xl p-5"
         style={{
-          border: "1px solid var(--brand-structure-muted)",
-          backgroundColor: "var(--brand-surface-elevated)",
+          border: "1px solid rgba(16, 185, 129, 0.3)",
+          backgroundColor: "rgba(16, 185, 129, 0.05)",
         }}
         data-testid="trades-home-empty-state-banner"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(16, 185, 129, 0.15)" }}
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.5}
+              stroke="rgb(52, 211, 153)"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
           <div>
-            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-              All trade activity is up to date
+            <p className="text-sm font-medium" style={{ color: "rgb(167, 243, 208)" }}>
+              No trade actions required
             </p>
-            <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-              No trades require commissioner review or settlement.
+            <p className="mt-0.5 text-sm" style={{ color: "var(--muted-foreground)" }}>
+              There are no proposals awaiting review, settlement, or response.
             </p>
           </div>
         </div>
@@ -361,7 +375,8 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
     summary.requiresResponse +
     summary.outgoing +
     summary.closed;
-  const commissionerActionsEmpty = summary.reviewQueue === 0 && summary.settlementQueue === 0;
+  const commissionerActionsEmpty =
+    summary.reviewQueue === 0 && summary.settlementQueue === 0 && summary.requiresResponse === 0;
   const showCommissionerEmptyBanner = isCommissioner && commissionerActionsEmpty;
 
   const summaryCards = isCommissioner
