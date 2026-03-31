@@ -11,6 +11,15 @@ export type WeeklyWorkflowItem = {
   ctaLabel?: string;
 };
 
+export type StepValidation = {
+  /** System automatically marks this step complete when true */
+  validated: boolean;
+  /** System blocks manual completion when true */
+  blocked: boolean;
+  /** Human-readable reason shown in the UI */
+  reason: string;
+};
+
 type Props = {
   items: WeeklyWorkflowItem[];
   checkedIds: Record<string, boolean>;
@@ -18,18 +27,33 @@ type Props = {
   onRunComplianceScan: () => void;
   busyAction: string | null;
   weekBucket: string;
+  /** Per-step system validation derived from live data */
+  systemValidation?: Record<string, StepValidation>;
   testId?: string;
 };
 
 export function WeeklyWorkflowChecklist(props: Props) {
-  const { items, checkedIds, onToggle, onRunComplianceScan, busyAction, weekBucket } = props;
+  const { items, checkedIds, onToggle, onRunComplianceScan, busyAction, weekBucket, systemValidation } = props;
 
-  const completedCount = items.filter(item => checkedIds[item.id]).length;
+  // Effective completion: system-validated overrides to true, system-blocked overrides to false
+  const effectiveCheckedIds: Record<string, boolean> = {};
+  for (const item of items) {
+    const sv = systemValidation?.[item.id];
+    if (sv?.blocked) {
+      effectiveCheckedIds[item.id] = false;
+    } else if (sv?.validated) {
+      effectiveCheckedIds[item.id] = true;
+    } else {
+      effectiveCheckedIds[item.id] = Boolean(checkedIds[item.id]);
+    }
+  }
+
+  const completedCount = items.filter(item => effectiveCheckedIds[item.id]).length;
   const totalCount = items.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const isAllDone = completedCount === totalCount;
 
-  const nextItem = items.find(item => !checkedIds[item.id]) ?? null;
+  const nextItem = items.find(item => !effectiveCheckedIds[item.id]) ?? null;
 
   return (
     <div
@@ -113,17 +137,35 @@ export function WeeklyWorkflowChecklist(props: Props) {
                 busyAction={busyAction}
                 variant="primary"
               />
-              <button
-                type="button"
-                onClick={() => onToggle(nextItem.id)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-sky-700/50 bg-sky-900/40 px-3 py-1.5 text-xs font-medium text-sky-200 hover:border-sky-600 hover:text-sky-100"
-                data-testid={`commissioner-weekly-checklist-toggle-${nextItem.id}`}
-              >
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-                Mark done
-              </button>
+              {(() => {
+                const sv = systemValidation?.[nextItem.id];
+                if (sv?.blocked) {
+                  return (
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700/50 bg-slate-900/40 px-3 py-1.5 text-xs font-medium text-slate-500">
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z" />
+                      </svg>
+                      {sv.reason}
+                    </span>
+                  );
+                }
+                if (sv?.validated) {
+                  return null;
+                }
+                return (
+                  <button
+                    type="button"
+                    onClick={() => onToggle(nextItem.id)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-sky-700/50 bg-sky-900/40 px-3 py-1.5 text-xs font-medium text-sky-200 hover:border-sky-600 hover:text-sky-100"
+                    data-testid={`commissioner-weekly-checklist-toggle-${nextItem.id}`}
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Confirm reviewed
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -132,8 +174,12 @@ export function WeeklyWorkflowChecklist(props: Props) {
       {/* Step list */}
       <ol className="space-y-1 px-4 pb-4 pt-3">
         {items.map((item, index) => {
-          const isComplete = Boolean(checkedIds[item.id]);
+          const sv = systemValidation?.[item.id];
+          const isSystemValidated = sv?.validated === true;
+          const isSystemBlocked = sv?.blocked === true;
+          const isComplete = effectiveCheckedIds[item.id] === true;
           const isCurrent = !isAllDone && item.id === nextItem?.id;
+          const isSystemManaged = isSystemValidated || isSystemBlocked;
 
           return (
             <li
@@ -141,29 +187,38 @@ export function WeeklyWorkflowChecklist(props: Props) {
               className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                 isComplete
                   ? "border-emerald-800/30 bg-emerald-950/10 opacity-60"
-                  : isCurrent
-                    ? "border-sky-700/40 bg-sky-950/20"
-                    : "border-slate-800/60 bg-slate-950/20"
+                  : isSystemBlocked
+                    ? "border-amber-800/30 bg-amber-950/10"
+                    : isCurrent
+                      ? "border-sky-700/40 bg-sky-950/20"
+                      : "border-slate-800/60 bg-slate-950/20"
               }`}
               data-testid={`commissioner-weekly-checklist-item-${item.id}`}
             >
               {/* Step number / check indicator */}
               <button
                 type="button"
-                onClick={() => onToggle(item.id)}
-                aria-label={isComplete ? `Unmark step ${index + 1}` : `Mark step ${index + 1} complete`}
+                onClick={isSystemManaged ? undefined : () => onToggle(item.id)}
+                disabled={isSystemManaged}
+                aria-label={isComplete ? `Step ${index + 1} complete` : `Mark step ${index + 1} complete`}
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                   isComplete
-                    ? "border-emerald-600 bg-emerald-700/60 text-emerald-200"
-                    : isCurrent
-                      ? "border-sky-600 bg-sky-900/40 text-sky-400 hover:bg-sky-800/40"
-                      : "border-slate-700 bg-slate-900/40 text-slate-500 hover:border-slate-600"
+                    ? "border-emerald-600 bg-emerald-700/60 text-emerald-200 cursor-default"
+                    : isSystemBlocked
+                      ? "border-amber-700/50 bg-amber-950/30 text-amber-500 cursor-not-allowed"
+                      : isCurrent
+                        ? "border-sky-600 bg-sky-900/40 text-sky-400 hover:bg-sky-800/40"
+                        : "border-slate-700 bg-slate-900/40 text-slate-500 hover:border-slate-600"
                 }`}
                 data-testid={`commissioner-weekly-checklist-toggle-${item.id}`}
               >
                 {isComplete ? (
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                ) : isSystemBlocked ? (
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z" />
                   </svg>
                 ) : (
                   <span className="text-[9px] font-bold">{index + 1}</span>
@@ -174,12 +229,21 @@ export function WeeklyWorkflowChecklist(props: Props) {
               <div className="min-w-0 flex-1">
                 <p
                   className={`text-xs font-medium leading-snug ${
-                    isComplete ? "text-slate-400 line-through decoration-slate-600" : isCurrent ? "text-sky-100" : "text-slate-300"
+                    isComplete
+                      ? "text-slate-400 line-through decoration-slate-600"
+                      : isSystemBlocked
+                        ? "text-amber-200"
+                        : isCurrent
+                          ? "text-sky-100"
+                          : "text-slate-300"
                   }`}
                   data-testid="commissioner-weekly-checklist-item-title"
                 >
                   {item.title}
                 </p>
+                {isSystemBlocked && sv?.reason && (
+                  <p className="mt-0.5 text-[10px] text-amber-500">{sv.reason}</p>
+                )}
               </div>
 
               {/* Step action — visible for incomplete steps except the "next" one (shown in hero) */}
@@ -200,7 +264,7 @@ export function WeeklyWorkflowChecklist(props: Props) {
                   className="shrink-0 rounded-full bg-emerald-900/40 px-2 py-0.5 text-[10px] font-medium text-emerald-400"
                   data-testid={`commissioner-weekly-checklist-status-${item.id}`}
                 >
-                  Done
+                  {isSystemValidated ? "Verified" : "Done"}
                 </span>
               )}
             </li>

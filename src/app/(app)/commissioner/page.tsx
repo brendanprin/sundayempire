@@ -543,6 +543,7 @@ export default function CommissionerPage() {
   const [fixApplyConfirmed, setFixApplyConfirmed] = useState(false);
   const [lastFixPreviewSignature, setLastFixPreviewSignature] = useState<string | null>(null);
   const [weeklyChecklistState, setWeeklyChecklistState] = useState<Record<string, boolean>>({});
+  const [lastScanRanAt, setLastScanRanAt] = useState<number | null>(null);
   const [rulings, setRulings] = useState<CommissionerRulingRecord[]>([]);
   const [selectedDisputeId, setSelectedDisputeId] = useState("");
   const [rulingDecision, setRulingDecision] = useState<CommissionerRulingRecord["decision"]>("manual-review");
@@ -815,6 +816,27 @@ export default function CommissionerPage() {
     [disputeQueue],
   );
   const tradeSettlementCount = settlementQueue.length;
+  const weeklyChecklistSystemValidation = useMemo(() => ({
+    "compliance-scan": {
+      validated: lastScanRanAt !== null,
+      blocked: false,
+      reason: lastScanRanAt !== null ? "Scan completed this session" : "Scan not yet run",
+    },
+    "trade-approval-queue": {
+      validated: tradeReviewCount === 0,
+      blocked: tradeReviewCount > 0,
+      reason: tradeReviewCount === 0
+        ? "Review queue is clear"
+        : `${tradeReviewCount} proposal${tradeReviewCount === 1 ? "" : "s"} pending review`,
+    },
+    "trade-processing-queue": {
+      validated: tradeSettlementCount === 0,
+      blocked: tradeSettlementCount > 0,
+      reason: tradeSettlementCount === 0
+        ? "Settlement queue is clear"
+        : `${tradeSettlementCount} trade${tradeSettlementCount === 1 ? "" : "s"} pending settlement`,
+    },
+  }), [lastScanRanAt, tradeReviewCount, tradeSettlementCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -965,6 +987,7 @@ export default function CommissionerPage() {
         method: "POST",
       });
       setComplianceSummary(payload.report.summary);
+      setLastScanRanAt(Date.now());
       await loadComplianceOps();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Failed to run compliance scan.");
@@ -1562,6 +1585,7 @@ export default function CommissionerPage() {
           onRunComplianceScan={runComplianceScan}
           busyAction={busyAction}
           weekBucket={checklistStorageKey.split(":").pop() ?? ""}
+          systemValidation={weeklyChecklistSystemValidation}
           testId="commissioner-weekly-workflow"
         />
       }
