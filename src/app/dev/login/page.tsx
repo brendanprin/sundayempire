@@ -1,3 +1,21 @@
+// Top scenario shortcuts for quick launch
+const QUICK_LAUNCH_SCENARIOS = [
+  {
+    label: "Commissioner: League Shell",
+    role: "COMMISSIONER",
+    getRoute: () => "/my-leagues",
+  },
+  {
+    label: "Member: Team Dashboard",
+    role: "MEMBER_WITH_TEAM",
+    getRoute: () => "/dashboard",
+  },
+  {
+    label: "Member: No Team",
+    role: "MEMBER_NO_TEAM",
+    getRoute: () => "/dashboard",
+  },
+];
 "use client";
 
 import Link from "next/link";
@@ -77,22 +95,40 @@ export default function DevLoginPage() {
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
   const [demoAuthEnabled, setDemoAuthEnabled] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<IdentityOption | null>(null);
-  const [selectedEmail, setSelectedEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState("/");
+  const [recentEmails, setRecentEmails] = useState<string[]>([]);
   const loginOpenedAtRef = useRef(Date.now());
-  const selectedEmailRef = useRef("");
 
   // Environment checks for demo auth
   const isProduction = process.env.NODE_ENV === "production";
   const isDemoAuthAvailable = demoAuthEnabled && !isProduction;
 
+
+  // Load recent emails from localStorage
   useEffect(() => {
-    selectedEmailRef.current = selectedEmail;
-  }, [selectedEmail]);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("dev-recent-emails");
+      if (stored) {
+        try {
+          setRecentEmails(JSON.parse(stored));
+        } catch {}
+      }
+    }
+  }, []);
+
+  // Save recent emails to localStorage
+  const addRecentEmail = useCallback((email: string) => {
+    setRecentEmails((prev) => {
+      const next = [email, ...prev.filter((e) => e !== email)].slice(0, 5);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dev-recent-emails", JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
 
   const loadIdentities = useCallback(async () => {
     setIsLoading(true);
@@ -133,54 +169,56 @@ export default function DevLoginPage() {
     loadIdentities();
   }, [loadIdentities]);
 
-  const identitiesForSelectedRole = useMemo(() => {
-    if (!selectedRole) return [];
-    return identities.filter((identity) => toIdentityOption(identity) === selectedRole);
-  }, [identities, selectedRole]);
 
-  const selectedIdentity = useMemo(() => {
-    return selectedEmail ? identities.find((identity) => identity.email === selectedEmail) ?? null : null;
-  }, [identities, selectedEmail]);
+  // Group identities by scenario
+  const groupedIdentities = useMemo(() => {
+    const groups: Record<IdentityOption, Identity[]> = {
+      COMMISSIONER: [],
+      MEMBER_WITH_TEAM: [],
+      MEMBER_NO_TEAM: [],
+    };
+    identities.forEach((identity) => {
+      groups[toIdentityOption(identity)].push(identity);
+    });
+    return groups;
+  }, [identities]);
 
-  async function handleDemoSignIn(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedEmail) {
-      setError("Select an account before signing in.");
-      return;
-    }
+  // Recent identities (if still present)
+  const recentIdentities = useMemo(() => {
+    return recentEmails
+      .map((email) => identities.find((i) => i.email === email))
+      .filter(Boolean) as Identity[];
+  }, [recentEmails, identities]);
 
+  async function signInAs(email: string, overrideRoute?: string) {
     setIsSubmitting(true);
     setError(null);
-
     try {
       const response = await requestJson<{ destination?: string }>(
         "/api/auth/session",
         {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             mode: "demo",
-            email: selectedEmail,
+            email,
             leagueId: parseLeagueIdFromReturnTo(returnTo),
           }),
         },
         "Sign-in failed.",
       );
-
-      // Ensure we navigate to an authenticated route, never back to the landing page
-      const destination = response.destination && response.destination !== "/" 
-        ? response.destination 
-        : "/my-leagues";
-
+      addRecentEmail(email);
+      let destination = overrideRoute || response.destination;
+      if (!destination || destination === "/") {
+        destination = "/my-leagues";
+      }
       trackUiEvent({
         eventType: PILOT_EVENT_TYPES.UI_AUTH_SIGN_IN_SUCCESS,
         pagePath: "/dev/login",
         eventStep: "sign_in",
         status: "success",
         entityType: "auth_identity",
-        entityId: selectedEmail,
+        entityId: email,
         context: {
           returnTo,
           destination,
@@ -201,7 +239,6 @@ export default function DevLoginPage() {
           authMode: "demo",
         },
       });
-
       router.push(destination);
       router.refresh();
     } catch (submitError) {
@@ -211,7 +248,7 @@ export default function DevLoginPage() {
         eventStep: "sign_in",
         status: "error",
         entityType: "auth_identity",
-        entityId: selectedEmail || "none",
+        entityId: email || "none",
         context: {
           returnTo,
           authMode: "demo",
@@ -232,7 +269,7 @@ export default function DevLoginPage() {
   return (
     <div className="flex min-h-full flex-1">
       <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
+        <div className="mx-auto w-full max-w-lg lg:w-[32rem]">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
               <Link
@@ -252,13 +289,13 @@ export default function DevLoginPage() {
                 <div className="h-6 w-px bg-amber-600/40"></div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">⚠️</span>
+                    <span className="text-lg">⚡️</span>
                     <h1 className="text-sm font-bold uppercase tracking-[0.2em] text-amber-400">
-                      Development Access
+                      Dev Test Harness
                     </h1>
                   </div>
                   <p className="text-xs text-amber-200/80">
-                    Seeded Identity Switcher
+                    One-click Seeded Persona Launcher
                   </p>
                 </div>
               </div>
@@ -301,114 +338,88 @@ export default function DevLoginPage() {
               </p>
             </div>
           ) : (
-            <form className="space-y-6" onSubmit={handleDemoSignIn} data-testid="login-demo-auth-panel">
+            <>
               {error && (
-                <div className="rounded-md border border-red-600/40 bg-red-950/20 p-3">
+                <div className="rounded-md border border-red-600/40 bg-red-950/20 p-3 mb-4">
                   <p className="text-sm text-red-300">{error}</p>
                 </div>
               )}
 
-              <div className="space-y-3" data-testid="login-role-prompt">
-                <label className="block">
-                  <span className="text-sm font-medium text-amber-300 mb-3 block">
-                    Select Role
-                  </span>
-                  <div className="grid gap-3">
-                    {LOGIN_ROLE_OPTIONS.map((option, index) => {
-                      const count = identities.filter(
-                        (identity) => toIdentityOption(identity) === option.option,
-                      ).length;
-                      const isSelected = selectedRole === option.option;
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => {
-                            setSelectedRole(option.option);
-                            setSelectedEmail("");
-                          }}
-                          className="rounded-md border p-4 text-left transition hover:border-amber-500/70"
-                          style={{
-                            borderColor: isSelected
-                              ? "rgb(245, 158, 11)"
-                              : "rgb(245, 158, 11, 0.3)",
-                            backgroundColor: isSelected 
-                              ? "rgb(245, 158, 11, 0.1)" 
-                              : "rgb(245, 158, 11, 0.05)",
-                          }}
-                          data-testid={option.testId}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-amber-200">
-                                {option.label}
-                              </p>
-                              <p className="mt-1 text-xs text-amber-300/80">
-                                {option.description}
-                              </p>
-                            </div>
-                            <div className="ml-4 flex-shrink-0">
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-900/30 text-amber-300">
-                                {count} account{count === 1 ? "" : "s"}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </label>
+
+              {/* Quick Launch Row */}
+              <div className="mb-6">
+                <h2 className="text-xs font-bold text-amber-400 uppercase mb-2 tracking-widest">Quick Launch</h2>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_LAUNCH_SCENARIOS.map((scenario) => {
+                    // Find first persona for this role
+                    const persona = groupedIdentities[scenario.role]?.[0];
+                    if (!persona) return null;
+                    return (
+                      <button
+                        key={scenario.label}
+                        type="button"
+                        onClick={() => signInAs(persona.email, scenario.getRoute())}
+                        className="rounded bg-amber-700/80 hover:bg-amber-700 text-xs font-semibold text-white px-3 py-1.5 shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isSubmitting}
+                        data-testid={`quick-launch-${scenario.role}`}
+                      >
+                        {scenario.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <label className="block space-y-3">
-                <span className="text-sm font-medium text-amber-300">
-                  Select Account
-                </span>
-                <select
-                  value={selectedEmail}
-                  onChange={(event) => {
-                    const nextEmail = event.target.value;
-                    setSelectedEmail(nextEmail);
-                  }}
-                  disabled={!selectedRole}
-                  className="w-full rounded-md border border-amber-600/40 bg-amber-950/20 px-3 py-3 text-sm text-amber-200 placeholder-amber-400/60 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
-                  data-testid="login-demo-email-select"
-                >
-                  <option value="">
-                    {selectedRole ? "Choose an account..." : "Select a role first"}
-                  </option>
-                  {identitiesForSelectedRole.map((identity) => (
-                    <option key={identity.email} value={identity.email}>
-                      {identity.name ?? identity.email} ({identityLabel(identity)})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {selectedRole && identitiesForSelectedRole.length === 0 ? (
-                <p className="text-xs text-amber-400" data-testid="login-role-no-identities">
-                  No accounts are available for this role in the current league workspace.
-                </p>
-              ) : null}
-
-              {selectedIdentity ? (
-                <div className="rounded-md border border-amber-600/30 bg-amber-950/10 p-3">
-                  <p className="text-xs text-amber-300" data-testid="login-selection-summary">
-                    <span className="font-medium">Selected:</span> {selectedIdentity.name ?? selectedIdentity.email} as{" "}
-                    {identityLabel(selectedIdentity)}
-                  </p>
+              {/* Recent picker */}
+              {recentIdentities.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-xs font-bold text-amber-400 uppercase mb-2 tracking-widest">Recent</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {recentIdentities.map((identity) => (
+                      <button
+                        key={identity.email}
+                        type="button"
+                        onClick={() => signInAs(identity.email)}
+                        className="rounded-md border border-amber-600/40 bg-amber-900/30 px-4 py-3 text-left text-sm text-amber-200 hover:bg-amber-900/50 transition flex flex-col gap-1"
+                        disabled={isSubmitting}
+                        data-testid={`persona-card-recent-${identity.email}`}
+                      >
+                        <span className="font-medium">{identity.name ?? identity.email}</span>
+                        <span className="text-xs text-amber-300">{identityLabel(identity)}</span>
+                        <span className="text-xs text-amber-400">{identity.email}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : null}
+              )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !selectedEmail || !selectedRole}
-                className="w-full rounded-md border border-amber-600/40 bg-amber-900/30 px-4 py-3 text-sm font-medium text-amber-300 transition hover:bg-amber-900/50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
-                data-testid="login-demo-submit"
-              >
-                {isSubmitting ? "Signing In..." : "Sign In with Demo Identity"}
-              </button>
-            </form>
+              {/* Grouped persona cards */}
+              {Object.entries(groupedIdentities).map(([option, group]) => (
+                group.length > 0 && (
+                  <div key={option} className="mb-8">
+                    <h2 className="text-xs font-bold text-amber-400 uppercase mb-2 tracking-widest">
+                      {LOGIN_ROLE_OPTIONS.find((o) => o.option === option)?.label || option}
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {group.map((identity) => (
+                        <button
+                          key={identity.email}
+                          type="button"
+                          onClick={() => signInAs(identity.email)}
+                          className="rounded-md border border-amber-600/40 bg-amber-900/30 px-4 py-3 text-left text-sm text-amber-200 hover:bg-amber-900/50 transition flex flex-col gap-1"
+                          disabled={isSubmitting}
+                          data-testid={`persona-card-${option}-${identity.email}`}
+                        >
+                          <span className="font-medium">{identity.name ?? identity.email}</span>
+                          <span className="text-xs text-amber-300">{identityLabel(identity)}</span>
+                          <span className="text-xs text-amber-400">{identity.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+            </>
           )}
         </div>
       </div>
