@@ -204,7 +204,7 @@ function determineOptimalRoute(context: ResolvedLeagueContext): string {
     return "/commissioner";
   }
 
-  // For users without team access, direct to teams directory for team selection/onboarding
+  // For users without team access, direct to teams directory for onboarding
   if (!context.hasTeamAccess) {
     return "/teams";
   }

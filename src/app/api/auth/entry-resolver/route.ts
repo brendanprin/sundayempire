@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   try {
     const resolution = await resolveAuthenticatedEntry(user.id, resolvedPreferredLeagueId);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       resolution,
       user: {
         id: user.id,
@@ -30,6 +30,19 @@ export async function GET(request: NextRequest) {
         name: user.name,
       },
     });
+
+    // For single-league users, set the active league cookie so downstream app routes
+    // have league context without requiring an additional POST selection step.
+    if (resolution.kind === "single_league_entry") {
+      response.cookies.set(ACTIVE_LEAGUE_COOKIE, resolution.context.activeLeague.leagueId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
+      });
+    }
+
+    return response;
   } catch (error) {
     return apiError(
       500,

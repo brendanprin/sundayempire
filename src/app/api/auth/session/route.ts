@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { resolvePostAuthenticationDestination } from "@/lib/auth-entry";
-import { resolveQuickAuthenticatedRoute } from "@/lib/auth/authenticated-entry-resolver";
+import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
 import {
   ACTIVE_LEAGUE_COOKIE,
   AUTH_SESSION_MAX_AGE_SECONDS,
@@ -261,19 +261,19 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
     ipAddress: extractClientIpAddress(request),
   });
 
-  // Get the optimal route using the resolver with fallback
-  let destinationRoute: string;
+  // Resolve destination and active league context
+  let destinationRoute: string = "/my-leagues";
+  let resolvedLeagueId: string | null = requestedLeagueId;
   try {
-    destinationRoute = await resolveQuickAuthenticatedRoute(user.id, requestedLeagueId);
-    
-    // Ensure we don't redirect to the public landing page
-    if (!destinationRoute || destinationRoute === "/") {
-      destinationRoute = "/dashboard";
+    const resolution = await resolveAuthenticatedEntry(user.id, requestedLeagueId);
+    if (resolution.route && resolution.route !== "/") {
+      destinationRoute = resolution.route;
+    }
+    if (resolution.kind === "single_league_entry") {
+      resolvedLeagueId = resolution.context.activeLeague.leagueId;
     }
   } catch (error) {
-    // If resolver fails, provide a sensible fallback
     console.error("Demo auth resolver failed:", error);
-    destinationRoute = "/dashboard";
   }
 
   const response = NextResponse.json({
@@ -281,15 +281,13 @@ async function handleDemoIdentitySignIn(request: NextRequest, body: SessionPostB
       userId: user.id,
       email: user.email,
       name: user.name,
-      // Note: Keeping minimal actor data for demo response
-      // Full context resolution happens server-side via the resolver
     },
     destination: destinationRoute,
   });
 
   applyAuthenticatedSessionCookies(response, {
     token,
-    activeLeagueId: requestedLeagueId,
+    activeLeagueId: resolvedLeagueId,
   });
 
   return response;
@@ -334,35 +332,27 @@ export async function GET(request: NextRequest) {
       userAgent: request.headers.get("user-agent")?.trim() ?? null,
     });
 
-    // Use new centralized resolver for context-aware routing
+    // Use full resolver for context-aware routing and cookie setting
     const preferredLeagueId = parseLeagueIdFromReturnTo(returnTo) ?? readRequestedLeagueId(request);
-    let destinationRoute: string;
+    const resolution = await resolveAuthenticatedEntry(consumedMagicLink.user.id, preferredLeagueId);
 
-    // If we have a valid returnTo that's not a league route, honor it
-    if (returnTo && !returnTo.startsWith('/league/') && !returnTo.startsWith('/dashboard')) {
-      // For non-league specific routes, use the resolver to determine active league context
-      // but keep the requested route
+    // Honor an explicit returnTo unless the user has no league access (avoid landing on
+    // protected app routes with no active league context).
+    let destinationRoute: string;
+    if (returnTo && resolution.kind !== "no_league_access" && !returnTo.startsWith("/league/") && !returnTo.startsWith("/dashboard")) {
       destinationRoute = returnTo;
     } else {
-      // For default routing or league-specific routes, use full context resolution
-      destinationRoute = await resolveQuickAuthenticatedRoute(
-        consumedMagicLink.user.id,
-        preferredLeagueId
-      );
+      destinationRoute = resolution.route;
     }
 
     const response = NextResponse.redirect(new URL(destinationRoute, request.url));
 
-    // Determine active league ID for session cookie
-    let activeLeagueId: string | null = null;
-    if (preferredLeagueId) {
-      // Verify the user has access to the preferred league
-      const memberships = await listSessionMemberships(consumedMagicLink.user.id);
-      const hasAccess = memberships.some(m => m.leagueId === preferredLeagueId && hasReadyLeagueContext(m));
-      if (hasAccess) {
-        activeLeagueId = preferredLeagueId;
-      }
-    }
+    // Set the active league cookie from the resolved context so all downstream app
+    // routes have league context immediately without an additional selection step.
+    const activeLeagueId =
+      resolution.kind === "single_league_entry"
+        ? resolution.context.activeLeague.leagueId
+        : null;
 
     applyAuthenticatedSessionCookies(response, {
       token: consumedMagicLink.sessionToken,

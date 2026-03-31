@@ -30,6 +30,7 @@ type TeamFilters = {
 };
 
 type AuthLeagueRole = "COMMISSIONER" | "MEMBER";
+type AuthMeActor = { leagueRole: AuthLeagueRole; teamId: string | null };
 
 const DEFAULT_TEAM_FILTERS: TeamFilters = {
   compliance: "",
@@ -51,7 +52,9 @@ const TEAM_COLUMNS: {
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<TeamListItem[]>([]);
-  const [role, setRole] = useState<AuthLeagueRole | null>(null);
+  const [actor, setActor] = useState<AuthMeActor | null>(null);
+  const role = actor?.leagueRole ?? null;
+  const isUnassigned = actor !== null && actor.leagueRole === "MEMBER" && actor.teamId === null;
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -86,12 +89,12 @@ export default function TeamsPage() {
 
     Promise.all([
       requestJson<{ teams: TeamListItem[] }>("/api/teams?scope=all", undefined, "Failed to load teams."),
-      requestJson<{ actor: { leagueRole: AuthLeagueRole } }>("/api/auth/me", undefined, "Failed to load actor role."),
+      requestJson<{ actor: AuthMeActor | null }>("/api/auth/me", undefined, "Failed to load actor role."),
     ])
       .then(([teamsPayload, authPayload]) => {
         if (!mounted) return;
         setTeams(teamsPayload.teams);
-        setRole(authPayload.actor.leagueRole);
+        setActor(authPayload.actor);
         setError(null);
       })
       .catch((requestError) => {
@@ -158,13 +161,13 @@ export default function TeamsPage() {
           Franchise directory for league-wide browse and scouting context.
         </p>
         {role === "COMMISSIONER" ? (
-          <p 
+          <p
             className="mt-1 text-xs"
             style={{ color: "var(--muted-foreground)" }}
           >
             Team and owner administration is available in{" "}
-            <Link 
-              href="/commissioner/teams" 
+            <Link
+              href="/commissioner/teams"
               className="transition"
               style={{ color: "rgb(14, 165, 233)" }}
               onMouseEnter={(e) => {
@@ -180,6 +183,38 @@ export default function TeamsPage() {
           </p>
         ) : null}
       </div>
+
+      {isUnassigned ? (
+        <div
+          className="rounded-lg border p-4"
+          style={{
+            borderColor: "rgb(30, 58, 138)",
+            backgroundColor: "rgba(23, 37, 84, 0.4)",
+          }}
+          data-testid="no-team-onboarding-banner"
+        >
+          <div className="flex items-start gap-3">
+            <svg
+              className="mt-0.5 h-5 w-5 flex-shrink-0"
+              style={{ color: "rgb(96, 165, 250)" }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium" style={{ color: "rgb(191, 219, 254)" }}>
+                You don&apos;t have a team assigned yet
+              </p>
+              <p className="mt-1 text-sm" style={{ color: "rgb(147, 197, 253)" }}>
+                You&apos;re a member of this league but haven&apos;t been assigned a team. Browse the teams below or contact your commissioner to get set up.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <div 

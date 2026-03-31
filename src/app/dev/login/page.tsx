@@ -1,21 +1,23 @@
 "use client";
 
-// Top scenario shortcuts for quick launch
-const QUICK_LAUNCH_SCENARIOS = [
+// Top scenario shortcuts for quick launch.
+// No route overrides — each persona uses the entry-resolver destination so the
+// quick-launch buttons exercise the same routing logic as production sign-in.
+const QUICK_LAUNCH_SCENARIOS: Array<{
+  label: string;
+  role: "COMMISSIONER" | "MEMBER_WITH_TEAM" | "MEMBER_NO_TEAM";
+}> = [
   {
     label: "Commissioner: League Shell",
     role: "COMMISSIONER",
-    getRoute: () => "/my-leagues",
   },
   {
     label: "Member: Team Dashboard",
     role: "MEMBER_WITH_TEAM",
-    getRoute: () => "/dashboard",
   },
   {
     label: "Member: No Team",
     role: "MEMBER_NO_TEAM",
-    getRoute: () => "/dashboard",
   },
 ];
 
@@ -347,7 +349,7 @@ export default function DevLoginPage() {
                       <button
                         key={scenario.label}
                         type="button"
-                        onClick={() => signInAs(persona.email, scenario.getRoute())}
+                        onClick={() => signInAs(persona.email)}
                         className="rounded bg-amber-700/80 hover:bg-amber-700 text-xs font-semibold text-white px-3 py-1.5 shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
                         disabled={isSubmitting}
                         data-testid={`quick-launch-${scenario.role}`}
