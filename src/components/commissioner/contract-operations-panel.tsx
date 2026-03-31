@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CompatibilityNotice } from "@/components/layout/compatibility-notice";
 import {
   StandardTable,
@@ -85,6 +85,9 @@ export function ContractOperationsPanel() {
     yearsTotal: "1",
     isRookieContract: false,
   });
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   const {
     filters,
     setFilters,
@@ -191,6 +194,27 @@ export function ContractOperationsPanel() {
       mounted = false;
     };
   }, [loadContracts]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenMenuId(null);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuId]);
 
   function beginEdit(contract: ContractRow) {
     setEditingId(contract.id);
@@ -589,39 +613,124 @@ export function ContractOperationsPanel() {
                   <td className="px-3 py-2 text-right">{contract.yearsTotal}</td>
                   <td className="px-3 py-2 text-right">{contract.yearsRemaining}</td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => beginEdit(contract)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => applyFranchiseTag(contract.id)}
-                        disabled={busyAction !== null || contract.isFranchiseTag}
-                        loading={busyAction === `tag:${contract.id}`}
-                        className="border-amber-700 text-amber-200 hover:border-amber-500 disabled:opacity-50"
-                      >
-                        {busyAction === `tag:${contract.id}` ? "Applying..." : "Apply Tag"}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => exerciseRookieOption(contract.id)}
-                        disabled={
-                          busyAction !== null ||
-                          !contract.rookieOptionEligible ||
-                          contract.rookieOptionExercised
-                        }
-                        loading={busyAction === `option:${contract.id}`}
-                        className="border-sky-700 text-sky-200 hover:border-sky-500 disabled:opacity-50"
-                      >
-                        {busyAction === `option:${contract.id}` ? "Applying..." : "Exercise Option"}
-                      </Button>
-                    </div>
+                    {(() => {
+                      // Determine primary action: highest-priority contextual action
+                      const canExerciseOption =
+                        contract.rookieOptionEligible && !contract.rookieOptionExercised;
+                      const canApplyTag = !contract.isFranchiseTag;
+
+                      const primaryAction = canExerciseOption
+                        ? {
+                            label:
+                              busyAction === `option:${contract.id}`
+                                ? "Applying..."
+                                : "Exercise Option",
+                            onClick: () => exerciseRookieOption(contract.id),
+                            busy: busyAction === `option:${contract.id}`,
+                            className:
+                              "border-sky-700/70 text-sky-200 hover:border-sky-500",
+                          }
+                        : canApplyTag
+                          ? {
+                              label:
+                                busyAction === `tag:${contract.id}`
+                                  ? "Applying..."
+                                  : "Apply Tag",
+                              onClick: () => applyFranchiseTag(contract.id),
+                              busy: busyAction === `tag:${contract.id}`,
+                              className:
+                                "border-amber-700/70 text-amber-200 hover:border-amber-500",
+                            }
+                          : null;
+
+                      // Overflow items: Edit always; non-primary contextual actions
+                      const overflowItems: Array<{
+                        id: string;
+                        label: string;
+                        onClick: () => void;
+                      }> = [
+                        {
+                          id: "edit",
+                          label: "Edit",
+                          onClick: () => {
+                            setOpenMenuId(null);
+                            beginEdit(contract);
+                          },
+                        },
+                      ];
+
+                      // When Exercise Option is primary, Apply Tag goes in overflow
+                      if (canExerciseOption && canApplyTag) {
+                        overflowItems.push({
+                          id: "tag",
+                          label: "Apply Tag",
+                          onClick: () => {
+                            setOpenMenuId(null);
+                            applyFranchiseTag(contract.id);
+                          },
+                        });
+                      }
+
+                      const isMenuOpen = openMenuId === contract.id;
+
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          {primaryAction && (
+                            <button
+                              type="button"
+                              onClick={primaryAction.onClick}
+                              disabled={busyAction !== null}
+                              className={`inline-flex items-center rounded border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${primaryAction.className}`}
+                              data-testid={`contract-primary-action-${contract.id}`}
+                            >
+                              {primaryAction.label}
+                            </button>
+                          )}
+
+                          <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(isMenuOpen ? null : contract.id);
+                              }}
+                              aria-label="More actions"
+                              aria-expanded={isMenuOpen}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                              data-testid={`contract-overflow-menu-${contract.id}`}
+                            >
+                              <svg
+                                className="h-3.5 w-3.5"
+                                fill="currentColor"
+                                viewBox="0 0 16 16"
+                                aria-hidden="true"
+                              >
+                                <circle cx="8" cy="2.5" r="1.5" />
+                                <circle cx="8" cy="8" r="1.5" />
+                                <circle cx="8" cy="13.5" r="1.5" />
+                              </svg>
+                            </button>
+
+                            {isMenuOpen && (
+                              <div className="absolute right-0 top-full z-20 mt-1 min-w-[128px] rounded-md border border-slate-700 bg-slate-900 py-1 shadow-xl">
+                                {overflowItems.map((item) => (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={item.onClick}
+                                    disabled={busyAction !== null}
+                                    className="flex w-full items-center px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+                                    data-testid={`contract-overflow-item-${item.id}-${contract.id}`}
+                                  >
+                                    {item.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

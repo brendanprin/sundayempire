@@ -58,6 +58,7 @@ export function CommissionerQueueWorkspace(props: {
   actions: CommissionerActions;
   error: string | null;
   message: string | null;
+  checklistPanel: ReactNode;
   children: ReactNode;
   testId?: string;
 }) {
@@ -173,6 +174,9 @@ export function CommissionerQueueWorkspace(props: {
       {/* DASHBOARD TAB: Decision layer — queue and league health */}
       {activeTab === "dashboard" && (
         <div className="space-y-6">
+          {/* Weekly workflow — primary driver, rendered first */}
+          {props.checklistPanel}
+
           <section
             id="action-center"
             className={`scroll-mt-24 space-y-4 rounded-xl border p-5 ${

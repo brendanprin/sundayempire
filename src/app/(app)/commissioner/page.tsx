@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CommissionerQueueWorkspace } from "@/components/commissioner/commissioner-queue-workspace";
 import {
+  WeeklyWorkflowChecklist,
+  type WeeklyWorkflowItem,
+} from "@/components/commissioner/weekly-workflow-checklist";
+import {
   InviteManagementPanel,
   type CommissionerInviteRow,
 } from "@/components/commissioner/invite-management-panel";
@@ -253,15 +257,7 @@ const SNAPSHOT_IMPACT_KEYS = [
   "transactions",
 ] as const;
 
-type WeeklyChecklistItem = {
-  id: string;
-  title: string;
-  description: string;
-  href?: string;
-  ctaLabel?: string;
-};
-
-const WEEKLY_CHECKLIST_ITEMS: WeeklyChecklistItem[] = [
+const WEEKLY_CHECKLIST_ITEMS: WeeklyWorkflowItem[] = [
   {
     id: "phase-review",
     title: "Confirm active phase and weekly transition window",
@@ -1558,6 +1554,17 @@ export default function CommissionerPage() {
       actions={commissionerActions}
       error={error}
       message={message}
+      checklistPanel={
+        <WeeklyWorkflowChecklist
+          items={WEEKLY_CHECKLIST_ITEMS}
+          checkedIds={weeklyChecklistState}
+          onToggle={toggleWeeklyChecklistItem}
+          onRunComplianceScan={runComplianceScan}
+          busyAction={busyAction}
+          weekBucket={checklistStorageKey.split(":").pop() ?? ""}
+          testId="commissioner-weekly-workflow"
+        />
+      }
       testId="commissioner-page"
     >
       {/* Advanced Operations Sections for Secondary Context */}
@@ -1780,84 +1787,6 @@ export default function CommissionerPage() {
         summary={`${checklistCompletedCount}/${WEEKLY_CHECKLIST_ITEMS.length} checklist items complete`}
         defaultOpen
       >
-
-        <section
-          data-testid="commissioner-weekly-checklist"
-          className="rounded-lg border border-slate-800 bg-slate-950 p-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h4 className="text-sm font-semibold">Weekly Operations Checklist</h4>
-              <p className="mt-1 text-xs text-slate-400">
-                Guided runbook for the current week to reduce missed steps and ad hoc sequencing.
-              </p>
-            </div>
-            <span
-              className="rounded-full border border-sky-700/50 bg-sky-950/30 px-2 py-0.5 text-xs text-sky-200"
-              data-testid="commissioner-weekly-checklist-progress"
-            >
-              {checklistCompletedCount} / {WEEKLY_CHECKLIST_ITEMS.length} complete
-            </span>
-          </div>
-
-          <ol className="mt-3 space-y-2 text-sm">
-            {WEEKLY_CHECKLIST_ITEMS.map((item, index) => {
-              const isComplete = Boolean(weeklyChecklistState[item.id]);
-
-              return (
-                <li
-                  key={item.id}
-                  className={`rounded-md border px-3 py-2 ${
-                    isComplete
-                      ? "border-emerald-700/40 bg-emerald-950/20"
-                      : "border-slate-800 bg-slate-900"
-                  }`}
-                  data-testid={`commissioner-weekly-checklist-item-${item.id}`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <label className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        checked={isComplete}
-                        onChange={() => toggleWeeklyChecklistItem(item.id)}
-                        data-testid={`commissioner-weekly-checklist-toggle-${item.id}`}
-                      />
-                      <span>
-                        <span
-                          className="font-medium text-slate-100"
-                          data-testid="commissioner-weekly-checklist-item-title"
-                        >
-                          {index + 1}. {item.title}
-                        </span>
-                        <span className="mt-1 block text-xs text-slate-400">{item.description}</span>
-                      </span>
-                    </label>
-                    <span
-                      className={`rounded border px-2 py-0.5 text-[11px] ${
-                        isComplete
-                          ? "border-emerald-600/50 bg-emerald-900/40 text-emerald-100"
-                          : "border-amber-700/50 bg-amber-900/30 text-amber-100"
-                      }`}
-                      data-testid={`commissioner-weekly-checklist-status-${item.id}`}
-                    >
-                      {isComplete ? "Complete" : "Pending"}
-                    </span>
-                  </div>
-                  {item.href ? (
-                    <div className="mt-2">
-                      <Link
-                        href={item.href}
-                        className="inline-flex rounded border border-slate-700 px-2 py-1 text-xs text-sky-200 hover:border-slate-500"
-                      >
-                        {item.ctaLabel ?? "Open"}
-                      </Link>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
 
         <section
           data-testid="commissioner-routine-league-settings"
