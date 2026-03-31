@@ -614,36 +614,22 @@ export function ContractOperationsPanel() {
                   <td className="px-3 py-2 text-right">{contract.yearsRemaining}</td>
                   <td className="px-3 py-2">
                     {(() => {
-                      // Determine primary action: highest-priority contextual action
                       const canExerciseOption =
                         contract.rookieOptionEligible && !contract.rookieOptionExercised;
                       const canApplyTag = !contract.isFranchiseTag;
 
-                      const primaryAction = canExerciseOption
+                      // Primary action: Apply Tag only — keeps every row visually consistent
+                      const primaryAction = canApplyTag
                         ? {
                             label:
-                              busyAction === `option:${contract.id}`
-                                ? "Applying..."
-                                : "Exercise Option",
-                            onClick: () => exerciseRookieOption(contract.id),
-                            busy: busyAction === `option:${contract.id}`,
-                            className:
-                              "border-sky-700/70 text-sky-200 hover:border-sky-500",
+                              busyAction === `tag:${contract.id}` ? "Applying..." : "Apply Tag",
+                            onClick: () => applyFranchiseTag(contract.id),
+                            busy: busyAction === `tag:${contract.id}`,
+                            className: "border-amber-700/70 text-amber-200 hover:border-amber-500",
                           }
-                        : canApplyTag
-                          ? {
-                              label:
-                                busyAction === `tag:${contract.id}`
-                                  ? "Applying..."
-                                  : "Apply Tag",
-                              onClick: () => applyFranchiseTag(contract.id),
-                              busy: busyAction === `tag:${contract.id}`,
-                              className:
-                                "border-amber-700/70 text-amber-200 hover:border-amber-500",
-                            }
-                          : null;
+                        : null;
 
-                      // Overflow items: Edit always; non-primary contextual actions
+                      // Overflow: Edit always; Exercise Option when eligible
                       const overflowItems: Array<{
                         id: string;
                         label: string;
@@ -659,14 +645,13 @@ export function ContractOperationsPanel() {
                         },
                       ];
 
-                      // When Exercise Option is primary, Apply Tag goes in overflow
-                      if (canExerciseOption && canApplyTag) {
+                      if (canExerciseOption) {
                         overflowItems.push({
-                          id: "tag",
-                          label: "Apply Tag",
+                          id: "exercise-option",
+                          label: "Exercise Option",
                           onClick: () => {
                             setOpenMenuId(null);
-                            applyFranchiseTag(contract.id);
+                            exerciseRookieOption(contract.id);
                           },
                         });
                       }
