@@ -81,7 +81,7 @@ export function CommissionerQueueWorkspace(props: {
     <div className="space-y-6" data-testid={props.testId}>
       <PageHeaderBand
         eyebrow="Commissioner Operations"
-        title="Operations Console"
+        title="Commissioner Home"
         description={headerDescription}
         titleTestId="commissioner-workspace-title"
         eyebrowTestId="commissioner-workspace-eyebrow"
@@ -111,17 +111,14 @@ export function CommissionerQueueWorkspace(props: {
       <StickySubnav
         testId="commissioner-queue-subnav"
         items={[
-          { href: "#urgent-queue", label: "Urgent Queue" },
-          { href: "#phase-readiness", label: "Phase Readiness" }, 
-          { href: "#compliance-oversight", label: "Compliance" },
-          { href: "#contract-operations", label: "Contract Ops" },
-          { href: "#workspace-admin", label: "Workspace Admin" },
-          { href: "#advanced-operations", label: "Advanced Ops" },
+          { href: "#action-center", label: "Action Center" },
+          { href: "#compliance-oversight", label: "League Health" },
+          { href: "#contract-operations", label: "Contracts & Tools" },
         ]}
       />
 
       {props.error ? (
-        <div 
+        <div
           className="rounded-md border border-red-700 bg-red-950/40 px-4 py-3 text-sm text-red-200"
           data-testid="commissioner-error-banner"
         >
@@ -130,57 +127,93 @@ export function CommissionerQueueWorkspace(props: {
       ) : null}
 
       {props.message ? (
-        <div 
+        <div
           className="rounded-md border border-emerald-700 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200"
-          data-testid="commissioner-message-banner"  
+          data-testid="commissioner-message-banner"
         >
           {props.message}
         </div>
       ) : null}
 
-      {/* Queue-First Hierarchy: Urgent Work First */}
-      <UrgentOperationsQueue
-        data={props.data}
-        actions={props.actions}
-        testId="urgent-queue"
-      />
-
-      {/* Phase Readiness - Next Priority */}
-      <PhaseReadinessPanel 
-        data={props.data}
-        actions={props.actions}
-        testId="phase-readiness"
-      />
-
-      {/* Compliance Oversight - League Health */}  
-      <ComplianceOversightPanel
-        data={props.data}
-        actions={props.actions}
-        testId="compliance-oversight"
-      />
-
-      {/* Secondary Admin/Setup Operations */}
+      {/* PRIMARY: Action Center — dominant above-the-fold section */}
       <section
-        id="contract-operations"
-        className="scroll-mt-24 space-y-4 rounded-lg border border-slate-800/80 bg-slate-950/30 p-4"
-        data-testid="contract-operations-section"
+        id="action-center"
+        className="scroll-mt-24 space-y-4 rounded-xl border border-slate-700 bg-slate-900/60 p-5 ring-1 ring-slate-700/50"
+        data-testid="action-center-section"
       >
-        <div>
-          <h3 className="text-sm font-semibold">Contract Operations</h3>
-          <p className="mt-1 text-xs text-slate-400">
-            Commissioner-only contract maintenance and roster intervention tools.
-          </p>
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-100">Action Center</h2>
+            <p className="mt-0.5 text-xs text-slate-400">What to do right now</p>
+          </div>
+          {totalUrgentWork > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-red-900/50 px-3 py-1 text-xs font-medium text-red-200">
+              {totalUrgentWork} item{totalUrgentWork === 1 ? "" : "s"} need attention
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-200">
+              All clear
+            </span>
+          )}
         </div>
-        <ContractOperationsPanel />
+
+        <UrgentOperationsQueue
+          data={props.data}
+          actions={props.actions}
+          testId="urgent-queue"
+        />
+
+        <PhaseReadinessPanel
+          data={props.data}
+          actions={props.actions}
+          testId="phase-readiness"
+        />
       </section>
 
-      {/* Advanced/Admin Operations - Secondary */}
-      <section 
-        id="workspace-admin"
-        className="scroll-mt-24"
-        data-testid="workspace-admin-section"
+      {/* SECONDARY: League Health — context panels */}
+      <section
+        id="compliance-oversight"
+        className="scroll-mt-24 space-y-3"
+        data-testid="league-health-section"
       >
-        {props.children}
+        <div className="flex items-center gap-2 px-1">
+          <h2 className="text-sm font-medium text-slate-400">League Health</h2>
+          <div className="h-px flex-1 bg-slate-800" />
+        </div>
+        <ComplianceOversightPanel
+          data={props.data}
+          actions={props.actions}
+          testId="compliance-oversight-panel"
+        />
+      </section>
+
+      {/* TERTIARY: Deep Workspaces — demoted, for intentional use */}
+      <section
+        id="contract-operations"
+        className="scroll-mt-24 space-y-3"
+        data-testid="deep-workspace-section"
+      >
+        <div className="flex items-center gap-2 px-1">
+          <h2 className="text-sm font-medium text-slate-500">Contracts &amp; Tools</h2>
+          <div className="h-px flex-1 bg-slate-800/60" />
+        </div>
+        <div className="rounded-lg border border-slate-800/60 bg-slate-950/20 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-medium text-slate-400">Contract Operations</h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Commissioner-only contract maintenance and roster intervention tools.
+            </p>
+          </div>
+          <ContractOperationsPanel />
+        </div>
+
+        <div
+          id="workspace-admin"
+          className="scroll-mt-24"
+          data-testid="workspace-admin-section"
+        >
+          {props.children}
+        </div>
       </section>
     </div>
   );
