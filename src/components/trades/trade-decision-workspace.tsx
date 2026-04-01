@@ -94,6 +94,7 @@ export function TradeDecisionWorkspace(props: {
   onSaveDraft: () => Promise<void> | void;
   onValidate: () => Promise<void> | void;
   onSubmit: () => Promise<void> | void;
+  onReset: () => void;
   isDirty: boolean;
 }) {
   const proposerPool =
@@ -404,6 +405,19 @@ export function TradeDecisionWorkspace(props: {
                   {props.busyLabel === "submit" ? "Submitting..." : "Submit Proposal"}
                 </Button>
               )}
+              {selectedCount > 0 || props.isDirty ? (
+                <>
+                  <div className="border-t border-slate-800" />
+                  <button
+                    type="button"
+                    onClick={props.onReset}
+                    disabled={Boolean(props.busyLabel)}
+                    className="w-full rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors disabled:opacity-40"
+                  >
+                    Reset Package
+                  </button>
+                </>
+              ) : null}
             </div>
           </DashboardCard>
         </div>

@@ -339,6 +339,10 @@ function TradeBuilderPageContent() {
           router.push(`/trades/${submitted.proposal.id}`);
         })
       }
+      onReset={() => {
+        setSelectionState(buildSelectionsFromDetail(detail));
+        setIsDirty(false);
+      }}
       isDirty={isDirty}
     />
   );
