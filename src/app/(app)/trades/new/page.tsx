@@ -305,7 +305,7 @@ function TradeBuilderPageContent() {
       }
       onValidate={() =>
         runWithBusy("validate", async () => {
-          const saved = detail ?? (await saveDraft());
+          const saved = await saveDraft();
           const evaluated = await requestJson<TradeProposalDetailResponse>(
             `/api/trades/proposals/${saved.proposal.id}/evaluate`,
             {
@@ -320,7 +320,7 @@ function TradeBuilderPageContent() {
       }
       onSubmit={() =>
         runWithBusy("submit", async () => {
-          const saved = detail ?? (await saveDraft());
+          const saved = await saveDraft();
           const submitted = await requestJson<TradeProposalDetailResponse>(
             `/api/trades/proposals/${saved.proposal.id}/submit`,
             {
