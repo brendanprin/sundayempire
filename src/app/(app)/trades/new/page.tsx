@@ -204,7 +204,7 @@ function TradeBuilderPageContent() {
     if (!proposalId || proposalId !== saved.proposal.id) {
       router.replace(`/trades/new?proposalId=${saved.proposal.id}`);
     }
-    setMessage("Draft saved.");
+    setMessage("Package saved.");
     return saved;
   }, [buildPayload, detail?.proposal.id, proposalId, router]);
 

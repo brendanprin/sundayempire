@@ -606,7 +606,7 @@ export function TradeBuilderView(props: {
                   loading={props.busyLabel === "save"}
                   className="flex-1 justify-center"
                 >
-                  {props.busyLabel === "save" ? "Saving..." : "Save Trade Draft"}
+                  {props.busyLabel === "save" ? "Saving..." : "Save Package"}
                 </Button>
               </div>
               <div className="flex items-center gap-3">

@@ -359,7 +359,7 @@ export function TradeDecisionWorkspace(props: {
                 loading={props.busyLabel === "save"}
                 className="w-full"
               >
-                {props.busyLabel === "save" ? "Saving..." : "Save Draft"}
+                {props.busyLabel === "save" ? "Saving..." : "Save Package"}
               </Button>
 
               <button
