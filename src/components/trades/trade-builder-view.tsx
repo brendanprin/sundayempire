@@ -359,12 +359,15 @@ export function TradeBuilderView(props: {
           className="space-y-4 xl:sticky xl:top-24"
           data-testid="trade-builder-summary-rail"
         >
-          <DashboardCard
-            title="Proposal composition"
-            description="Selected assets are grouped by team so the package is easy to review before validation."
-            testId="trade-builder-composition"
+          <section
+            className="scroll-mt-6 rounded-2xl border border-slate-600/80 bg-slate-900/60 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.35),inset_0_1px_0_rgba(148,163,184,0.06)]"
+            data-testid="trade-builder-composition"
           >
-            <div className="space-y-4 text-sm">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Proposed exchange</p>
+              <h3 className="mt-1 text-lg font-semibold text-slate-100">Trade Package</h3>
+            </div>
+            <div className="mt-5 space-y-4 text-sm">
               {[
                 {
                   title: proposerPool?.team.name ?? "Proposing team",
@@ -375,8 +378,8 @@ export function TradeBuilderView(props: {
                   items: counterpartySelectedAssets,
                 },
               ].map((section) => (
-                <div key={section.title} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                  <p className="font-medium text-slate-100">{section.title}</p>
+                <div key={section.title} className="rounded-xl border border-slate-700 bg-slate-950/50 p-4">
+                  <p className="font-semibold text-slate-100">{section.title}</p>
                   {section.items.length === 0 ? (
                     <p className="mt-2 text-slate-500">
                       No assets selected yet. Add players or picks from each source pool to build the package.
@@ -391,7 +394,7 @@ export function TradeBuilderView(props: {
                 </div>
               ))}
             </div>
-          </DashboardCard>
+          </section>
 
           <DashboardCard
             title="Validation findings"
