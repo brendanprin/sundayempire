@@ -28,6 +28,30 @@ function formatTradeOutcomeLabel(
   return "Not reviewed yet";
 }
 
+type EvaluationTrigger = TradeProposalDetailResponse["evaluationHistory"][number]["trigger"];
+
+function triggerCategory(trigger: EvaluationTrigger): "validation" | "decision" {
+  return trigger === "BUILDER_VALIDATE" || trigger === "SUBMIT" ? "validation" : "decision";
+}
+
+function triggerLabel(trigger: EvaluationTrigger): string {
+  if (trigger === "BUILDER_VALIDATE") return "Package check";
+  if (trigger === "SUBMIT") return "Submission check";
+  if (trigger === "COUNTERPARTY_RESPONSE") return "Counterparty response";
+  if (trigger === "COMMISSIONER_REVIEW") return "Commissioner decision";
+  return formatEnumLabel(trigger);
+}
+
+type EvaluationOutcome = TradeProposalDetailResponse["evaluationHistory"][number]["outcome"];
+
+function outcomeColor(outcome: EvaluationOutcome): string {
+  if (outcome === "FAIL_HARD_BLOCK") return "text-rose-400";
+  if (outcome === "FAIL_REQUIRES_COMMISSIONER") return "text-amber-400";
+  if (outcome === "PASS_WITH_WARNING") return "text-amber-300";
+  if (outcome === "PASS") return "text-emerald-400";
+  return "text-slate-400";
+}
+
 function buildDecisionState(detail: TradeProposalDetailResponse) {
   const current = detail.currentEvaluation;
   
@@ -228,39 +252,66 @@ export function TradeReviewWorkspace(props: {
           />
 
           {/* Evaluation History (Secondary Context) */}
-          <DashboardCard 
-            title="Review History" 
-            description="Evaluation timeline and findings from most recent to oldest."
+          <DashboardCard
+            title="Proposal History"
+            description="Package checks and lifecycle decisions, most recent first."
             testId="trade-review-history"
           >
-            <div className="space-y-3">
-              {props.detail.evaluationHistory.map((evaluation) => (
-                <div
-                  key={evaluation.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-100">
-                        {formatTradeOutcomeLabel(evaluation.outcome)}
-                      </span>
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-slate-700/50 text-slate-300">
-                        {formatEnumLabel(evaluation.trigger)}
-                      </span>
+            <div className="space-y-2">
+              {props.detail.evaluationHistory.map((evaluation) => {
+                const category = triggerCategory(evaluation.trigger);
+                const isDecision = category === "decision";
+                return (
+                  <div
+                    key={evaluation.id}
+                    className={`rounded-lg border px-3 py-3 ${
+                      isDecision
+                        ? "border-sky-900/60 bg-sky-950/20"
+                        : "border-slate-800 bg-slate-900/40"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-[10px] font-semibold uppercase tracking-widest ${
+                            isDecision ? "text-sky-500" : "text-slate-500"
+                          }`}>
+                            {isDecision ? "Decision" : "Validation"}
+                          </span>
+                          <span className="text-[10px] text-slate-600">·</span>
+                          <span className="text-xs text-slate-400">{triggerLabel(evaluation.trigger)}</span>
+                          {evaluation.isSubmissionSnapshot && (
+                            <span className="rounded border border-amber-700/40 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-300">
+                              Submission snapshot
+                            </span>
+                          )}
+                          {evaluation.isCurrent && (
+                            <span className="rounded border border-emerald-800/50 bg-emerald-950/30 px-1.5 py-0.5 text-[10px] text-emerald-400">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-sm font-medium ${outcomeColor(evaluation.outcome)}`}>
+                          {formatTradeOutcomeLabel(evaluation.outcome)}
+                        </p>
+                        {evaluation.findings.length > 0 ? (
+                          <p className="text-xs text-slate-500">
+                            {evaluation.findings.length} finding{evaluation.findings.length !== 1 ? "s" : ""}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-600">No findings</p>
+                        )}
+                        {isDecision && evaluation.createdByUser?.name && (
+                          <p className="text-xs text-slate-500">{evaluation.createdByUser.name}</p>
+                        )}
+                      </div>
+                      <p className="shrink-0 text-[11px] text-slate-600">{formatDateTime(evaluation.evaluatedAt)}</p>
                     </div>
-                    <p className="text-xs text-slate-400">{formatDateTime(evaluation.evaluatedAt)}</p>
                   </div>
-                  {evaluation.findings.length > 0 ? (
-                    <p className="text-sm text-slate-300">
-                      {evaluation.findings.length} finding{evaluation.findings.length === 1 ? "" : "s"} in this review.
-                    </p>
-                  ) : (
-                    <p className="text-sm text-slate-500">No findings.</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {props.detail.evaluationHistory.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No review history yet.</p>
+                <p className="py-4 text-center text-sm text-slate-500">No history yet.</p>
               )}
             </div>
           </DashboardCard>
