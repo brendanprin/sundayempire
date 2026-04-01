@@ -94,6 +94,7 @@ export function TradeDecisionWorkspace(props: {
   onSaveDraft: () => Promise<void> | void;
   onValidate: () => Promise<void> | void;
   onSubmit: () => Promise<void> | void;
+  isDirty: boolean;
 }) {
   const proposerPool =
     props.context.assetPools.find((pool) => pool.team.id === props.proposerTeamId) ?? null;
@@ -118,8 +119,9 @@ export function TradeDecisionWorkspace(props: {
     (team) => team.id !== props.proposerTeamId,
   );
 
-  const canSubmit = selectedCount > 0 && props.detail && currentEvaluation?.outcome !== "FAIL_HARD_BLOCK";
   const isHardBlocked = currentEvaluation?.outcome === "FAIL_HARD_BLOCK";
+  const canValidate = Boolean(props.detail) && !props.isDirty;
+  const canSubmit = !props.isDirty && Boolean(props.detail) && Boolean(currentEvaluation) && !isHardBlocked;
 
   return (
     <div className="space-y-6" data-testid="trade-decision-workspace">
@@ -345,7 +347,7 @@ export function TradeDecisionWorkspace(props: {
           {/* Trade Actions */}
           <DashboardCard
             title="Trade Actions"
-            description="Save, validate, and submit when the package is ready."
+            description="Save the package, then validate, then submit."
             testId="trade-builder-actions"
           >
             <div className="space-y-3">
@@ -357,16 +359,17 @@ export function TradeDecisionWorkspace(props: {
                 loading={props.busyLabel === "save"}
                 className="w-full"
               >
-                {props.busyLabel === "save" ? "Saving..." : "Save Trade Draft"}
+                {props.busyLabel === "save" ? "Saving..." : "Save Draft"}
               </Button>
-              
+
               <button
                 type="button"
                 onClick={props.onValidate}
-                disabled={Boolean(props.busyLabel) || !props.detail}
+                disabled={Boolean(props.busyLabel) || !canValidate}
+                title={props.isDirty ? "Save changes before validating" : undefined}
                 className="w-full rounded-lg border border-sky-700/50 bg-sky-950/40 px-3 py-2 text-sm font-medium text-sky-100 hover:border-sky-500 disabled:opacity-60"
               >
-                {props.busyLabel === "validate" ? "Running..." : "Run Trade Validation"}
+                {props.busyLabel === "validate" ? "Validating..." : "Run Validation"}
               </button>
               
               {isHardBlocked ? (
@@ -382,8 +385,15 @@ export function TradeDecisionWorkspace(props: {
                   disabled={Boolean(props.busyLabel) || !canSubmit}
                   loading={props.busyLabel === "submit"}
                   className="w-full"
+                  title={
+                    props.isDirty
+                      ? "Save changes before submitting"
+                      : !currentEvaluation
+                        ? "Run validation before submitting"
+                        : undefined
+                  }
                 >
-                  {props.busyLabel === "submit" ? "Submitting..." : "Submit Trade Proposal"}
+                  {props.busyLabel === "submit" ? "Submitting..." : "Submit Proposal"}
                 </Button>
               )}
             </div>

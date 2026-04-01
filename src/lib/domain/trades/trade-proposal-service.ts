@@ -232,18 +232,6 @@ export function createTradeProposalWorkflowService(
           throw new Error("TRADE_NOT_FOUND");
         }
 
-        const evaluation = await evaluateProposalRecord({
-          proposal: hydratedProposal,
-          trigger: "BUILDER_VALIDATE",
-        });
-
-        await persistEvaluation({
-          tx,
-          proposal: hydratedProposal,
-          evaluation,
-          createdByUserId: input.actor.userId,
-        });
-
         return {
           proposalId: hydratedProposal.id,
           status: hydratedProposal.status,
@@ -281,17 +269,7 @@ export function createTradeProposalWorkflowService(
           throw new Error("TRADE_NOT_FOUND");
         }
 
-        const evaluation = await evaluateProposalRecord({
-          proposal: hydratedProposal,
-          trigger: "BUILDER_VALIDATE",
-        });
-
-        await persistEvaluation({
-          tx,
-          proposal: hydratedProposal,
-          evaluation,
-          createdByUserId: input.actor.userId,
-        });
+        await createTradeEvaluationRepository(tx).markAllNotCurrent(input.proposalId);
 
         return {
           proposalId: hydratedProposal.id,

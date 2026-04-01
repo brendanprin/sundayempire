@@ -76,6 +76,7 @@ function TradeBuilderPageContent() {
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   const load = useCallback(async () => {
     const query = proposalId ? `?proposalId=${encodeURIComponent(proposalId)}` : "";
@@ -199,6 +200,7 @@ function TradeBuilderPageContent() {
 
     setDetail(saved);
     setSelectionState(buildSelectionsFromDetail(saved));
+    setIsDirty(false);
     if (!proposalId || proposalId !== saved.proposal.id) {
       router.replace(`/trades/new?proposalId=${saved.proposal.id}`);
     }
@@ -269,35 +271,41 @@ function TradeBuilderPageContent() {
       onChangeProposerTeam={(teamId) => {
         setProposerTeamId(teamId);
         setSelectionState(emptySelectionState());
+        setIsDirty(true);
       }}
       onChangeCounterpartyTeam={(teamId) => {
         setCounterpartyTeamId(teamId);
         setSelectionState(emptySelectionState());
+        setIsDirty(true);
       }}
-      onToggleProposerPlayer={(playerId) =>
+      onToggleProposerPlayer={(playerId) => {
+        setIsDirty(true);
         setSelectionState((previous) => ({
           ...previous,
           proposerPlayers: toggleInSet(previous.proposerPlayers, playerId),
-        }))
-      }
-      onToggleProposerPick={(pickId) =>
+        }));
+      }}
+      onToggleProposerPick={(pickId) => {
+        setIsDirty(true);
         setSelectionState((previous) => ({
           ...previous,
           proposerPicks: toggleInSet(previous.proposerPicks, pickId),
-        }))
-      }
-      onToggleCounterpartyPlayer={(playerId) =>
+        }));
+      }}
+      onToggleCounterpartyPlayer={(playerId) => {
+        setIsDirty(true);
         setSelectionState((previous) => ({
           ...previous,
           counterpartyPlayers: toggleInSet(previous.counterpartyPlayers, playerId),
-        }))
-      }
-      onToggleCounterpartyPick={(pickId) =>
+        }));
+      }}
+      onToggleCounterpartyPick={(pickId) => {
+        setIsDirty(true);
         setSelectionState((previous) => ({
           ...previous,
           counterpartyPicks: toggleInSet(previous.counterpartyPicks, pickId),
-        }))
-      }
+        }));
+      }}
       onSaveDraft={() =>
         runWithBusy("save", async () => {
           await saveDraft();
@@ -305,33 +313,33 @@ function TradeBuilderPageContent() {
       }
       onValidate={() =>
         runWithBusy("validate", async () => {
-          const saved = await saveDraft();
+          if (!detail) {
+            throw new Error("Save the draft before validating.");
+          }
           const evaluated = await requestJson<TradeProposalDetailResponse>(
-            `/api/trades/proposals/${saved.proposal.id}/evaluate`,
-            {
-              method: "POST",
-            },
+            `/api/trades/proposals/${detail.proposal.id}/evaluate`,
+            { method: "POST" },
             "Failed to evaluate trade draft.",
           );
           setDetail(evaluated);
-          setSelectionState(buildSelectionsFromDetail(evaluated));
-          setMessage("Trade draft evaluated.");
+          setMessage("Validation complete.");
         })
       }
       onSubmit={() =>
         runWithBusy("submit", async () => {
-          const saved = await saveDraft();
+          if (!detail) {
+            throw new Error("Save the draft before submitting.");
+          }
           const submitted = await requestJson<TradeProposalDetailResponse>(
-            `/api/trades/proposals/${saved.proposal.id}/submit`,
-            {
-              method: "POST",
-            },
+            `/api/trades/proposals/${detail.proposal.id}/submit`,
+            { method: "POST" },
             "Failed to submit trade proposal.",
           );
           setDetail(submitted);
           router.push(`/trades/${submitted.proposal.id}`);
         })
       }
+      isDirty={isDirty}
     />
   );
 }
