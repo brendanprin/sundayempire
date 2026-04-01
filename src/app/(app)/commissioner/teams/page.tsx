@@ -527,34 +527,69 @@ export default function CommissionerTeamsPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs text-slate-500">Total Teams</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-100">{leagueStats.totalTeams}</p>
+      <div
+        data-testid="assignment-summary-strip"
+        className={`rounded-lg border px-4 py-3 ${
+          leagueStats.unassignedTeams > 0 || leagueStats.membersWithoutTeam > 0
+            ? "border-amber-800/50 bg-amber-950/10"
+            : "border-emerald-800/40 bg-emerald-950/10"
+        }`}
+      >
+        <div className="mb-3 flex items-center gap-2">
+          {leagueStats.unassignedTeams > 0 || leagueStats.membersWithoutTeam > 0 ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <p className="text-xs font-medium text-amber-400">Needs attention</p>
+            </>
+          ) : leagueStats.totalTeams === 0 ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-slate-600" />
+              <p className="text-xs font-medium text-slate-500">No franchises set up yet</p>
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <p className="text-xs font-medium text-emerald-400">Fully staffed</p>
+            </>
+          )}
         </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs text-slate-500">Assigned</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-100">{leagueStats.assignedTeams}</p>
-        </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs text-slate-500">Unassigned</p>
-          <p
-            className={`mt-1 text-2xl font-semibold ${leagueStats.unassignedTeams > 0 ? "text-amber-400" : "text-slate-100"}`}
-          >
-            {leagueStats.unassignedTeams}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs text-slate-500">Without Team</p>
-          <p
-            className={`mt-1 text-2xl font-semibold ${leagueStats.membersWithoutTeam > 0 ? "text-amber-400" : "text-slate-100"}`}
-          >
-            {leagueStats.membersWithoutTeam}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-3">
-          <p className="text-xs text-slate-500">Pending Invites</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-100">0</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-5">
+          <div>
+            <p className="text-xs text-slate-500">Total Teams</p>
+            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-total-teams">
+              {leagueStats.totalTeams}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Assigned</p>
+            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-assigned-teams">
+              {leagueStats.assignedTeams}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Unassigned</p>
+            <p
+              className={`mt-0.5 text-xl font-semibold ${leagueStats.unassignedTeams > 0 ? "text-amber-400" : "text-slate-100"}`}
+              data-testid="summary-unassigned-teams"
+            >
+              {leagueStats.unassignedTeams}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Without Team</p>
+            <p
+              className={`mt-0.5 text-xl font-semibold ${leagueStats.membersWithoutTeam > 0 ? "text-amber-400" : "text-slate-100"}`}
+              data-testid="summary-members-without-team"
+            >
+              {leagueStats.membersWithoutTeam}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Pending Invites</p>
+            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-pending-invites">
+              0
+            </p>
+          </div>
         </div>
       </div>
 
