@@ -618,12 +618,6 @@ export default function CommissionerTeamsPage() {
             </thead>
             <tbody>
               {sortedTeams.map((team) => {
-                const edit = teamEdits[team.id] ?? {
-                  name: team.name,
-                  abbreviation: team.abbreviation ?? "",
-                  divisionLabel: team.divisionLabel ?? "",
-                  ownerId: team.owner?.id ?? "",
-                };
                 const isEditing = editingTeamId === team.id;
                 const isInAssignmentFlow = assignmentFlow?.teamId === team.id;
 
@@ -660,92 +654,6 @@ export default function CommissionerTeamsPage() {
                       Assigned
                     </span>
                   );
-
-                // --- Edit mode: metadata only (name / abbr / division) ---
-                // Owner assignment is governed separately via the assignment flow.
-                if (isEditing) {
-                  return (
-                    <tr
-                      key={team.id}
-                      data-testid={`franchise-row-${team.id}`}
-                      className="border-b border-slate-800/70 bg-slate-900/60 outline outline-1 outline-sky-800/60 last:border-b-0"
-                    >
-                      <td className="px-3 py-2">
-                        <input
-                          value={edit.name}
-                          onChange={(event) =>
-                            setTeamEdits((previous) => ({
-                              ...previous,
-                              [team.id]: { ...edit, name: event.target.value },
-                            }))
-                          }
-                          className="w-full min-w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          value={edit.abbreviation}
-                          onChange={(event) =>
-                            setTeamEdits((previous) => ({
-                              ...previous,
-                              [team.id]: { ...edit, abbreviation: event.target.value },
-                            }))
-                          }
-                          className="w-20 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          value={edit.divisionLabel}
-                          onChange={(event) =>
-                            setTeamEdits((previous) => ({
-                              ...previous,
-                              [team.id]: { ...edit, divisionLabel: event.target.value },
-                            }))
-                          }
-                          className="w-full min-w-24 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <p className="text-sm text-slate-300">
-                          {team.owner?.name ?? (
-                            <span className="text-slate-600">Unassigned</span>
-                          )}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-600">Use Reassign to change</p>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-400">
-                        {savedMemberEmail ?? <span className="text-slate-600">—</span>}
-                      </td>
-                      <td className="px-3 py-2">{statusBadge}</td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            data-testid={`franchise-save-btn-${team.id}`}
-                            onClick={async () => {
-                              const saved = await saveTeam(team.id);
-                              if (saved) setEditingTeamId(null);
-                            }}
-                            disabled={busyAction !== null}
-                            className="rounded border border-sky-700 bg-sky-900/40 px-2 py-1 text-xs text-sky-200 disabled:opacity-50"
-                          >
-                            {busyAction === `save-team:${team.id}` ? "Saving..." : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            data-testid={`franchise-cancel-btn-${team.id}`}
-                            onClick={() => cancelTeamEdit(team.id)}
-                            disabled={busyAction !== null}
-                            className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
 
                 // --- Assignment flow: explicit assign / reassign / remove ---
                 if (isInAssignmentFlow) {
@@ -880,7 +788,13 @@ export default function CommissionerTeamsPage() {
                   <tr
                     key={team.id}
                     data-testid={`franchise-row-${team.id}`}
-                    className={`border-b border-slate-800/70 last:border-b-0 ${status === "unassigned" ? "bg-amber-950/10" : ""}`}
+                    className={`border-b border-slate-800/70 last:border-b-0 ${
+                      isEditing
+                        ? "bg-slate-900/60 outline outline-1 outline-sky-900/60"
+                        : status === "unassigned"
+                          ? "bg-amber-950/10"
+                          : ""
+                    }`}
                   >
                     <td className="px-3 py-2 text-sm text-slate-100">{team.name}</td>
                     <td className="px-3 py-2 text-xs text-slate-400">
@@ -948,6 +862,106 @@ export default function CommissionerTeamsPage() {
           </table>
         </div>
       </section>
+
+      {editingTeamId ? (() => {
+        const team = teams.find((t) => t.id === editingTeamId);
+        if (!team) return null;
+        const edit = teamEdits[editingTeamId] ?? {
+          name: team.name,
+          abbreviation: team.abbreviation ?? "",
+          divisionLabel: team.divisionLabel ?? "",
+          ownerId: team.owner?.id ?? "",
+        };
+        return (
+          <section
+            data-testid={`franchise-detail-panel-${editingTeamId}`}
+            className="rounded-lg border border-sky-800/40 bg-slate-900/60 p-4"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-200">Edit Franchise Details</h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Updating <span className="text-slate-300">{team.name}</span>. Assignment is managed separately via the Assign / Reassign actions in the table.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => cancelTeamEdit(editingTeamId)}
+                className="flex-shrink-0 text-xs text-slate-500 hover:text-slate-300"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="block space-y-1 text-xs text-slate-400">
+                <span>Franchise Name</span>
+                <input
+                  data-testid={`franchise-detail-name-${editingTeamId}`}
+                  value={edit.name}
+                  onChange={(event) =>
+                    setTeamEdits((previous) => ({
+                      ...previous,
+                      [editingTeamId]: { ...edit, name: event.target.value },
+                    }))
+                  }
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                />
+              </label>
+              <label className="block space-y-1 text-xs text-slate-400">
+                <span>Abbreviation</span>
+                <input
+                  data-testid={`franchise-detail-abbr-${editingTeamId}`}
+                  value={edit.abbreviation}
+                  onChange={(event) =>
+                    setTeamEdits((previous) => ({
+                      ...previous,
+                      [editingTeamId]: { ...edit, abbreviation: event.target.value },
+                    }))
+                  }
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                />
+              </label>
+              <label className="block space-y-1 text-xs text-slate-400">
+                <span>Division</span>
+                <input
+                  data-testid={`franchise-detail-division-${editingTeamId}`}
+                  value={edit.divisionLabel}
+                  onChange={(event) =>
+                    setTeamEdits((previous) => ({
+                      ...previous,
+                      [editingTeamId]: { ...edit, divisionLabel: event.target.value },
+                    }))
+                  }
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="button"
+                data-testid={`franchise-detail-save-${editingTeamId}`}
+                onClick={async () => {
+                  const saved = await saveTeam(editingTeamId);
+                  if (saved) setEditingTeamId(null);
+                }}
+                disabled={busyAction !== null}
+                className="rounded border border-sky-700 bg-sky-900/40 px-3 py-1.5 text-sm text-sky-200 disabled:opacity-50"
+              >
+                {busyAction === `save-team:${editingTeamId}` ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                type="button"
+                data-testid={`franchise-detail-cancel-${editingTeamId}`}
+                onClick={() => cancelTeamEdit(editingTeamId)}
+                disabled={busyAction !== null}
+                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-400 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        );
+      })() : null}
 
       <section
         data-testid="commissioner-team-admin-owners-table"
