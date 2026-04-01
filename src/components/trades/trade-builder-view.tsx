@@ -230,6 +230,12 @@ export function TradeBuilderView(props: {
             </div>
           </DashboardCard>
 
+          {selectedCount === 0 ? (
+            <div className="rounded-lg border border-sky-700/50 bg-sky-950/20 px-4 py-3 text-sm text-sky-100">
+              <span className="font-medium">Start here —</span> select players and picks from each team to build your trade package.
+            </div>
+          ) : null}
+
           <div className="grid gap-4 xl:grid-cols-2">
             {[proposerPool, counterpartyPool].map((pool, index) => {
               if (!pool) {
