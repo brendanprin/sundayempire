@@ -54,18 +54,20 @@ function buildSubmissionGuidance(
 export function TradeValidationPanel(props: {
   evaluation: TradeEvaluation | null;
   status: TradeStatus;
+  isStale?: boolean;
   showSubmissionGuidance?: boolean;
   compact?: boolean;
   testId?: string;
 }) {
+  const isStale = Boolean(props.isStale && props.evaluation);
   const submissionGuidance = buildSubmissionGuidance(
-    props.evaluation, 
-    props.status, 
+    props.evaluation,
+    props.status,
     props.showSubmissionGuidance ?? false
   );
 
   return (
-    <div 
+    <div
       className="space-y-4"
       data-testid={props.testId || "trade-validation-panel"}
     >
@@ -82,12 +84,24 @@ export function TradeValidationPanel(props: {
         {props.evaluation && (
           <div className="flex items-center gap-2">
             <TradeStatusBadge status={props.status} />
-            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${outcomeTone(props.evaluation.outcome)}`}>
-              {formatEnumLabel(props.evaluation.outcome)}
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+              isStale
+                ? "border-amber-600/50 bg-amber-900/40 text-amber-300"
+                : outcomeTone(props.evaluation.outcome)
+            }`}>
+              {isStale ? "Stale" : formatEnumLabel(props.evaluation.outcome)}
             </span>
           </div>
         )}
       </div>
+
+      {/* Stale Banner */}
+      {isStale && (
+        <div className="rounded-lg border border-amber-600/50 bg-amber-950/20 px-3 py-3 text-sm text-amber-200">
+          <span className="font-semibold">Package changed</span> — these findings reflect the previous version.
+          Save your changes and re-validate before submitting.
+        </div>
+      )}
 
       {/* Validation Content */}
       {!props.evaluation ? (
@@ -100,7 +114,7 @@ export function TradeValidationPanel(props: {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className={`space-y-3 ${isStale ? "opacity-40" : ""}`}>
           {/* Remediation Context */}
           {props.evaluation.remediation?.reasons.length ? (
             <div className="rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-3">

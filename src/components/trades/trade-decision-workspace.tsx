@@ -120,6 +120,7 @@ export function TradeDecisionWorkspace(props: {
   );
 
   const isHardBlocked = currentEvaluation?.outcome === "FAIL_HARD_BLOCK";
+  const isValidationStale = props.isDirty && Boolean(currentEvaluation);
   const canValidate = Boolean(props.detail) && !props.isDirty;
   const canSubmit = !props.isDirty && Boolean(props.detail) && Boolean(currentEvaluation) && !isHardBlocked;
 
@@ -159,8 +160,10 @@ export function TradeDecisionWorkspace(props: {
         </DashboardCard>
         <DashboardCard title="Validation Status" eyebrow="Last review">
           <p className="text-sm font-semibold text-slate-100">
-            {currentEvaluation ? (
-              <span className={currentEvaluation.outcome === "FAIL_HARD_BLOCK" ? "text-rose-400" : 
+            {isValidationStale ? (
+              <span className="text-amber-400">Stale</span>
+            ) : currentEvaluation ? (
+              <span className={currentEvaluation.outcome === "FAIL_HARD_BLOCK" ? "text-rose-400" :
                              currentEvaluation.outcome === "PASS" ? "text-emerald-400" : "text-amber-400"}>
                 {currentEvaluation.outcome.replace(/_/g, ' ').toLowerCase()}
               </span>
@@ -171,7 +174,11 @@ export function TradeDecisionWorkspace(props: {
         </DashboardCard>
         <DashboardCard title="Ready to Submit" eyebrow="Next action">
           <p className="text-sm font-medium text-slate-100">
-            {isHardBlocked ? "Blocked" : canSubmit ? "Ready" : "Build package first"}
+            {isHardBlocked ? "Blocked" :
+             isValidationStale ? "Re-validate first" :
+             canSubmit ? "Ready" :
+             currentEvaluation === null && props.detail ? "Validate first" :
+             "Build package first"}
           </p>
         </DashboardCard>
       </div>
@@ -333,6 +340,7 @@ export function TradeDecisionWorkspace(props: {
           <TradeValidationPanel
             evaluation={currentEvaluation}
             status={props.detail?.proposal.status ?? "DRAFT"}
+            isStale={isValidationStale}
             showSubmissionGuidance={true}
             compact={true}
             testId="trade-builder-validation"
