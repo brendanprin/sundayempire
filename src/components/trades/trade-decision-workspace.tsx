@@ -6,11 +6,54 @@ import { TradeProposalCanvas } from "@/components/trades/trade-proposal-canvas";
 import { TradeValidationPanel } from "@/components/trades/trade-validation-panel";
 import { TradeImpactSummary } from "@/components/trades/trade-impact-summary";
 import { Button, Select, Checkbox } from "@/components/ui";
+import type { ButtonVariant } from "@/components/ui/button";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import type {
   TradeBuilderContextResponse,
   TradeProposalDetailResponse,
 } from "@/types/trade-workflow";
+
+type WorkflowStage = "empty" | "building" | "stale" | "saved" | "validated" | "blocked";
+
+function resolveWorkflowStage(
+  selectedCount: number,
+  hasDraft: boolean,
+  hasEvaluation: boolean,
+  isDirty: boolean,
+  isHardBlocked: boolean,
+): WorkflowStage {
+  if (selectedCount === 0 && !isDirty && !hasDraft) return "empty";
+  if (isDirty && hasEvaluation) return "stale";
+  if (isDirty || !hasDraft) return "building";
+  if (!hasEvaluation) return "saved";
+  if (isHardBlocked) return "blocked";
+  return "validated";
+}
+
+const STAGE_DESCRIPTION: Record<WorkflowStage, string> = {
+  empty:     "Select assets from both teams to begin.",
+  building:  "Save the package to unlock validation.",
+  stale:     "Save your changes, then re-validate.",
+  saved:     "Run validation to check league rules and cap impact.",
+  validated: "Package is validated — submit when ready.",
+  blocked:   "Resolve the hard-block findings before submitting.",
+};
+
+function saveVariant(stage: WorkflowStage): ButtonVariant {
+  return stage === "building" || stage === "stale" ? "primary" : "subtle";
+}
+
+function submitVariant(stage: WorkflowStage): ButtonVariant {
+  return stage === "validated" ? "primary" : "subtle";
+}
+
+function validateClasses(stage: WorkflowStage): string {
+  const base = "w-full rounded-md px-3 py-2 text-sm font-medium transition-colors inline-flex items-center justify-center disabled:opacity-40";
+  if (stage === "saved") {
+    return `${base} border border-sky-600/70 bg-sky-900/50 text-sky-100 hover:border-sky-500`;
+  }
+  return `${base} border border-slate-700/60 bg-transparent text-slate-500 hover:border-slate-600 hover:text-slate-400`;
+}
 
 type SelectionState = {
   proposerPlayers: Set<string>;
@@ -124,6 +167,13 @@ export function TradeDecisionWorkspace(props: {
   const isValidationStale = props.isDirty && Boolean(currentEvaluation);
   const canValidate = Boolean(props.detail) && !props.isDirty;
   const canSubmit = !props.isDirty && Boolean(props.detail) && Boolean(currentEvaluation) && !isHardBlocked;
+  const stage = resolveWorkflowStage(
+    selectedCount,
+    Boolean(props.detail),
+    Boolean(currentEvaluation),
+    props.isDirty,
+    isHardBlocked,
+  );
 
   return (
     <div className="space-y-6" data-testid="trade-decision-workspace">
@@ -356,17 +406,17 @@ export function TradeDecisionWorkspace(props: {
           {/* Trade Actions */}
           <DashboardCard
             title="Trade Actions"
-            description="Save the package, then validate, then submit."
+            description={STAGE_DESCRIPTION[stage]}
             testId="trade-builder-actions"
           >
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant={saveVariant(stage)}
                 onClick={props.onSaveDraft}
                 disabled={Boolean(props.busyLabel) || selectedCount === 0}
                 loading={props.busyLabel === "save"}
-                className="w-full"
+                className="w-full justify-center"
               >
                 {props.busyLabel === "save" ? "Saving..." : "Save Package"}
               </Button>
@@ -375,44 +425,36 @@ export function TradeDecisionWorkspace(props: {
                 type="button"
                 onClick={props.onValidate}
                 disabled={Boolean(props.busyLabel) || !canValidate}
-                title={props.isDirty ? "Save changes before validating" : undefined}
-                className="w-full rounded-lg border border-sky-700/50 bg-sky-950/40 px-3 py-2 text-sm font-medium text-sky-100 hover:border-sky-500 disabled:opacity-60"
+                className={validateClasses(stage)}
               >
                 {props.busyLabel === "validate" ? "Validating..." : "Run Validation"}
               </button>
-              
-              {isHardBlocked ? (
-                <div className="rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-3 text-sm text-rose-100">
-                  <p className="font-medium mb-1">Submission Blocked</p>
-                  <p>Resolve validation findings before submitting this proposal.</p>
+
+              {stage === "blocked" ? (
+                <div className="rounded-md border border-rose-700/50 bg-rose-950/30 px-3 py-2.5 text-sm text-rose-200">
+                  Submission blocked — resolve findings to continue.
                 </div>
               ) : (
                 <Button
                   type="button"
-                  variant="primary"
+                  variant={submitVariant(stage)}
                   onClick={props.onSubmit}
                   disabled={Boolean(props.busyLabel) || !canSubmit}
                   loading={props.busyLabel === "submit"}
-                  className="w-full"
-                  title={
-                    props.isDirty
-                      ? "Save changes before submitting"
-                      : !currentEvaluation
-                        ? "Run validation before submitting"
-                        : undefined
-                  }
+                  className="w-full justify-center"
                 >
                   {props.busyLabel === "submit" ? "Submitting..." : "Submit Proposal"}
                 </Button>
               )}
+
               {selectedCount > 0 || props.isDirty ? (
                 <>
-                  <div className="border-t border-slate-800" />
+                  <div className="mt-1 border-t border-slate-800/80 pt-1" />
                   <button
                     type="button"
                     onClick={props.onReset}
                     disabled={Boolean(props.busyLabel)}
-                    className="w-full rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors disabled:opacity-40"
+                    className="w-full rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-400 hover:bg-slate-800/40 transition-colors disabled:opacity-40"
                   >
                     Reset Package
                   </button>
