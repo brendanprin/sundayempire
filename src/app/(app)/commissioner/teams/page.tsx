@@ -75,6 +75,7 @@ export default function CommissionerTeamsPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [memberAssignTargets, setMemberAssignTargets] = useState<Record<string, string>>({});
+  const [setupOpen, setSetupOpen] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
   const reloadWorkspace = useCallback(async () => {
@@ -876,103 +877,114 @@ export default function CommissionerTeamsPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-lg border border-slate-700/50 bg-slate-950/50 p-4">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-300">League Setup Utilities</h3>
-          <p className="mt-0.5 text-xs text-slate-500">Create new franchises and members.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-            <h3 className="text-sm font-semibold">Create Owner</h3>
-            <label className="block space-y-1 text-xs text-slate-400">
-              <span>Name</span>
-              <input
-                data-testid="commissioner-team-admin-create-owner-name"
-                value={ownerForm.name}
-                onChange={(event) => setOwnerForm((previous) => ({ ...previous, name: event.target.value }))}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-              />
-            </label>
-            <label className="block space-y-1 text-xs text-slate-400">
-              <span>Email</span>
-              <input
-                data-testid="commissioner-team-admin-create-owner-email"
-                value={ownerForm.email}
-                onChange={(event) => setOwnerForm((previous) => ({ ...previous, email: event.target.value }))}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={createOwner}
-              disabled={busyAction !== null}
-              className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
-            >
-              {busyAction === "create-owner" ? "Creating..." : "Create Owner"}
-            </button>
-          </form>
+      <section className="rounded-lg border border-slate-700/40 bg-slate-950/40">
+        <button
+          type="button"
+          data-testid="setup-utilities-toggle"
+          onClick={() => setSetupOpen((previous) => !previous)}
+          className="flex w-full items-center justify-between px-4 py-3 text-left"
+        >
+          <div>
+            <h3 className="text-sm font-medium text-slate-400">League Setup Utilities</h3>
+            <p className="mt-0.5 text-xs text-slate-600">Add franchises or members to the league.</p>
+          </div>
+          <span className="ml-4 flex-shrink-0 text-xs text-slate-600">{setupOpen ? "▲" : "▼"}</span>
+        </button>
 
-          <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-            <h3 className="text-sm font-semibold">Create Team</h3>
-            <label className="block space-y-1 text-xs text-slate-400">
-              <span>Team Name</span>
-              <input
-                data-testid="commissioner-team-admin-create-team-name"
-                value={teamForm.name}
-                onChange={(event) => setTeamForm((previous) => ({ ...previous, name: event.target.value }))}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {setupOpen ? (
+          <div className="grid grid-cols-1 gap-4 border-t border-slate-800 px-4 pb-4 pt-4 lg:grid-cols-2">
+            <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <h3 className="text-sm font-semibold">Create League Member</h3>
               <label className="block space-y-1 text-xs text-slate-400">
-                <span>Abbreviation</span>
+                <span>Name</span>
                 <input
-                  data-testid="commissioner-team-admin-create-team-abbr"
-                  value={teamForm.abbreviation}
-                  onChange={(event) =>
-                    setTeamForm((previous) => ({ ...previous, abbreviation: event.target.value }))
-                  }
+                  data-testid="commissioner-team-admin-create-owner-name"
+                  value={ownerForm.name}
+                  onChange={(event) => setOwnerForm((previous) => ({ ...previous, name: event.target.value }))}
                   className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
                 />
               </label>
               <label className="block space-y-1 text-xs text-slate-400">
-                <span>Division</span>
+                <span>Email</span>
                 <input
-                  data-testid="commissioner-team-admin-create-team-division"
-                  value={teamForm.divisionLabel}
-                  onChange={(event) =>
-                    setTeamForm((previous) => ({ ...previous, divisionLabel: event.target.value }))
-                  }
+                  data-testid="commissioner-team-admin-create-owner-email"
+                  value={ownerForm.email}
+                  onChange={(event) => setOwnerForm((previous) => ({ ...previous, email: event.target.value }))}
                   className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
                 />
               </label>
-            </div>
-            <label className="block space-y-1 text-xs text-slate-400">
-              <span>Owner</span>
-              <select
-                data-testid="commissioner-team-admin-create-team-owner"
-                value={teamForm.ownerId}
-                onChange={(event) => setTeamForm((previous) => ({ ...previous, ownerId: event.target.value }))}
-                className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+              <button
+                type="button"
+                onClick={createOwner}
+                disabled={busyAction !== null}
+                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
               >
-                <option value="">Unassigned</option>
-                {ownerSelectOptions.map((ownerOption) => (
-                  <option key={ownerOption.id} value={ownerOption.id}>
-                    {ownerOption.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={createTeam}
-              disabled={busyAction !== null}
-              className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
-            >
-              {busyAction === "create-team" ? "Creating..." : "Create Team"}
-            </button>
-          </form>
-        </div>
+                {busyAction === "create-owner" ? "Adding..." : "Add League Member"}
+              </button>
+            </form>
+
+            <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <h3 className="text-sm font-semibold">Create Franchise</h3>
+              <label className="block space-y-1 text-xs text-slate-400">
+                <span>Franchise Name</span>
+                <input
+                  data-testid="commissioner-team-admin-create-team-name"
+                  value={teamForm.name}
+                  onChange={(event) => setTeamForm((previous) => ({ ...previous, name: event.target.value }))}
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                />
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block space-y-1 text-xs text-slate-400">
+                  <span>Abbreviation</span>
+                  <input
+                    data-testid="commissioner-team-admin-create-team-abbr"
+                    value={teamForm.abbreviation}
+                    onChange={(event) =>
+                      setTeamForm((previous) => ({ ...previous, abbreviation: event.target.value }))
+                    }
+                    className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                  />
+                </label>
+                <label className="block space-y-1 text-xs text-slate-400">
+                  <span>Division</span>
+                  <input
+                    data-testid="commissioner-team-admin-create-team-division"
+                    value={teamForm.divisionLabel}
+                    onChange={(event) =>
+                      setTeamForm((previous) => ({ ...previous, divisionLabel: event.target.value }))
+                    }
+                    className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1 text-xs text-slate-400">
+                <span>Assign to Member</span>
+                <select
+                  data-testid="commissioner-team-admin-create-team-owner"
+                  value={teamForm.ownerId}
+                  onChange={(event) => setTeamForm((previous) => ({ ...previous, ownerId: event.target.value }))}
+                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                >
+                  <option value="">Unassigned</option>
+                  {ownerSelectOptions.map((ownerOption) => (
+                    <option key={ownerOption.id} value={ownerOption.id}>
+                      {ownerOption.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={createTeam}
+                disabled={busyAction !== null}
+                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
+              >
+                {busyAction === "create-team" ? "Adding..." : "Add Franchise"}
+              </button>
+            </form>
+          </div>
+        ) : null}
       </section>
 
       <Link href="/teams" className="inline-flex text-sm text-sky-300 hover:text-sky-200">

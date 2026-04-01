@@ -7,12 +7,15 @@ test.describe("Commissioner Team Admin Route", () => {
     await page.goto("/commissioner/teams");
 
     await expect(page.getByRole("heading", { name: "Commissioner Team Administration" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Create Owner" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Create Team" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create Owner" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create Team" })).toBeVisible();
     await expect(page.getByTestId("commissioner-team-admin-owners-table")).toBeVisible();
     await expect(page.getByTestId("commissioner-team-admin-teams-table")).toBeVisible();
+
+    // Setup utilities are collapsed by default — expand to verify forms are present
+    await page.getByTestId("setup-utilities-toggle").click();
+    await expect(page.getByRole("heading", { name: "Create League Member" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create Franchise" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add League Member" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add Franchise" })).toBeVisible();
   });
 
   test("non-commissioner users are redirected away from commissioner team admin route", async ({ page }) => {
