@@ -210,7 +210,7 @@ export default function CommissionerTeamsPage() {
 
   async function createOwner() {
     if (ownerForm.name.trim().length < 2) {
-      setError("Owner name must be at least 2 characters.");
+      setError("Member name must be at least 2 characters.");
       return;
     }
 
@@ -229,13 +229,13 @@ export default function CommissionerTeamsPage() {
             email: ownerForm.email.trim() || null,
           }),
         },
-        "Failed to create owner.",
+        "Failed to add league member.",
       );
       setOwnerForm(EMPTY_OWNER_FORM);
-      setMessage("Owner created.");
+      setMessage("League member added.");
       await reloadWorkspace();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to create owner.");
+      setError(requestError instanceof Error ? requestError.message : "Failed to add league member.");
     } finally {
       setBusyAction(null);
     }
@@ -297,13 +297,13 @@ export default function CommissionerTeamsPage() {
             email: edit.email.trim() || null,
           }),
         },
-        "Failed to save owner.",
+        "Failed to update member.",
       );
-      setMessage("Owner updated.");
+      setMessage("Member updated.");
       await reloadWorkspace();
       return true;
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to save owner.");
+      setError(requestError instanceof Error ? requestError.message : "Failed to update member.");
       return false;
     } finally {
       setBusyAction(null);
