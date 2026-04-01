@@ -50,6 +50,14 @@ type TeamForm = {
 
 type FranchiseStatus = "unassigned" | "assigned" | "needs-reassignment";
 
+type AssignmentFlow = {
+  teamId: string;
+  mode: "assign" | "reassign";
+  pendingOwnerId: string; // "" = nothing chosen yet, REMOVE_ASSIGNMENT = explicit removal, uuid = new owner
+};
+
+const REMOVE_ASSIGNMENT = "__remove__";
+
 const EMPTY_OWNER_FORM: OwnerForm = {
   name: "",
   email: "",
@@ -76,6 +84,7 @@ export default function CommissionerTeamsPage() {
   const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [memberAssignTargets, setMemberAssignTargets] = useState<Record<string, string>>({});
   const [setupOpen, setSetupOpen] = useState(false);
+  const [assignmentFlow, setAssignmentFlow] = useState<AssignmentFlow | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
 
   const reloadWorkspace = useCallback(async () => {
@@ -423,7 +432,74 @@ export default function CommissionerTeamsPage() {
     if (editingTeamId && editingTeamId !== teamId) {
       discardTeamEdit(editingTeamId);
     }
+    setAssignmentFlow(null);
     setEditingTeamId(teamId);
+  }
+
+  function startAssignmentFlow(teamId: string) {
+    if (editingTeamId) cancelTeamEdit(editingTeamId);
+    setAssignmentFlow({ teamId, mode: "assign", pendingOwnerId: "" });
+  }
+
+  function startReassignmentFlow(teamId: string) {
+    if (editingTeamId) cancelTeamEdit(editingTeamId);
+    setAssignmentFlow({ teamId, mode: "reassign", pendingOwnerId: "" });
+  }
+
+  async function confirmAssignmentChange() {
+    const flow = assignmentFlow;
+    if (!flow) return;
+
+    const { teamId, mode, pendingOwnerId } = flow;
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+
+    const isRemoval = pendingOwnerId === REMOVE_ASSIGNMENT;
+    const newOwnerId = isRemoval ? null : pendingOwnerId || null;
+    const currentOwnerName = team.owner?.name ?? null;
+    const newOwner = newOwnerId ? ownerById.get(newOwnerId) : null;
+
+    setBusyAction(`confirm-assignment:${teamId}`);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await requestJson(
+        `/api/teams/${teamId}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: team.name,
+            abbreviation: team.abbreviation ?? null,
+            divisionLabel: team.divisionLabel ?? null,
+            ownerId: newOwnerId,
+          }),
+        },
+        "Failed to update franchise assignment.",
+      );
+
+      if (mode === "assign") {
+        setMessage(`${newOwner?.name ?? "Member"} assigned to ${team.name}.`);
+      } else if (isRemoval) {
+        setMessage(`${currentOwnerName ?? "Member"} removed from ${team.name}.`);
+      } else {
+        setMessage(
+          `${team.name} reassigned from ${currentOwnerName ?? "previous member"} to ${newOwner?.name ?? "new member"}.`,
+        );
+      }
+
+      setAssignmentFlow(null);
+      await reloadWorkspace();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to update franchise assignment.",
+      );
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   if (accessDenied) {
@@ -514,6 +590,7 @@ export default function CommissionerTeamsPage() {
                   ownerId: team.owner?.id ?? "",
                 };
                 const isEditing = editingTeamId === team.id;
+                const isInAssignmentFlow = assignmentFlow?.teamId === team.id;
 
                 const status: FranchiseStatus = !team.owner
                   ? "unassigned"
@@ -523,9 +600,6 @@ export default function CommissionerTeamsPage() {
 
                 const savedMemberEmail = team.owner
                   ? (ownerById.get(team.owner.id)?.email ?? null)
-                  : null;
-                const editMemberEmail = edit.ownerId
-                  ? (ownerById.get(edit.ownerId)?.email ?? null)
                   : null;
 
                 const statusBadge =
@@ -552,6 +626,8 @@ export default function CommissionerTeamsPage() {
                     </span>
                   );
 
+                // --- Edit mode: metadata only (name / abbr / division) ---
+                // Owner assignment is governed separately via the assignment flow.
                 if (isEditing) {
                   return (
                     <tr
@@ -596,26 +672,15 @@ export default function CommissionerTeamsPage() {
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <select
-                          value={edit.ownerId}
-                          onChange={(event) =>
-                            setTeamEdits((previous) => ({
-                              ...previous,
-                              [team.id]: { ...edit, ownerId: event.target.value },
-                            }))
-                          }
-                          className="w-full min-w-36 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        >
-                          <option value="">Unassigned</option>
-                          {ownerSelectOptions.map((ownerOption) => (
-                            <option key={ownerOption.id} value={ownerOption.id}>
-                              {ownerOption.label}
-                            </option>
-                          ))}
-                        </select>
+                        <p className="text-sm text-slate-300">
+                          {team.owner?.name ?? (
+                            <span className="text-slate-600">Unassigned</span>
+                          )}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-600">Use Reassign to change</p>
                       </td>
                       <td className="px-3 py-2 text-xs text-slate-400">
-                        {editMemberEmail ?? <span className="text-slate-600">—</span>}
+                        {savedMemberEmail ?? <span className="text-slate-600">—</span>}
                       </td>
                       <td className="px-3 py-2">{statusBadge}</td>
                       <td className="px-3 py-2 text-right">
@@ -647,6 +712,135 @@ export default function CommissionerTeamsPage() {
                   );
                 }
 
+                // --- Assignment flow: explicit assign / reassign / remove ---
+                if (isInAssignmentFlow) {
+                  const flow = assignmentFlow!;
+                  const isAssignMode = flow.mode === "assign";
+                  const pendingOwnerId = flow.pendingOwnerId;
+                  const currentOwner = team.owner ? ownerById.get(team.owner.id) : null;
+                  const isRemoval = pendingOwnerId === REMOVE_ASSIGNMENT;
+                  const pendingOwner =
+                    !isRemoval && pendingOwnerId ? ownerById.get(pendingOwnerId) : null;
+                  const hasChosen = pendingOwnerId !== "";
+                  const isUnchanged = !isAssignMode && pendingOwnerId === team.owner?.id;
+                  const confirmDisabled = busyAction !== null || !hasChosen || isUnchanged;
+
+                  const confirmLabel =
+                    busyAction === `confirm-assignment:${team.id}`
+                      ? "Saving..."
+                      : isRemoval
+                        ? "Confirm Removal"
+                        : isAssignMode
+                          ? "Confirm Assignment"
+                          : "Confirm Reassignment";
+
+                  return (
+                    <tr
+                      key={team.id}
+                      data-testid={`franchise-row-${team.id}`}
+                      className={`border-b border-slate-800/70 last:border-b-0 ${
+                        isAssignMode
+                          ? "bg-amber-950/5 outline outline-1 outline-amber-800/40"
+                          : "bg-slate-900/40 outline outline-1 outline-sky-800/40"
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-sm font-medium text-slate-100">{team.name}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {team.abbreviation || <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {team.divisionLabel || <span className="text-slate-600">—</span>}
+                      </td>
+                      <td colSpan={4} className="px-3 py-3">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-slate-300">
+                            {isAssignMode
+                              ? "Assign a member to this franchise"
+                              : "Change franchise assignment"}
+                          </p>
+
+                          {!isAssignMode && currentOwner ? (
+                            <p className="text-xs text-slate-500">
+                              Currently:{" "}
+                              <span className="font-medium text-slate-300">{currentOwner.name}</span>
+                              {currentOwner.email ? (
+                                <span className="ml-1 text-slate-600">({currentOwner.email})</span>
+                              ) : null}
+                            </p>
+                          ) : null}
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <select
+                              data-testid={`franchise-assignment-select-${team.id}`}
+                              value={pendingOwnerId}
+                              onChange={(event) =>
+                                setAssignmentFlow({ ...flow, pendingOwnerId: event.target.value })
+                              }
+                              className="min-w-44 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+                            >
+                              <option value="" disabled>
+                                {isAssignMode ? "Select a member…" : "Choose new assignment…"}
+                              </option>
+                              {!isAssignMode ? (
+                                <option value={REMOVE_ASSIGNMENT}>— Remove assignment</option>
+                              ) : null}
+                              {ownerSelectOptions.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            {!isAssignMode && hasChosen && !isRemoval && pendingOwner ? (
+                              <span className="text-xs text-slate-500">
+                                {currentOwner?.name}
+                                <span className="mx-1.5 text-slate-600">→</span>
+                                <span className="font-medium text-slate-200">{pendingOwner.name}</span>
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {isRemoval && currentOwner ? (
+                            <p className="text-xs text-orange-400">
+                              {currentOwner.name} will be unassigned from {team.name} and moved to the
+                              unassigned queue.
+                            </p>
+                          ) : null}
+
+                          {!isAssignMode && !isRemoval && hasChosen && pendingOwner ? (
+                            <p className="text-xs text-amber-400">
+                              {currentOwner?.name} will lose control of {team.name}.{" "}
+                              {pendingOwner.name} will take over.
+                            </p>
+                          ) : null}
+
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <button
+                              type="button"
+                              data-testid={`franchise-confirm-assignment-btn-${team.id}`}
+                              onClick={confirmAssignmentChange}
+                              disabled={confirmDisabled}
+                              className="rounded border border-sky-700 bg-sky-900/40 px-2.5 py-1 text-xs text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {confirmLabel}
+                            </button>
+                            <button
+                              type="button"
+                              data-testid={`franchise-cancel-assignment-btn-${team.id}`}
+                              onClick={() => setAssignmentFlow(null)}
+                              disabled={busyAction !== null}
+                              className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // --- View mode ---
                 return (
                   <tr
                     key={team.id}
@@ -677,34 +871,32 @@ export default function CommissionerTeamsPage() {
                           <button
                             type="button"
                             data-testid={`franchise-assign-btn-${team.id}`}
-                            onClick={() => startEditingTeam(team.id)}
+                            onClick={() => startAssignmentFlow(team.id)}
                             disabled={busyAction !== null}
                             className="rounded border border-amber-700/60 bg-amber-900/20 px-2 py-1 text-xs text-amber-300 disabled:opacity-50"
                           >
                             Assign Member
                           </button>
                         ) : (
-                          <>
-                            <button
-                              type="button"
-                              data-testid={`franchise-reassign-btn-${team.id}`}
-                              onClick={() => startEditingTeam(team.id)}
-                              disabled={busyAction !== null}
-                              className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 disabled:opacity-50"
-                            >
-                              Reassign
-                            </button>
-                            <button
-                              type="button"
-                              data-testid={`franchise-edit-btn-${team.id}`}
-                              onClick={() => startEditingTeam(team.id)}
-                              disabled={busyAction !== null}
-                              className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                            >
-                              Edit
-                            </button>
-                          </>
+                          <button
+                            type="button"
+                            data-testid={`franchise-reassign-btn-${team.id}`}
+                            onClick={() => startReassignmentFlow(team.id)}
+                            disabled={busyAction !== null}
+                            className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 disabled:opacity-50"
+                          >
+                            Reassign
+                          </button>
                         )}
+                        <button
+                          type="button"
+                          data-testid={`franchise-edit-btn-${team.id}`}
+                          onClick={() => startEditingTeam(team.id)}
+                          disabled={busyAction !== null}
+                          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
                       </div>
                     </td>
                   </tr>
