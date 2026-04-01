@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { TradeStatusBadge } from "@/components/trades/trade-status-badge";
 import { Button, Select, Checkbox } from "@/components/ui";
@@ -7,8 +8,25 @@ import { formatEnumLabel } from "@/lib/format-label";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import type {
   TradeBuilderContextResponse,
+  TradeBuilderTeamAssetPool,
   TradeProposalDetailResponse,
 } from "@/types/trade-workflow";
+
+const POSITION_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF"];
+
+function sortedPlayers(players: TradeBuilderTeamAssetPool["players"]) {
+  return [...players].sort((a, b) => {
+    const posA = POSITION_ORDER.indexOf(a.position);
+    const posB = POSITION_ORDER.indexOf(b.position);
+    const posDiff = (posA === -1 ? 99 : posA) - (posB === -1 ? 99 : posB);
+    if (posDiff !== 0) return posDiff;
+    return b.salary - a.salary;
+  });
+}
+
+function sortedPicks(picks: TradeBuilderTeamAssetPool["picks"]) {
+  return [...picks].sort((a, b) => a.round - b.round || a.seasonYear - b.seasonYear);
+}
 
 type SelectionState = {
   proposerPlayers: Set<string>;
@@ -270,46 +288,58 @@ export function TradeBuilderView(props: {
                     isProposer ? "trade-builder-assets-proposer" : "trade-builder-assets-counterparty"
                   }
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {pool.availability.pickDataIncomplete ? (
                       <div className="rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-3 text-xs text-amber-100">
-                            Pick ownership is partially unavailable for this team. Review the available pick data before validating or submitting the proposal.
+                        Pick ownership is partially unavailable for this team. Review the available pick data before validating or submitting the proposal.
                       </div>
                     ) : null}
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-100">Players</h4>
-                      <div className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-1">
-                        {pool.players.map((player) => (
-                          <label
-                            key={player.contractId}
-                            className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm"
-                          >
-                            <Checkbox
-                              checked={playerSelection.has(player.playerId)}
-                              onChange={() =>
-                                isProposer
-                                  ? props.onToggleProposerPlayer(player.playerId)
-                                  : props.onToggleCounterpartyPlayer(player.playerId)
-                              }
-                              className="mt-1"
-                            />
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium text-slate-100">
-                                {player.name}
-                              </span>
-                              <span className="block text-xs text-slate-400">
-                                {player.position} · ${player.salary} · {player.yearsRemaining} year(s)
-                              </span>
-                              {player.isFranchiseTag || player.isRestricted ? (
-                                <span className="mt-1 block text-xs text-amber-200">
-                                  {player.isFranchiseTag ? "Tagged" : null}
-                                  {player.isFranchiseTag && player.isRestricted ? " · " : null}
-                                  {player.isRestricted ? "Restricted" : null}
-                                </span>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Players</h4>
+                        <div className="h-px flex-1 bg-slate-800" />
+                        <span className="text-[10px] text-slate-600">{pool.players.length}</span>
+                      </div>
+                      <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                        {sortedPlayers(pool.players).map((player, i, arr) => {
+                          const showGroupLabel = player.position !== arr[i - 1]?.position;
+                          return (
+                            <Fragment key={player.contractId}>
+                              {showGroupLabel ? (
+                                <p className={`${i > 0 ? "mt-3" : ""} mb-1 text-[10px] font-medium uppercase tracking-widest text-slate-600`}>
+                                  {player.position}
+                                </p>
                               ) : null}
-                            </span>
-                          </label>
-                        ))}
+                              <label className={`mb-1 flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                playerSelection.has(player.playerId)
+                                  ? "border-sky-700/60 bg-sky-950/30"
+                                  : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
+                              }`}>
+                                <Checkbox
+                                  checked={playerSelection.has(player.playerId)}
+                                  onChange={() =>
+                                    isProposer
+                                      ? props.onToggleProposerPlayer(player.playerId)
+                                      : props.onToggleCounterpartyPlayer(player.playerId)
+                                  }
+                                />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-medium text-slate-100">
+                                    {player.name}
+                                  </span>
+                                  <span className="block text-xs text-slate-400">
+                                    ${player.salary} · {player.yearsRemaining}yr
+                                  </span>
+                                </span>
+                                {player.isFranchiseTag || player.isRestricted ? (
+                                  <span className="shrink-0 rounded border border-amber-700/40 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-300">
+                                    {player.isFranchiseTag ? "Tagged" : "RFA"}
+                                  </span>
+                                ) : null}
+                              </label>
+                            </Fragment>
+                          );
+                        })}
                         {pool.players.length === 0 ? (
                           <p className="text-sm text-slate-500">
                             No tradable players are currently available in this pool.
@@ -318,12 +348,20 @@ export function TradeBuilderView(props: {
                       </div>
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-100">Picks</h4>
-                      <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pr-1">
-                        {pool.picks.map((pick) => (
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Picks</h4>
+                        <div className="h-px flex-1 bg-slate-800" />
+                        <span className="text-[10px] text-slate-600">{pool.picks.length}</span>
+                      </div>
+                      <div className="mt-3 max-h-44 space-y-1 overflow-y-auto pr-1">
+                        {sortedPicks(pool.picks).map((pick) => (
                           <label
                             key={pick.id}
-                            className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm"
+                            className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                              pickSelection.has(pick.id)
+                                ? "border-sky-700/60 bg-sky-950/30"
+                                : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
+                            }`}
                           >
                             <Checkbox
                               checked={pickSelection.has(pick.id)}
@@ -332,13 +370,11 @@ export function TradeBuilderView(props: {
                                   ? props.onToggleProposerPick(pick.id)
                                   : props.onToggleCounterpartyPick(pick.id)
                               }
-                              className="mt-1"
                             />
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium text-slate-100">
-                                {pick.label}
-                              </span>
+                            <span className="min-w-0 flex-1 truncate font-medium text-slate-100">
+                              {pick.label}
                             </span>
+                            <span className="shrink-0 text-[10px] text-slate-500">Rd {pick.round}</span>
                           </label>
                         ))}
                         {pool.picks.length === 0 ? (
