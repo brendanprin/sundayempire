@@ -73,26 +73,45 @@ function buildDecisionState(detail: TradeProposalDetailResponse) {
   }
 }
 
+function buildViewOnlyNote(detail: TradeProposalDetailResponse): string {
+  switch (detail.proposal.status) {
+    case "DECLINED":
+      return "This proposal was declined. The package and evaluation record are preserved for reference.";
+    case "PROCESSED":
+      return "This trade has been settled and roster and cap changes applied.";
+    case "REVIEW_REJECTED":
+      return "This proposal was rejected during commissioner review and will not proceed.";
+    case "SUBMITTED":
+      return "This proposal has been submitted. Awaiting response from the counterparty.";
+    case "ACCEPTED":
+      return "This trade was accepted and is pending settlement by the commissioner.";
+    case "REVIEW_APPROVED":
+      return "Commissioner review is complete. Awaiting settlement.";
+    default:
+      return "No action is available for your current role on this proposal.";
+  }
+}
+
 function buildActionGuidance(detail: TradeProposalDetailResponse) {
   if (detail.permissions.canProcess) {
-    return "This proposal is approved and ready for commissioner settlement.";
+    return "Accepted and approved — ready to settle. Applying settlement will update rosters and cap immediately.";
   }
   if (detail.permissions.canCommissionerReview) {
-    return "Commissioner review is required before this proposal can move forward.";
+    return "This proposal was flagged during submission. Review the findings and decide whether to approve or reject.";
   }
   if (detail.permissions.canAccept || detail.permissions.canDecline) {
-    return "Your team can respond to this submitted proposal.";
+    return "This trade has been proposed to your team. Review the package and respond.";
   }
   if (detail.permissions.canSubmit) {
     if (detail.currentEvaluation?.outcome === "FAIL_HARD_BLOCK") {
       return "This draft is blocked. Reopen the Trade Builder to resolve findings before submitting.";
     }
-    return "This draft is ready for submission.";
+    return "This draft is validated and ready to submit to the counterparty.";
   }
   if (detail.permissions.canEditDraft) {
     return "This draft can still be edited in the Trade Builder.";
   }
-  return "No action is available for your role or the current trade state.";
+  return buildViewOnlyNote(detail);
 }
 
 function buildSubmitActionState(detail: TradeProposalDetailResponse) {
@@ -182,11 +201,16 @@ export function TradeReviewWorkspace(props: {
         </DashboardCard>
         <DashboardCard title="Next Action" eyebrow="Available">
           <p className="text-sm font-medium text-slate-100">
-            {props.detail.permissions.canAccept ? "Accept/Decline" :
-             props.detail.permissions.canSubmit ? "Submit" :
-             props.detail.permissions.canCommissionerReview ? "Review" :
-             props.detail.permissions.canProcess ? "Settle" :
-             props.detail.permissions.canEditDraft ? "Edit" : "View Only"}
+            {props.detail.permissions.canProcess ? "Settle trade" :
+             props.detail.permissions.canAccept ? "Accept or decline" :
+             props.detail.permissions.canSubmit ? "Submit to counterparty" :
+             props.detail.permissions.canCommissionerReview ? "Commissioner review" :
+             props.detail.permissions.canEditDraft ? "Edit draft" :
+             props.detail.proposal.status === "DECLINED" ? "Closed — declined" :
+             props.detail.proposal.status === "PROCESSED" ? "Settled" :
+             props.detail.proposal.status === "SUBMITTED" ? "Awaiting response" :
+             props.detail.proposal.status === "REVIEW_REJECTED" ? "Closed — rejected" :
+             "View only"}
           </p>
         </DashboardCard>
       </div>
@@ -369,14 +393,16 @@ export function TradeReviewWorkspace(props: {
 
               {/* Process/Settle */}
               {props.detail.permissions.canProcess && (
-                <button
+                <Button
                   type="button"
+                  variant="primary"
                   onClick={props.onProcess}
                   disabled={Boolean(props.busyLabel)}
-                  className="w-full rounded-lg border border-sky-700/50 bg-sky-950/40 px-3 py-2 text-sm font-medium text-sky-100 hover:border-sky-500 disabled:opacity-60"
+                  loading={props.busyLabel === "process"}
+                  className="w-full justify-center"
                 >
-                  {props.busyLabel === "process" ? "Settling..." : "Settle Trade Now"}
-                </button>
+                  {props.busyLabel === "process" ? "Settling..." : "Apply Settlement"}
+                </Button>
               )}
 
               {/* No Actions Available */}
@@ -388,7 +414,7 @@ export function TradeReviewWorkspace(props: {
                !props.detail.permissions.canProcess && (
                 <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-3 text-center">
                   <p className="text-sm text-slate-400">
-                    This trade is view-only for the current role.
+                    {buildViewOnlyNote(props.detail)}
                   </p>
                 </div>
               )}

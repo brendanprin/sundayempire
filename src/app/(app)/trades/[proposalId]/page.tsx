@@ -54,14 +54,14 @@ export default function TradeProposalDetailPage() {
   }, [load]);
 
   const runAction = useCallback(
-    async (label: string, action: () => Promise<TradeProposalDetailResponse>) => {
+    async (label: string, successMessage: string, action: () => Promise<TradeProposalDetailResponse>) => {
       setBusyLabel(label);
       setError(null);
       setMessage(null);
       try {
         const payload = await action();
         setDetail(payload);
-        setMessage("Trade proposal updated.");
+        setMessage(successMessage);
       } catch (requestError) {
         setError(
           requestError instanceof Error
@@ -130,7 +130,7 @@ export default function TradeProposalDetailPage() {
       reviewReason={reviewReason}
       onReviewReasonChange={setReviewReason}
       onSubmitProposal={() =>
-        runAction("submit", () =>
+        runAction("submit", "Proposal submitted to the counterparty.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/trades/proposals/${proposalId}/submit`,
             { method: "POST" },
@@ -139,7 +139,7 @@ export default function TradeProposalDetailPage() {
         )
       }
       onAccept={() =>
-        runAction("accept", () =>
+        runAction("accept", "Trade accepted. Awaiting commissioner settlement.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/trades/proposals/${proposalId}/accept`,
             { method: "POST" },
@@ -148,7 +148,7 @@ export default function TradeProposalDetailPage() {
         )
       }
       onDecline={() =>
-        runAction("decline", () =>
+        runAction("decline", "Trade declined. This proposal is now closed.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/trades/proposals/${proposalId}/decline`,
             { method: "POST" },
@@ -157,7 +157,7 @@ export default function TradeProposalDetailPage() {
         )
       }
       onApprove={() =>
-        runAction("approve", () =>
+        runAction("approve", "Trade approved. It will proceed to settlement.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/commissioner/trades/${proposalId}/review`,
             {
@@ -175,7 +175,7 @@ export default function TradeProposalDetailPage() {
         )
       }
       onReject={() =>
-        runAction("reject", () =>
+        runAction("reject", "Trade rejected. This proposal will not proceed.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/commissioner/trades/${proposalId}/review`,
             {
@@ -193,7 +193,7 @@ export default function TradeProposalDetailPage() {
         )
       }
       onProcess={() =>
-        runAction("process", () =>
+        runAction("process", "Trade settled. Roster and cap changes have been applied.", () =>
           requestJson<TradeProposalDetailResponse>(
             `/api/commissioner/trades/${proposalId}/settle`,
             {
