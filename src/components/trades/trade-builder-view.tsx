@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { TradeStatusBadge } from "@/components/trades/trade-status-badge";
 import { Button, Select, Checkbox } from "@/components/ui";
@@ -86,6 +86,28 @@ function buildSelectedAssets(
   return [...playerLabels, ...pickLabels];
 }
 
+function StepBadge(props: { done: boolean; active: boolean; number: number }) {
+  if (props.done) {
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-700 bg-emerald-900/40 text-[10px] text-emerald-400">
+        ✓
+      </span>
+    );
+  }
+  if (props.active) {
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sky-600 text-[10px] font-bold text-sky-400">
+        {props.number}
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-[10px] font-bold text-slate-600">
+      {props.number}
+    </span>
+  );
+}
+
 function buildSubmissionGuidance(
   detail: TradeProposalDetailResponse | null,
   selectedCount: number,
@@ -149,6 +171,17 @@ export function TradeBuilderView(props: {
   );
   const submissionGuidance = buildSubmissionGuidance(props.detail, selectedCount);
 
+  const [assetFlash, setAssetFlash] = useState(false);
+  const prevCountRef = useRef(selectedCount);
+  useEffect(() => {
+    if (selectedCount !== prevCountRef.current) {
+      prevCountRef.current = selectedCount;
+      setAssetFlash(true);
+      const timer = setTimeout(() => setAssetFlash(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedCount]);
+
   return (
     <div className="space-y-6" data-testid="trade-builder">
       <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.3)]">
@@ -188,7 +221,9 @@ export function TradeBuilderView(props: {
           </p>
         </DashboardCard>
         <DashboardCard title="Selected Assets" eyebrow="Package size">
-          <p className="text-3xl font-semibold text-slate-100">{selectedCount}</p>
+          <p className={`text-3xl font-semibold transition-all duration-150 ${assetFlash ? "scale-110 text-sky-300" : "scale-100 text-slate-100"}`}>
+            {selectedCount}
+          </p>
         </DashboardCard>
         <DashboardCard title="Latest Decision" eyebrow="Trade review">
           <p className="text-lg font-semibold text-slate-100">
@@ -396,12 +431,27 @@ export function TradeBuilderView(props: {
           data-testid="trade-builder-summary-rail"
         >
           <section
-            className="scroll-mt-6 rounded-2xl border border-slate-600/80 bg-slate-900/60 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.35),inset_0_1px_0_rgba(148,163,184,0.06)]"
+            className={`scroll-mt-6 rounded-2xl border bg-slate-900/60 p-5 transition-all duration-300 ${
+              assetFlash
+                ? "border-sky-600/60 shadow-[0_24px_80px_rgba(15,23,42,0.35),0_0_24px_rgba(56,189,248,0.12),inset_0_1px_0_rgba(148,163,184,0.06)]"
+                : "border-slate-600/80 shadow-[0_24px_80px_rgba(15,23,42,0.35),inset_0_1px_0_rgba(148,163,184,0.06)]"
+            }`}
             data-testid="trade-builder-composition"
           >
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Proposed exchange</p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-100">Trade Package</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Proposed exchange</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-100">Trade Package</h3>
+              </div>
+              {selectedCount > 0 ? (
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-all duration-150 ${
+                  assetFlash
+                    ? "border-sky-600/60 bg-sky-900/40 text-sky-300"
+                    : "border-slate-700 bg-slate-800/60 text-slate-400"
+                }`}>
+                  {selectedCount} asset{selectedCount !== 1 ? "s" : ""}
+                </span>
+              ) : null}
             </div>
             <div className="mt-5 space-y-4 text-sm">
               {[
@@ -531,45 +581,74 @@ export function TradeBuilderView(props: {
           </DashboardCard>
 
           <DashboardCard
-            title="Available actions"
-            description="Save first, validate against league rules, then submit once the package is ready."
+            title="Actions"
             testId="trade-builder-actions"
           >
-            <div className="space-y-3 text-sm text-slate-300">
-              <p>{submissionGuidance}</p>
-              {currentEvaluation?.outcome === "FAIL_HARD_BLOCK" ? (
-                <p className="rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-3 text-rose-100">
-                  Submission is likely to fail until the hard-block findings above are addressed.
-                </p>
-              ) : null}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={props.onSaveDraft}
-                disabled={Boolean(props.busyLabel)}
-                loading={props.busyLabel === "save"}
-              >
-                {props.busyLabel === "save" ? "Saving..." : "Save Trade Draft"}
-              </Button>
-              <button
-                type="button"
-                onClick={props.onValidate}
-                disabled={Boolean(props.busyLabel)}
-                className="rounded-lg border border-sky-700/50 bg-sky-950/40 px-3 py-2 text-sm font-medium text-sky-100 hover:border-sky-500 disabled:opacity-60"
-              >
-                {props.busyLabel === "validate" ? "Running..." : "Run Trade Validation"}
-              </button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={props.onSubmit}
-                disabled={Boolean(props.busyLabel)}
-                loading={props.busyLabel === "submit"}
-              >
-                {props.busyLabel === "submit" ? "Submitting..." : "Submit Trade Proposal"}
-              </Button>
+            {currentEvaluation?.outcome === "FAIL_HARD_BLOCK" ? (
+              <p className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/30 px-3 py-3 text-sm text-rose-100">
+                Submission is blocked. Resolve the hard-block findings before submitting.
+              </p>
+            ) : (
+              <p className="mb-4 text-sm text-slate-400">{submissionGuidance}</p>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <StepBadge
+                  number={1}
+                  done={Boolean(props.detail)}
+                  active={selectedCount > 0 && !props.detail}
+                />
+                <Button
+                  type="button"
+                  variant={selectedCount > 0 && !props.detail ? "primary" : "subtle"}
+                  onClick={props.onSaveDraft}
+                  disabled={Boolean(props.busyLabel)}
+                  loading={props.busyLabel === "save"}
+                  className="flex-1 justify-center"
+                >
+                  {props.busyLabel === "save" ? "Saving..." : "Save Trade Draft"}
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <StepBadge
+                  number={2}
+                  done={Boolean(currentEvaluation)}
+                  active={Boolean(props.detail) && !currentEvaluation}
+                />
+                <button
+                  type="button"
+                  onClick={props.onValidate}
+                  disabled={Boolean(props.busyLabel)}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
+                    props.detail && !currentEvaluation
+                      ? "border border-sky-600/70 bg-sky-900/50 text-sky-100 hover:border-sky-500"
+                      : "border border-slate-800 bg-slate-900/40 text-slate-500 hover:border-slate-700 hover:text-slate-400"
+                  }`}
+                >
+                  {props.busyLabel === "validate" ? "Running..." : "Run Trade Validation"}
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <StepBadge
+                  number={3}
+                  done={false}
+                  active={Boolean(currentEvaluation) && currentEvaluation?.outcome !== "FAIL_HARD_BLOCK"}
+                />
+                <Button
+                  type="button"
+                  variant={
+                    currentEvaluation && currentEvaluation.outcome !== "FAIL_HARD_BLOCK"
+                      ? "primary"
+                      : "subtle"
+                  }
+                  onClick={props.onSubmit}
+                  disabled={Boolean(props.busyLabel) || currentEvaluation?.outcome === "FAIL_HARD_BLOCK"}
+                  loading={props.busyLabel === "submit"}
+                  className="flex-1 justify-center"
+                >
+                  {props.busyLabel === "submit" ? "Submitting..." : "Submit Trade Proposal"}
+                </Button>
+              </div>
             </div>
           </DashboardCard>
         </div>
