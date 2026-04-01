@@ -402,8 +402,8 @@ export function TradeBuilderView(props: {
             testId="trade-builder-validation"
           >
             {!currentEvaluation ? (
-              <p className="text-sm text-slate-500">
-                Run Trade Validation to capture the current decision, policy findings, and post-trade impact.
+              <p className="text-sm text-slate-400">
+                Build your trade package, then run validation to check rules, cap impact, and blockers.
               </p>
             ) : (
               <div className="space-y-4">
