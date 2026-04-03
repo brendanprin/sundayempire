@@ -1,74 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { requestJson } from "@/lib/client-request";
+import { AssignmentSummaryStrip } from "./_components/assignment-summary-strip";
+import { FranchiseTable } from "./_components/franchise-table";
+import { TeamDetailPanel } from "./_components/team-detail-panel";
+import { MemberList } from "./_components/member-list";
+import { SetupUtilitiesSection } from "./_components/setup-utilities-section";
+import type {
+  OwnerRow,
+  TeamRow,
+  OwnerForm,
+  TeamForm,
+  AssignmentFlow,
+} from "./_components/types";
+import { REMOVE_ASSIGNMENT } from "./_components/types";
 
-type AuthPayload = {
-  actor: {
-    leagueRole: "COMMISSIONER" | "MEMBER";
-  };
-};
+type AuthPayload = { actor: { leagueRole: "COMMISSIONER" | "MEMBER" } };
+type OwnerPayload = { owners: OwnerRow[] };
+type TeamPayload = { teams: TeamRow[] };
 
-type OwnerRow = {
-  id: string;
-  name: string;
-  email: string | null;
-  teamCount: number;
-};
-
-type OwnerPayload = {
-  owners: OwnerRow[];
-};
-
-type TeamRow = {
-  id: string;
-  name: string;
-  abbreviation: string | null;
-  divisionLabel: string | null;
-  owner: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-type TeamPayload = {
-  teams: TeamRow[];
-};
-
-type OwnerForm = {
-  name: string;
-  email: string;
-};
-
-type TeamForm = {
-  name: string;
-  abbreviation: string;
-  divisionLabel: string;
-  ownerId: string;
-};
-
-type FranchiseStatus = "unassigned" | "assigned" | "needs-reassignment";
-
-type AssignmentFlow = {
-  teamId: string;
-  mode: "assign" | "reassign";
-  pendingOwnerId: string; // "" = nothing chosen yet, REMOVE_ASSIGNMENT = explicit removal, uuid = new owner
-};
-
-const REMOVE_ASSIGNMENT = "__remove__";
-
-const EMPTY_OWNER_FORM: OwnerForm = {
-  name: "",
-  email: "",
-};
-
-const EMPTY_TEAM_FORM: TeamForm = {
-  name: "",
-  abbreviation: "",
-  divisionLabel: "",
-  ownerId: "",
-};
+const EMPTY_OWNER_FORM: OwnerForm = { name: "", email: "" };
+const EMPTY_TEAM_FORM: TeamForm = { name: "", abbreviation: "", divisionLabel: "", ownerId: "" };
 
 export default function CommissionerTeamsPage() {
   const [owners, setOwners] = useState<OwnerRow[]>([]);
@@ -86,6 +40,8 @@ export default function CommissionerTeamsPage() {
   const [setupOpen, setSetupOpen] = useState(false);
   const [assignmentFlow, setAssignmentFlow] = useState<AssignmentFlow | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // ── Data loading ──────────────────────────────────────────────────────────
 
   const reloadWorkspace = useCallback(async () => {
     const authPayload = await requestJson<AuthPayload>("/api/auth/me");
@@ -107,12 +63,8 @@ export default function CommissionerTeamsPage() {
 
   useEffect(() => {
     let mounted = true;
-
     reloadWorkspace()
-      .then(() => {
-        if (!mounted) return;
-        setError(null);
-      })
+      .then(() => { if (mounted) setError(null); })
       .catch((requestError) => {
         if (!mounted) return;
         setError(
@@ -121,21 +73,16 @@ export default function CommissionerTeamsPage() {
             : "Failed to load commissioner team administration workspace.",
         );
       });
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [reloadWorkspace]);
 
+  // Keep edit buffers in sync with server data without overwriting in-progress edits
   useEffect(() => {
-    setOwnerEdits((previous) => {
-      const next = { ...previous };
+    setOwnerEdits((prev) => {
+      const next = { ...prev };
       owners.forEach((owner) => {
         if (!next[owner.id]) {
-          next[owner.id] = {
-            name: owner.name,
-            email: owner.email ?? "",
-          };
+          next[owner.id] = { name: owner.name, email: owner.email ?? "" };
         }
       });
       return next;
@@ -143,8 +90,8 @@ export default function CommissionerTeamsPage() {
   }, [owners]);
 
   useEffect(() => {
-    setTeamEdits((previous) => {
-      const next = { ...previous };
+    setTeamEdits((prev) => {
+      const next = { ...prev };
       teams.forEach((team) => {
         if (!next[team.id]) {
           next[team.id] = {
@@ -159,23 +106,24 @@ export default function CommissionerTeamsPage() {
     });
   }, [teams]);
 
-  const ownerSelectOptions = useMemo(
-    () =>
-      owners.map((owner) => ({
-        id: owner.id,
-        label: owner.name,
-      })),
-    [owners],
-  );
+  // ── Derived data ──────────────────────────────────────────────────────────
 
   const ownerById = useMemo(() => new Map(owners.map((o) => [o.id, o])), [owners]);
+
+  const ownerSelectOptions = useMemo(
+    () => owners.map((o) => ({ id: o.id, label: o.name })),
+    [owners],
+  );
 
   const leagueStats = useMemo(() => {
     const totalTeams = teams.length;
     const assignedTeams = teams.filter((t) => t.owner !== null).length;
-    const unassignedTeams = totalTeams - assignedTeams;
-    const membersWithoutTeam = owners.filter((o) => o.teamCount === 0).length;
-    return { totalTeams, assignedTeams, unassignedTeams, membersWithoutTeam };
+    return {
+      totalTeams,
+      assignedTeams,
+      unassignedTeams: totalTeams - assignedTeams,
+      membersWithoutTeam: owners.filter((o) => o.teamCount === 0).length,
+    };
   }, [teams, owners]);
 
   const sortedTeams = useMemo(
@@ -189,122 +137,58 @@ export default function CommissionerTeamsPage() {
   );
 
   const unassignedOwners = useMemo(
-    () =>
-      owners
-        .filter((o) => o.teamCount === 0)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+    () => owners.filter((o) => o.teamCount === 0).sort((a, b) => a.name.localeCompare(b.name)),
     [owners],
   );
 
   const unassignedTeams = useMemo(
-    () =>
-      teams
-        .filter((t) => t.owner === null)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+    () => teams.filter((t) => t.owner === null).sort((a, b) => a.name.localeCompare(b.name)),
     [teams],
   );
 
-  function onOwnerSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-  }
+  // ── Owner actions ─────────────────────────────────────────────────────────
 
   async function createOwner() {
     if (ownerForm.name.trim().length < 2) {
       setError("Member name must be at least 2 characters.");
       return;
     }
-
     setBusyAction("create-owner");
     setError(null);
     setMessage(null);
-
     try {
-      await requestJson(
-        "/api/owners",
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: ownerForm.name.trim(),
-            email: ownerForm.email.trim() || null,
-          }),
-        },
-        "Failed to add league member.",
-      );
+      await requestJson("/api/owners", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: ownerForm.name.trim(), email: ownerForm.email.trim() || null }),
+      }, "Failed to add league member.");
       setOwnerForm(EMPTY_OWNER_FORM);
       setMessage("League member added.");
       await reloadWorkspace();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to add league member.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add league member.");
     } finally {
       setBusyAction(null);
     }
   }
 
-  async function createTeam() {
-    if (teamForm.name.trim().length < 2) {
-      setError("Team name must be at least 2 characters.");
-      return;
-    }
-
-    setBusyAction("create-team");
-    setError(null);
-    setMessage(null);
-
-    try {
-      await requestJson(
-        "/api/teams",
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: teamForm.name.trim(),
-            abbreviation: teamForm.abbreviation.trim() || null,
-            divisionLabel: teamForm.divisionLabel.trim() || null,
-            ownerId: teamForm.ownerId || null,
-          }),
-        },
-        "Failed to create team.",
-      );
-      setTeamForm(EMPTY_TEAM_FORM);
-      setMessage("Team created.");
-      await reloadWorkspace();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to create team.");
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  async function saveOwner(ownerId: string): Promise<boolean> {
+  async function saveOwner(ownerId: string): Promise<void> {
     const edit = ownerEdits[ownerId];
-    if (!edit) {
-      return false;
-    }
-
+    if (!edit) return;
     setBusyAction(`save-owner:${ownerId}`);
     setError(null);
     setMessage(null);
-
     try {
-      await requestJson(
-        `/api/owners/${ownerId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: edit.name.trim(),
-            email: edit.email.trim() || null,
-          }),
-        },
-        "Failed to update member.",
-      );
+      await requestJson(`/api/owners/${ownerId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: edit.name.trim(), email: edit.email.trim() || null }),
+      }, `Failed to update member "${edit.name}".`);
       setMessage("Member updated.");
+      setEditingOwnerId(null);
       await reloadWorkspace();
-      return true;
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to update member.");
-      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to update member "${edit.name}".`);
     } finally {
       setBusyAction(null);
     }
@@ -313,97 +197,99 @@ export default function CommissionerTeamsPage() {
   function discardOwnerEdit(ownerId: string) {
     const owner = owners.find((o) => o.id === ownerId);
     if (!owner) return;
-    setOwnerEdits((previous) => ({
-      ...previous,
-      [ownerId]: { name: owner.name, email: owner.email ?? "" },
-    }));
-  }
-
-  function cancelOwnerEdit(ownerId: string) {
-    discardOwnerEdit(ownerId);
-    setEditingOwnerId(null);
+    setOwnerEdits((prev) => ({ ...prev, [ownerId]: { name: owner.name, email: owner.email ?? "" } }));
   }
 
   function startEditingOwner(ownerId: string) {
-    if (editingOwnerId && editingOwnerId !== ownerId) {
-      discardOwnerEdit(editingOwnerId);
-    }
+    if (editingOwnerId && editingOwnerId !== ownerId) discardOwnerEdit(editingOwnerId);
     setEditingOwnerId(ownerId);
   }
 
-  async function assignOwnerToTeam(ownerId: string, teamId: string): Promise<boolean> {
+  async function assignOwnerToTeam(ownerId: string): Promise<void> {
+    const teamId = memberAssignTargets[ownerId];
+    if (!teamId) return;
     const team = teams.find((t) => t.id === teamId);
     const owner = owners.find((o) => o.id === ownerId);
-    if (!team || !owner) return false;
+    if (!team || !owner) return;
 
     setBusyAction(`assign-to-team:${ownerId}`);
     setError(null);
     setMessage(null);
-
     try {
-      await requestJson(
-        `/api/teams/${teamId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: team.name,
-            abbreviation: team.abbreviation ?? null,
-            divisionLabel: team.divisionLabel ?? null,
-            ownerId: ownerId,
-          }),
-        },
-        "Failed to assign member to franchise.",
-      );
+      await requestJson(`/api/teams/${teamId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: team.name,
+          abbreviation: team.abbreviation ?? null,
+          divisionLabel: team.divisionLabel ?? null,
+          ownerId,
+        }),
+      }, `Failed to assign ${owner.name} to ${team.name}.`);
       setMessage(`${owner.name} assigned to ${team.name}.`);
-      setMemberAssignTargets((previous) => {
-        const next = { ...previous };
-        delete next[ownerId];
-        return next;
-      });
+      setMemberAssignTargets((prev) => { const next = { ...prev }; delete next[ownerId]; return next; });
       await reloadWorkspace();
-      return true;
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error ? requestError.message : "Failed to assign member to franchise.",
-      );
-      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to assign ${owner.name} to ${team.name}.`);
     } finally {
       setBusyAction(null);
     }
   }
 
-  async function saveTeam(teamId: string): Promise<boolean> {
-    const edit = teamEdits[teamId];
-    if (!edit) {
-      return false;
-    }
+  // ── Team actions ──────────────────────────────────────────────────────────
 
+  async function createTeam() {
+    if (teamForm.name.trim().length < 2) {
+      setError("Team name must be at least 2 characters.");
+      return;
+    }
+    setBusyAction("create-team");
+    setError(null);
+    setMessage(null);
+    try {
+      await requestJson("/api/teams", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: teamForm.name.trim(),
+          abbreviation: teamForm.abbreviation.trim() || null,
+          divisionLabel: teamForm.divisionLabel.trim() || null,
+          ownerId: teamForm.ownerId || null,
+        }),
+      }, "Failed to create team.");
+      setTeamForm(EMPTY_TEAM_FORM);
+      setMessage("Team created.");
+      await reloadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create team.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function saveTeam(teamId: string): Promise<void> {
+    const edit = teamEdits[teamId];
+    const team = teams.find((t) => t.id === teamId);
+    if (!edit || !team) return;
     setBusyAction(`save-team:${teamId}`);
     setError(null);
     setMessage(null);
-
     try {
-      await requestJson(
-        `/api/teams/${teamId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: edit.name.trim(),
-            abbreviation: edit.abbreviation.trim() || null,
-            divisionLabel: edit.divisionLabel.trim() || null,
-            ownerId: edit.ownerId || null,
-          }),
-        },
-        "Failed to save team.",
-      );
+      await requestJson(`/api/teams/${teamId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: edit.name.trim(),
+          abbreviation: edit.abbreviation.trim() || null,
+          divisionLabel: edit.divisionLabel.trim() || null,
+          ownerId: edit.ownerId || null,
+        }),
+      }, `Failed to save team "${team.name}".`);
       setMessage("Team updated.");
+      setEditingTeamId(null);
       await reloadWorkspace();
-      return true;
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to save team.");
-      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to save team "${team.name}".`);
     } finally {
       setBusyAction(null);
     }
@@ -412,8 +298,8 @@ export default function CommissionerTeamsPage() {
   function discardTeamEdit(teamId: string) {
     const team = teams.find((t) => t.id === teamId);
     if (!team) return;
-    setTeamEdits((previous) => ({
-      ...previous,
+    setTeamEdits((prev) => ({
+      ...prev,
       [teamId]: {
         name: team.name,
         abbreviation: team.abbreviation ?? "",
@@ -423,18 +309,18 @@ export default function CommissionerTeamsPage() {
     }));
   }
 
+  function startEditingTeam(teamId: string) {
+    if (editingTeamId && editingTeamId !== teamId) discardTeamEdit(editingTeamId);
+    setAssignmentFlow(null);
+    setEditingTeamId(teamId);
+  }
+
   function cancelTeamEdit(teamId: string) {
     discardTeamEdit(teamId);
     setEditingTeamId(null);
   }
 
-  function startEditingTeam(teamId: string) {
-    if (editingTeamId && editingTeamId !== teamId) {
-      discardTeamEdit(editingTeamId);
-    }
-    setAssignmentFlow(null);
-    setEditingTeamId(teamId);
-  }
+  // ── Assignment flow ───────────────────────────────────────────────────────
 
   function startAssignmentFlow(teamId: string) {
     if (editingTeamId) cancelTeamEdit(editingTeamId);
@@ -462,22 +348,17 @@ export default function CommissionerTeamsPage() {
     setBusyAction(`confirm-assignment:${teamId}`);
     setError(null);
     setMessage(null);
-
     try {
-      await requestJson(
-        `/api/teams/${teamId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: team.name,
-            abbreviation: team.abbreviation ?? null,
-            divisionLabel: team.divisionLabel ?? null,
-            ownerId: newOwnerId,
-          }),
-        },
-        "Failed to update franchise assignment.",
-      );
+      await requestJson(`/api/teams/${teamId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: team.name,
+          abbreviation: team.abbreviation ?? null,
+          divisionLabel: team.divisionLabel ?? null,
+          ownerId: newOwnerId,
+        }),
+      }, `Failed to update assignment for ${team.name}.`);
 
       if (mode === "assign") {
         setMessage(`${newOwner?.name ?? "Member"} assigned to ${team.name}.`);
@@ -491,20 +372,26 @@ export default function CommissionerTeamsPage() {
 
       setAssignmentFlow(null);
       await reloadWorkspace();
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to update franchise assignment.",
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to update assignment for ${team.name}.`);
     } finally {
       setBusyAction(null);
     }
   }
 
-  if (accessDenied) {
-    return null;
-  }
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (accessDenied) return null;
+
+  const editingTeam = editingTeamId ? teams.find((t) => t.id === editingTeamId) : null;
+  const editingTeamEdit = editingTeamId
+    ? (teamEdits[editingTeamId] ?? {
+        name: editingTeam?.name ?? "",
+        abbreviation: editingTeam?.abbreviation ?? "",
+        divisionLabel: editingTeam?.divisionLabel ?? "",
+        ownerId: editingTeam?.owner?.id ?? "",
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -527,706 +414,70 @@ export default function CommissionerTeamsPage() {
         </div>
       ) : null}
 
-      <div
-        data-testid="assignment-summary-strip"
-        className={`rounded-lg border px-4 py-3 ${
-          leagueStats.unassignedTeams > 0 || leagueStats.membersWithoutTeam > 0
-            ? "border-amber-800/50 bg-amber-950/10"
-            : "border-emerald-800/40 bg-emerald-950/10"
-        }`}
-      >
-        <div className="mb-3 flex items-center gap-2">
-          {leagueStats.unassignedTeams > 0 || leagueStats.membersWithoutTeam > 0 ? (
-            <>
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <p className="text-xs font-medium text-amber-400">Needs attention</p>
-            </>
-          ) : leagueStats.totalTeams === 0 ? (
-            <>
-              <span className="h-2 w-2 rounded-full bg-slate-600" />
-              <p className="text-xs font-medium text-slate-500">No franchises set up yet</p>
-            </>
-          ) : (
-            <>
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <p className="text-xs font-medium text-emerald-400">Fully staffed</p>
-            </>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-5">
-          <div>
-            <p className="text-xs text-slate-500">Total Teams</p>
-            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-total-teams">
-              {leagueStats.totalTeams}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Assigned</p>
-            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-assigned-teams">
-              {leagueStats.assignedTeams}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Unassigned</p>
-            <p
-              className={`mt-0.5 text-xl font-semibold ${leagueStats.unassignedTeams > 0 ? "text-amber-400" : "text-slate-100"}`}
-              data-testid="summary-unassigned-teams"
-            >
-              {leagueStats.unassignedTeams}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Without Team</p>
-            <p
-              className={`mt-0.5 text-xl font-semibold ${leagueStats.membersWithoutTeam > 0 ? "text-amber-400" : "text-slate-100"}`}
-              data-testid="summary-members-without-team"
-            >
-              {leagueStats.membersWithoutTeam}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Pending Invites</p>
-            <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-pending-invites">
-              0
-            </p>
-          </div>
-        </div>
-      </div>
+      <AssignmentSummaryStrip stats={leagueStats} />
 
-      <section className="space-y-2 rounded-lg border border-slate-800 bg-slate-950 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold">Franchise Assignments</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              One row per franchise. Unassigned franchises appear first.
-            </p>
-          </div>
-          <span className="text-xs text-slate-400">{teams.length} teams</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm" data-testid="commissioner-team-admin-teams-table">
-            <thead className="text-slate-300">
-              <tr className="border-b border-slate-800">
-                <th className="px-3 py-2 text-left">Team Name</th>
-                <th className="px-3 py-2 text-left">Abbr</th>
-                <th className="px-3 py-2 text-left">Division</th>
-                <th className="px-3 py-2 text-left">Assigned Member</th>
-                <th className="px-3 py-2 text-left">Email</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedTeams.map((team) => {
-                const isEditing = editingTeamId === team.id;
-                const isInAssignmentFlow = assignmentFlow?.teamId === team.id;
+      <FranchiseTable
+        teams={sortedTeams}
+        ownerById={ownerById}
+        ownerSelectOptions={ownerSelectOptions}
+        editingTeamId={editingTeamId}
+        assignmentFlow={assignmentFlow}
+        busyAction={busyAction}
+        onEdit={startEditingTeam}
+        onAssign={startAssignmentFlow}
+        onReassign={startReassignmentFlow}
+        onFlowChange={setAssignmentFlow}
+        onFlowConfirm={confirmAssignmentChange}
+        onFlowCancel={() => setAssignmentFlow(null)}
+      />
 
-                const status: FranchiseStatus = !team.owner
-                  ? "unassigned"
-                  : (ownerById.get(team.owner.id)?.teamCount ?? 0) > 1
-                    ? "needs-reassignment"
-                    : "assigned";
+      {editingTeamId && editingTeam && editingTeamEdit ? (
+        <TeamDetailPanel
+          team={editingTeam}
+          edit={editingTeamEdit}
+          busyAction={busyAction}
+          onSave={() => saveTeam(editingTeamId)}
+          onCancel={() => cancelTeamEdit(editingTeamId)}
+          onEditChange={(next) =>
+            setTeamEdits((prev) => ({ ...prev, [editingTeamId]: next }))
+          }
+        />
+      ) : null}
 
-                const savedMemberEmail = team.owner
-                  ? (ownerById.get(team.owner.id)?.email ?? null)
-                  : null;
+      <MemberList
+        unassignedOwners={unassignedOwners}
+        unassignedTeams={unassignedTeams}
+        ownerEdits={ownerEdits}
+        memberAssignTargets={memberAssignTargets}
+        editingOwnerId={editingOwnerId}
+        busyAction={busyAction}
+        onEditChange={(ownerId, next) =>
+          setOwnerEdits((prev) => ({ ...prev, [ownerId]: next }))
+        }
+        onAssignTargetChange={(ownerId, teamId) =>
+          setMemberAssignTargets((prev) => ({ ...prev, [ownerId]: teamId }))
+        }
+        onSave={saveOwner}
+        onCancel={(ownerId) => {
+          discardOwnerEdit(ownerId);
+          setEditingOwnerId(null);
+        }}
+        onStartEdit={startEditingOwner}
+        onAssign={assignOwnerToTeam}
+      />
 
-                const statusBadge =
-                  status === "unassigned" ? (
-                    <span
-                      data-testid={`franchise-status-${team.id}`}
-                      className="whitespace-nowrap rounded-full bg-amber-900/40 px-2 py-0.5 text-xs text-amber-400"
-                    >
-                      Unassigned
-                    </span>
-                  ) : status === "needs-reassignment" ? (
-                    <span
-                      data-testid={`franchise-status-${team.id}`}
-                      className="whitespace-nowrap rounded-full bg-red-900/40 px-2 py-0.5 text-xs text-red-400"
-                    >
-                      Needs Reassignment
-                    </span>
-                  ) : (
-                    <span
-                      data-testid={`franchise-status-${team.id}`}
-                      className="whitespace-nowrap rounded-full bg-emerald-900/40 px-2 py-0.5 text-xs text-emerald-400"
-                    >
-                      Assigned
-                    </span>
-                  );
-
-                // --- Assignment flow: explicit assign / reassign / remove ---
-                if (isInAssignmentFlow) {
-                  const flow = assignmentFlow!;
-                  const isAssignMode = flow.mode === "assign";
-                  const pendingOwnerId = flow.pendingOwnerId;
-                  const currentOwner = team.owner ? ownerById.get(team.owner.id) : null;
-                  const isRemoval = pendingOwnerId === REMOVE_ASSIGNMENT;
-                  const pendingOwner =
-                    !isRemoval && pendingOwnerId ? ownerById.get(pendingOwnerId) : null;
-                  const hasChosen = pendingOwnerId !== "";
-                  const isUnchanged = !isAssignMode && pendingOwnerId === team.owner?.id;
-                  const confirmDisabled = busyAction !== null || !hasChosen || isUnchanged;
-
-                  const confirmLabel =
-                    busyAction === `confirm-assignment:${team.id}`
-                      ? "Saving..."
-                      : isRemoval
-                        ? "Confirm Removal"
-                        : isAssignMode
-                          ? "Confirm Assignment"
-                          : "Confirm Reassignment";
-
-                  return (
-                    <tr
-                      key={team.id}
-                      data-testid={`franchise-row-${team.id}`}
-                      className={`border-b border-slate-800/70 last:border-b-0 ${
-                        isAssignMode
-                          ? "bg-amber-950/5 outline outline-1 outline-amber-800/40"
-                          : "bg-slate-900/40 outline outline-1 outline-sky-800/40"
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-sm font-medium text-slate-100">{team.name}</td>
-                      <td className="px-3 py-2 text-xs text-slate-500">
-                        {team.abbreviation || <span className="text-slate-600">—</span>}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-500">
-                        {team.divisionLabel || <span className="text-slate-600">—</span>}
-                      </td>
-                      <td colSpan={4} className="px-3 py-3">
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-slate-300">
-                            {isAssignMode
-                              ? "Assign a member to this franchise"
-                              : "Change franchise assignment"}
-                          </p>
-
-                          {!isAssignMode && currentOwner ? (
-                            <p className="text-xs text-slate-500">
-                              Currently:{" "}
-                              <span className="font-medium text-slate-300">{currentOwner.name}</span>
-                              {currentOwner.email ? (
-                                <span className="ml-1 text-slate-600">({currentOwner.email})</span>
-                              ) : null}
-                            </p>
-                          ) : null}
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <select
-                              data-testid={`franchise-assignment-select-${team.id}`}
-                              value={pendingOwnerId}
-                              onChange={(event) =>
-                                setAssignmentFlow({ ...flow, pendingOwnerId: event.target.value })
-                              }
-                              className="min-w-44 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                            >
-                              <option value="" disabled>
-                                {isAssignMode ? "Select a member…" : "Choose new assignment…"}
-                              </option>
-                              {!isAssignMode ? (
-                                <option value={REMOVE_ASSIGNMENT}>— Remove assignment</option>
-                              ) : null}
-                              {ownerSelectOptions.map((opt) => (
-                                <option key={opt.id} value={opt.id}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            {!isAssignMode && hasChosen && !isRemoval && pendingOwner ? (
-                              <span className="text-xs text-slate-500">
-                                {currentOwner?.name}
-                                <span className="mx-1.5 text-slate-600">→</span>
-                                <span className="font-medium text-slate-200">{pendingOwner.name}</span>
-                              </span>
-                            ) : null}
-                          </div>
-
-                          {isRemoval && currentOwner ? (
-                            <p className="text-xs text-orange-400">
-                              {currentOwner.name} will be unassigned from {team.name} and moved to the
-                              unassigned queue.
-                            </p>
-                          ) : null}
-
-                          {!isAssignMode && !isRemoval && hasChosen && pendingOwner ? (
-                            <p className="text-xs text-amber-400">
-                              {currentOwner?.name} will lose control of {team.name}.{" "}
-                              {pendingOwner.name} will take over.
-                            </p>
-                          ) : null}
-
-                          <div className="flex items-center gap-2 pt-0.5">
-                            <button
-                              type="button"
-                              data-testid={`franchise-confirm-assignment-btn-${team.id}`}
-                              onClick={confirmAssignmentChange}
-                              disabled={confirmDisabled}
-                              className="rounded border border-sky-700 bg-sky-900/40 px-2.5 py-1 text-xs text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {confirmLabel}
-                            </button>
-                            <button
-                              type="button"
-                              data-testid={`franchise-cancel-assignment-btn-${team.id}`}
-                              onClick={() => setAssignmentFlow(null)}
-                              disabled={busyAction !== null}
-                              className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
-
-                // --- View mode ---
-                return (
-                  <tr
-                    key={team.id}
-                    data-testid={`franchise-row-${team.id}`}
-                    className={`border-b border-slate-800/70 last:border-b-0 ${
-                      isEditing
-                        ? "bg-slate-900/60 outline outline-1 outline-sky-900/60"
-                        : status === "unassigned"
-                          ? "bg-amber-950/10"
-                          : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2 text-sm text-slate-100">{team.name}</td>
-                    <td className="px-3 py-2 text-xs text-slate-400">
-                      {team.abbreviation || <span className="text-slate-600">—</span>}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-slate-400">
-                      {team.divisionLabel || <span className="text-slate-600">—</span>}
-                    </td>
-                    <td className="px-3 py-2">
-                      {team.owner ? (
-                        <span className="text-sm text-slate-100">{team.owner.name}</span>
-                      ) : (
-                        <span className="text-xs text-amber-500">No member assigned</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-slate-400">
-                      {savedMemberEmail ?? <span className="text-slate-600">—</span>}
-                    </td>
-                    <td className="px-3 py-2">{statusBadge}</td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {status === "unassigned" ? (
-                          <button
-                            type="button"
-                            data-testid={`franchise-assign-btn-${team.id}`}
-                            onClick={() => startAssignmentFlow(team.id)}
-                            disabled={busyAction !== null}
-                            className="rounded border border-amber-700/60 bg-amber-900/20 px-2 py-1 text-xs text-amber-300 disabled:opacity-50"
-                          >
-                            Assign Member
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            data-testid={`franchise-reassign-btn-${team.id}`}
-                            onClick={() => startReassignmentFlow(team.id)}
-                            disabled={busyAction !== null}
-                            className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 disabled:opacity-50"
-                          >
-                            Reassign
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          data-testid={`franchise-edit-btn-${team.id}`}
-                          onClick={() => startEditingTeam(team.id)}
-                          disabled={busyAction !== null}
-                          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {teams.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                    No teams found. Add a franchise using League Setup Utilities below.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {editingTeamId ? (() => {
-        const team = teams.find((t) => t.id === editingTeamId);
-        if (!team) return null;
-        const edit = teamEdits[editingTeamId] ?? {
-          name: team.name,
-          abbreviation: team.abbreviation ?? "",
-          divisionLabel: team.divisionLabel ?? "",
-          ownerId: team.owner?.id ?? "",
-        };
-        return (
-          <section
-            data-testid={`franchise-detail-panel-${editingTeamId}`}
-            className="rounded-lg border border-sky-800/40 bg-slate-900/60 p-4"
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-200">Edit Franchise Details</h3>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Updating <span className="text-slate-300">{team.name}</span>. Assignment is managed separately via the Assign / Reassign actions in the table.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => cancelTeamEdit(editingTeamId)}
-                className="flex-shrink-0 text-xs text-slate-500 hover:text-slate-300"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Franchise Name</span>
-                <input
-                  data-testid={`franchise-detail-name-${editingTeamId}`}
-                  value={edit.name}
-                  onChange={(event) =>
-                    setTeamEdits((previous) => ({
-                      ...previous,
-                      [editingTeamId]: { ...edit, name: event.target.value },
-                    }))
-                  }
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Abbreviation</span>
-                <input
-                  data-testid={`franchise-detail-abbr-${editingTeamId}`}
-                  value={edit.abbreviation}
-                  onChange={(event) =>
-                    setTeamEdits((previous) => ({
-                      ...previous,
-                      [editingTeamId]: { ...edit, abbreviation: event.target.value },
-                    }))
-                  }
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Division</span>
-                <input
-                  data-testid={`franchise-detail-division-${editingTeamId}`}
-                  value={edit.divisionLabel}
-                  onChange={(event) =>
-                    setTeamEdits((previous) => ({
-                      ...previous,
-                      [editingTeamId]: { ...edit, divisionLabel: event.target.value },
-                    }))
-                  }
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                data-testid={`franchise-detail-save-${editingTeamId}`}
-                onClick={async () => {
-                  const saved = await saveTeam(editingTeamId);
-                  if (saved) setEditingTeamId(null);
-                }}
-                disabled={busyAction !== null}
-                className="rounded border border-sky-700 bg-sky-900/40 px-3 py-1.5 text-sm text-sky-200 disabled:opacity-50"
-              >
-                {busyAction === `save-team:${editingTeamId}` ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                type="button"
-                data-testid={`franchise-detail-cancel-${editingTeamId}`}
-                onClick={() => cancelTeamEdit(editingTeamId)}
-                disabled={busyAction !== null}
-                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-400 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </section>
-        );
-      })() : null}
-
-      <section
-        data-testid="commissioner-team-admin-owners-table"
-        className="space-y-3 rounded-lg border border-slate-700/50 bg-slate-900/30 p-4"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-300">Unassigned / Pending Members</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              People not currently attached to a franchise.
-            </p>
-          </div>
-          {unassignedOwners.length > 0 ? (
-            <span className="rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-              {unassignedOwners.length}
-            </span>
-          ) : null}
-        </div>
-
-        {unassignedOwners.length === 0 ? (
-          <p className="py-4 text-center text-xs text-slate-500">
-            All members are assigned to a franchise.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {unassignedOwners.map((owner) => {
-              const edit = ownerEdits[owner.id] ?? { name: owner.name, email: owner.email ?? "" };
-              const isEditing = editingOwnerId === owner.id;
-              const assignTarget = memberAssignTargets[owner.id] ?? "";
-              const isSavingOwner = busyAction === `save-owner:${owner.id}`;
-              const isAssigning = busyAction === `assign-to-team:${owner.id}`;
-
-              return (
-                <li
-                  key={owner.id}
-                  data-testid={`member-row-${owner.id}`}
-                  className="flex items-center gap-3 rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2.5"
-                >
-                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-300">
-                    {owner.name.charAt(0).toUpperCase()}
-                  </div>
-
-                  {isEditing ? (
-                    <>
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                        <input
-                          value={edit.name}
-                          onChange={(event) =>
-                            setOwnerEdits((previous) => ({
-                              ...previous,
-                              [owner.id]: { ...edit, name: event.target.value },
-                            }))
-                          }
-                          placeholder="Name"
-                          className="min-w-32 flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        />
-                        <input
-                          value={edit.email}
-                          onChange={(event) =>
-                            setOwnerEdits((previous) => ({
-                              ...previous,
-                              [owner.id]: { ...edit, email: event.target.value },
-                            }))
-                          }
-                          placeholder="Email"
-                          className="min-w-40 flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
-                        />
-                      </div>
-                      <div className="flex flex-shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          data-testid={`member-save-btn-${owner.id}`}
-                          onClick={async () => {
-                            const saved = await saveOwner(owner.id);
-                            if (saved) setEditingOwnerId(null);
-                          }}
-                          disabled={busyAction !== null}
-                          className="rounded border border-sky-700 bg-sky-900/40 px-2 py-1 text-xs text-sky-200 disabled:opacity-50"
-                        >
-                          {isSavingOwner ? "Saving..." : "Save"}
-                        </button>
-                        <button
-                          type="button"
-                          data-testid={`member-cancel-btn-${owner.id}`}
-                          onClick={() => cancelOwnerEdit(owner.id)}
-                          disabled={busyAction !== null}
-                          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-slate-100">{owner.name}</p>
-                        <p className="truncate text-xs text-slate-500">
-                          {owner.email ?? (
-                            <span className="italic text-slate-600">No email on record</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
-                        <select
-                          data-testid={`member-assign-select-${owner.id}`}
-                          value={assignTarget}
-                          onChange={(event) =>
-                            setMemberAssignTargets((previous) => ({
-                              ...previous,
-                              [owner.id]: event.target.value,
-                            }))
-                          }
-                          className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300"
-                        >
-                          <option value="">Assign to franchise…</option>
-                          {unassignedTeams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.name}
-                            </option>
-                          ))}
-                          {unassignedTeams.length === 0 ? (
-                            <option disabled value="">
-                              No unassigned franchises
-                            </option>
-                          ) : null}
-                        </select>
-                        <button
-                          type="button"
-                          data-testid={`member-assign-btn-${owner.id}`}
-                          onClick={() => {
-                            if (assignTarget) assignOwnerToTeam(owner.id, assignTarget);
-                          }}
-                          disabled={!assignTarget || busyAction !== null}
-                          className="rounded border border-amber-700/60 bg-amber-900/20 px-2 py-1 text-xs text-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {isAssigning ? "Assigning..." : "Assign"}
-                        </button>
-                        <button
-                          type="button"
-                          data-testid={`member-edit-btn-${owner.id}`}
-                          onClick={() => startEditingOwner(owner.id)}
-                          disabled={busyAction !== null}
-                          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-400 disabled:opacity-50"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-lg border border-slate-700/40 bg-slate-950/40">
-        <button
-          type="button"
-          data-testid="setup-utilities-toggle"
-          onClick={() => setSetupOpen((previous) => !previous)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
-        >
-          <div>
-            <h3 className="text-sm font-medium text-slate-400">League Setup Utilities</h3>
-            <p className="mt-0.5 text-xs text-slate-600">Add franchises or members to the league.</p>
-          </div>
-          <span className="ml-4 flex-shrink-0 text-xs text-slate-600">{setupOpen ? "▲" : "▼"}</span>
-        </button>
-
-        {setupOpen ? (
-          <div className="grid grid-cols-1 gap-4 border-t border-slate-800 px-4 pb-4 pt-4 lg:grid-cols-2">
-            <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-              <h3 className="text-sm font-semibold">Create League Member</h3>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Name</span>
-                <input
-                  data-testid="commissioner-team-admin-create-owner-name"
-                  value={ownerForm.name}
-                  onChange={(event) => setOwnerForm((previous) => ({ ...previous, name: event.target.value }))}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Email</span>
-                <input
-                  data-testid="commissioner-team-admin-create-owner-email"
-                  value={ownerForm.email}
-                  onChange={(event) => setOwnerForm((previous) => ({ ...previous, email: event.target.value }))}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={createOwner}
-                disabled={busyAction !== null}
-                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
-              >
-                {busyAction === "create-owner" ? "Adding..." : "Add League Member"}
-              </button>
-            </form>
-
-            <form onSubmit={onOwnerSubmit} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-              <h3 className="text-sm font-semibold">Create Franchise</h3>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Franchise Name</span>
-                <input
-                  data-testid="commissioner-team-admin-create-team-name"
-                  value={teamForm.name}
-                  onChange={(event) => setTeamForm((previous) => ({ ...previous, name: event.target.value }))}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                />
-              </label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block space-y-1 text-xs text-slate-400">
-                  <span>Abbreviation</span>
-                  <input
-                    data-testid="commissioner-team-admin-create-team-abbr"
-                    value={teamForm.abbreviation}
-                    onChange={(event) =>
-                      setTeamForm((previous) => ({ ...previous, abbreviation: event.target.value }))
-                    }
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                  />
-                </label>
-                <label className="block space-y-1 text-xs text-slate-400">
-                  <span>Division</span>
-                  <input
-                    data-testid="commissioner-team-admin-create-team-division"
-                    value={teamForm.divisionLabel}
-                    onChange={(event) =>
-                      setTeamForm((previous) => ({ ...previous, divisionLabel: event.target.value }))
-                    }
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                  />
-                </label>
-              </div>
-              <label className="block space-y-1 text-xs text-slate-400">
-                <span>Assign to Member</span>
-                <select
-                  data-testid="commissioner-team-admin-create-team-owner"
-                  value={teamForm.ownerId}
-                  onChange={(event) => setTeamForm((previous) => ({ ...previous, ownerId: event.target.value }))}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-                >
-                  <option value="">Unassigned</option>
-                  {ownerSelectOptions.map((ownerOption) => (
-                    <option key={ownerOption.id} value={ownerOption.id}>
-                      {ownerOption.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={createTeam}
-                disabled={busyAction !== null}
-                className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-100 disabled:opacity-50"
-              >
-                {busyAction === "create-team" ? "Adding..." : "Add Franchise"}
-              </button>
-            </form>
-          </div>
-        ) : null}
-      </section>
+      <SetupUtilitiesSection
+        setupOpen={setupOpen}
+        ownerForm={ownerForm}
+        teamForm={teamForm}
+        ownerSelectOptions={ownerSelectOptions}
+        busyAction={busyAction}
+        onToggle={() => setSetupOpen((prev) => !prev)}
+        onOwnerFormChange={setOwnerForm}
+        onTeamFormChange={setTeamForm}
+        onCreateOwner={createOwner}
+        onCreateTeam={createTeam}
+      />
 
       <Link href="/teams" className="inline-flex text-sm text-sky-300 hover:text-sky-200">
         Open browse-only Teams directory

@@ -61,6 +61,11 @@ export async function GET(request: NextRequest) {
   const memberTeamId =
     auth.actor && isActorTeamScopedMember(auth.actor) ? auth.actor.teamId : null;
 
+  const rawLimit = parseInt(params.get("limit") ?? "200", 10);
+  const rawOffset = parseInt(params.get("offset") ?? "0", 10);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(1, rawLimit), 500) : 200;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
+
   const contracts = await prisma.contract.findMany({
     where: {
       seasonId: context.seasonId,
@@ -90,6 +95,8 @@ export async function GET(request: NextRequest) {
       },
     },
     orderBy: [{ yearsRemaining: "asc" }, { salary: "desc" }],
+    take: limit,
+    skip: offset,
   });
 
   return NextResponse.json({
@@ -102,6 +109,11 @@ export async function GET(request: NextRequest) {
       year: context.seasonYear,
     },
     contracts,
+    pagination: {
+      limit,
+      offset,
+      hasMore: contracts.length === limit,
+    },
   });
 }
 

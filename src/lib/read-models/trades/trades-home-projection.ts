@@ -27,6 +27,8 @@ export function createTradesHomeProjection(client: TradesReadDbClient = prisma) 
       const proposals = await proposalRepository.listBySeason({
         leagueId: input.leagueId,
         seasonId: input.seasonId,
+        // Members only need proposals involving their team — filter at DB level.
+        teamId: input.actor.leagueRole === "COMMISSIONER" ? null : input.actor.teamId,
       });
 
       const mapped = proposals.map(mapTradeProposalSummary);

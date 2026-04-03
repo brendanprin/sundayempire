@@ -10,6 +10,8 @@ import {
   getAuthenticatedUser,
   isLegacyAuthCompatibilityEnabled,
 } from "@/lib/auth";
+import { computeActiveCapTotal } from "@/lib/domain/contracts/active-cap-calculator";
+import { computeDeadCapTotal } from "@/lib/domain/contracts/dead-cap-calculator";
 import { createTeamFinancialStateService } from "@/lib/domain/contracts/team-financial-state-service";
 import { selectPreferredSeason } from "@/lib/domain/lifecycle/season-selection";
 import { prisma } from "@/lib/prisma";
@@ -345,4 +347,112 @@ export async function summarizeTeamCap(
     capSpaceHard,
     complianceStatus,
   };
+}
+
+export async function batchSummarizeTeamCap(
+  teams: Array<Pick<Team, "id">>,
+  season: Pick<Season, "id">,
+  ruleset: Pick<LeagueRuleSet, "rosterSize" | "salaryCapSoft" | "salaryCapHard">,
+): Promise<Map<string, TeamCapSummary>> {
+  if (teams.length === 0) {
+    return new Map();
+  }
+
+  const teamIds = teams.map((t) => t.id);
+
+  const [rosterCounts, ledgers, deadCapCharges] = await Promise.all([
+    prisma.rosterAssignment.groupBy({
+      by: ["teamId"],
+      where: {
+        teamId: { in: teamIds },
+        seasonId: season.id,
+        endedAt: null,
+        rosterStatus: { in: ["ACTIVE", "IR", "MIRRORED_ONLY"] },
+      },
+      _count: { _all: true },
+    }),
+    prisma.contractSeasonLedger.findMany({
+      where: {
+        seasonId: season.id,
+        contract: { teamId: { in: teamIds } },
+      },
+      select: {
+        annualSalary: true,
+        ledgerStatus: true,
+        contract: { select: { teamId: true } },
+      },
+    }),
+    prisma.deadCapCharge.findMany({
+      where: {
+        teamId: { in: teamIds },
+        appliesToSeasonId: season.id,
+      },
+      select: {
+        teamId: true,
+        systemCalculatedAmount: true,
+        adjustedAmount: true,
+      },
+    }),
+  ]);
+
+  const rosterCountByTeamId = new Map(
+    rosterCounts.map((r) => [r.teamId, r._count._all]),
+  );
+
+  const ledgersByTeamId = new Map<string, Array<{ annualSalary: number; ledgerStatus: string }>>();
+  for (const ledger of ledgers) {
+    const teamId = ledger.contract.teamId;
+    const bucket = ledgersByTeamId.get(teamId) ?? [];
+    bucket.push({ annualSalary: ledger.annualSalary, ledgerStatus: ledger.ledgerStatus });
+    ledgersByTeamId.set(teamId, bucket);
+  }
+
+  const deadCapByTeamId = new Map<
+    string,
+    Array<{ systemCalculatedAmount: number; adjustedAmount: number | null }>
+  >();
+  for (const charge of deadCapCharges) {
+    const bucket = deadCapByTeamId.get(charge.teamId) ?? [];
+    bucket.push({
+      systemCalculatedAmount: charge.systemCalculatedAmount,
+      adjustedAmount: charge.adjustedAmount,
+    });
+    deadCapByTeamId.set(charge.teamId, bucket);
+  }
+
+  const result = new Map<string, TeamCapSummary>();
+  for (const team of teams) {
+    const rosterCount = rosterCountByTeamId.get(team.id) ?? 0;
+    const activeCapHit = computeActiveCapTotal(
+      (ledgersByTeamId.get(team.id) ?? []).map((l) => ({
+        annualSalary: l.annualSalary,
+        ledgerStatus: l.ledgerStatus as Parameters<typeof computeActiveCapTotal>[0][number]["ledgerStatus"],
+      })),
+    );
+    const deadCapHit = computeDeadCapTotal(deadCapByTeamId.get(team.id) ?? []);
+    const totalCapHit = activeCapHit + deadCapHit;
+    const capSpaceSoft = ruleset.salaryCapSoft - totalCapHit;
+    const capSpaceHard = ruleset.salaryCapHard - totalCapHit;
+
+    let complianceStatus: TeamCapSummary["complianceStatus"] = "ok";
+    if (rosterCount > ruleset.rosterSize || totalCapHit > ruleset.salaryCapSoft) {
+      complianceStatus = "warning";
+    }
+    if (totalCapHit > ruleset.salaryCapHard) {
+      complianceStatus = "error";
+    }
+
+    result.set(team.id, {
+      teamId: team.id,
+      rosterCount,
+      activeCapHit,
+      deadCapHit,
+      totalCapHit,
+      capSpaceSoft,
+      capSpaceHard,
+      complianceStatus,
+    });
+  }
+
+  return result;
 }

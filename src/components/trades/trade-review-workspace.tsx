@@ -322,6 +322,7 @@ export function TradeReviewWorkspace(props: {
           <TradeValidationPanel
             evaluation={props.detail.currentEvaluation}
             status={props.detail.proposal.status}
+            showSubmissionGuidance={props.detail.permissions.canSubmit}
             compact={true}
             testId="trade-review-validation"
           />

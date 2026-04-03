@@ -85,14 +85,19 @@ function toLoggableError(error: unknown) {
 async function runBestEffortSideEffect(input: {
   action: "submit" | "accept" | "decline" | "review";
   proposalId: string;
+  effectType: "notification" | "activity";
   effect: () => Promise<unknown>;
 }) {
   try {
     await input.effect();
   } catch (error) {
-    logRuntime("warn", {
+    // Notifications and activity events are best-effort — the core trade state
+    // transition already committed. Log as error so monitoring can surface
+    // patterns without blocking the user response.
+    logRuntime("error", {
       event: "trade.proposal.side_effect_failed",
       action: input.action,
+      effectType: input.effectType,
       proposalId: input.proposalId,
       ...toLoggableError(error),
     });
@@ -392,6 +397,7 @@ export function createTradeProposalWorkflowService(
       await runBestEffortSideEffect({
         action: "submit",
         proposalId: result.proposalId,
+        effectType: "notification",
         effect: () =>
           result.notification.kind === "commissioner-review"
             ? notificationService.notifyCommissionerReview({
@@ -417,6 +423,7 @@ export function createTradeProposalWorkflowService(
         await runBestEffortSideEffect({
           action: "submit",
           proposalId: result.proposalId,
+          effectType: "activity",
           effect: () =>
             activityPublisher.publishSafe({
               leagueId: proposal.leagueId,
@@ -521,6 +528,7 @@ export function createTradeProposalWorkflowService(
       await runBestEffortSideEffect({
         action: "accept",
         proposalId: result.proposalId,
+        effectType: "notification",
         effect: () =>
           result.notification.kind === "commissioner-review"
             ? notificationService.notifyCommissionerReview({
@@ -549,6 +557,7 @@ export function createTradeProposalWorkflowService(
         await runBestEffortSideEffect({
           action: "accept",
           proposalId: result.proposalId,
+          effectType: "activity",
           effect: () =>
             activityPublisher.publishSafe({
               leagueId: proposal.leagueId,
@@ -601,6 +610,7 @@ export function createTradeProposalWorkflowService(
       await runBestEffortSideEffect({
         action: "decline",
         proposalId: updated.id,
+        effectType: "notification",
         effect: () =>
           notificationService.notifyProposalDecision({
             leagueId: updated.leagueId,
@@ -619,6 +629,7 @@ export function createTradeProposalWorkflowService(
         await runBestEffortSideEffect({
           action: "decline",
           proposalId: updated.id,
+          effectType: "activity",
           effect: () =>
             activityPublisher.publishSafe({
               leagueId: updated.leagueId,
@@ -792,6 +803,7 @@ export function createTradeProposalWorkflowService(
         runBestEffortSideEffect({
           action: "review",
           proposalId: result.proposalId,
+          effectType: "notification",
           effect: () =>
             commissionerOverrideFactory(client).notifyRecordedOverride({
               leagueId: result.notification.override.leagueId,
@@ -807,6 +819,7 @@ export function createTradeProposalWorkflowService(
         runBestEffortSideEffect({
           action: "review",
           proposalId: result.proposalId,
+          effectType: "notification",
           effect: () =>
             notificationService.notifyProposalDecision({
               leagueId: result.notification.proposalDecision.leagueId,
@@ -824,6 +837,7 @@ export function createTradeProposalWorkflowService(
           ? runBestEffortSideEffect({
               action: "review",
               proposalId: result.proposalId,
+              effectType: "activity",
               effect: () =>
                 activityPublisher.publishSafe({
                   leagueId: proposal.leagueId,

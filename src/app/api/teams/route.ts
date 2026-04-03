@@ -2,30 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { TransactionType } from "@prisma/client";
 import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { isActorTeamScopedMember, requireLeagueRole } from "@/lib/auth";
+import { isActorTeamScopedMember } from "@/lib/auth";
 import { evaluateLeagueCompliance } from "@/lib/compliance/service";
-import { getActiveLeagueContext, summarizeTeamCap } from "@/lib/league-context";
+import { batchSummarizeTeamCap } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
 import { TeamListItem } from "@/types/teams";
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) {
+    return access.response;
   }
 
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const { actor, context } = access;
 
   const scope = request.nextUrl.searchParams.get("scope");
   const includeAllTeams = scope === "all";
   const teamWhere =
-    auth.actor && isActorTeamScopedMember(auth.actor) && !includeAllTeams
-      ? { leagueId: context.leagueId, id: auth.actor.teamId! }
+    isActorTeamScopedMember(actor) && !includeAllTeams
+      ? { leagueId: context.leagueId, id: actor.teamId! }
       : { leagueId: context.leagueId };
 
   const teams = await prisma.team.findMany({
@@ -41,35 +37,29 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const picksOwned = await prisma.futurePick.groupBy({
-    by: ["currentTeamId"],
-    where: {
-      leagueId: context.leagueId,
-      seasonYear: {
-        gte: context.seasonYear,
-        lte: context.seasonYear + 2,
+  const [picksOwned, summaryByTeamId, leagueCompliance] = await Promise.all([
+    prisma.futurePick.groupBy({
+      by: ["currentTeamId"],
+      where: {
+        leagueId: context.leagueId,
+        seasonYear: {
+          gte: context.seasonYear,
+          lte: context.seasonYear + 2,
+        },
       },
-    },
-    _count: {
-      _all: true,
-    },
-  });
+      _count: { _all: true },
+    }),
+    batchSummarizeTeamCap(teams, { id: context.seasonId }, context.ruleset),
+    evaluateLeagueCompliance({
+      leagueId: context.leagueId,
+      seasonId: context.seasonId,
+    }),
+  ]);
 
   const picksOwnedByTeamId = new Map<string, number>(
     picksOwned.map((entry) => [entry.currentTeamId, entry._count._all]),
   );
 
-  const summaries = await Promise.all(
-    teams.map((team) =>
-      summarizeTeamCap(team, { id: context.seasonId }, context.ruleset),
-    ),
-  );
-  const leagueCompliance = await evaluateLeagueCompliance({
-    leagueId: context.leagueId,
-    seasonId: context.seasonId,
-  });
-
-  const summaryByTeamId = new Map(summaries.map((summary) => [summary.teamId, summary]));
   const complianceByTeamId = new Map(
     leagueCompliance.teams.map((report) => [report.teamId, report]),
   );
