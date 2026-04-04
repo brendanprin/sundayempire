@@ -164,9 +164,9 @@ export function ResponsiveAuctionLayout({
                     type="button"
                     onClick={() => setIsRailOpen(true)}
                     className="rounded-full bg-slate-800 border border-slate-600 p-3 text-slate-300 hover:bg-slate-700 hover:text-slate-200 transition-colors shadow-lg"
-                    title="Open Manager Info"
+                    aria-label="Open Manager Info"
                   >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </button>
@@ -185,8 +185,9 @@ export function ResponsiveAuctionLayout({
                         type="button"
                         onClick={() => setIsRailOpen(false)}
                         className="rounded-lg p-2 hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                        aria-label="Close Manager Context"
                       >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -220,9 +221,9 @@ export function ResponsiveAuctionLayout({
                   type="button"
                   onClick={() => setIsRailOpen(true)}
                   className="rounded-full bg-slate-800 border border-slate-600 p-2.5 text-slate-300 hover:bg-slate-700 hover:text-slate-200 transition-colors shadow-lg"
-                  title="Manager Info"
+                  aria-label="Open Manager Info"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </button>
@@ -241,8 +242,9 @@ export function ResponsiveAuctionLayout({
                       type="button"
                       onClick={() => setIsRailOpen(false)}
                       className="rounded-lg p-2 hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                      aria-label="Close Manager Info"
                     >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
