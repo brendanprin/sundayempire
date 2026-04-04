@@ -30,6 +30,13 @@ import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboa
 import type { DraftHomeProjection } from "@/lib/read-models/draft/types";
 import type { TradeHomeResponse } from "@/types/trade-workflow";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
+import {
+  EMAIL_PATTERN,
+  type FounderSetupAction,
+  type FounderSetupPayload,
+  type LeagueInvitesPayload,
+  type SetupBulkImportPayload,
+} from "./_types";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -39,70 +46,6 @@ function formatDateTime(value: string) {
     minute: "2-digit",
   }).format(new Date(value));
 }
-
-type FounderSetupStatus = "COMPLETE" | "INCOMPLETE_REQUIRED" | "INCOMPLETE_POSTPONED";
-type FounderSetupAction = "create" | "claim" | "skip";
-
-type FounderSetupPayload = {
-  leagueId: string;
-  isComplete: boolean;
-  status: FounderSetupStatus;
-  hasPostponed: boolean;
-  currentTeam: {
-    id: string;
-    name: string;
-    abbreviation: string | null;
-  } | null;
-  claimableTeams: {
-    id: string;
-    name: string;
-    abbreviation: string | null;
-    ownerName: string | null;
-  }[];
-};
-
-type LeagueInvitesPayload = {
-  invites: CommissionerInviteRow[];
-  capabilities: {
-    copyFreshLink: boolean;
-  };
-};
-
-type SetupBulkImportValidationRow = {
-  rowNumber: number;
-  status: "valid" | "invalid";
-  errors: string[];
-  row: {
-    ownerName: string;
-    ownerEmail: string;
-    teamName: string;
-    teamAbbreviation: string | null;
-    divisionLabel: string | null;
-  };
-};
-
-type SetupBulkImportApplyResult = {
-  rowNumber: number;
-  status: "created" | "failed";
-  message: string;
-  teamId: string | null;
-  inviteId: string | null;
-};
-
-type SetupBulkImportPayload = {
-  mode: "validate" | "apply";
-  summary: {
-    totalRows: number;
-    validRows: number;
-    invalidRows: number;
-    createdRows?: number;
-    failedRows?: number;
-  };
-  rows: SetupBulkImportValidationRow[];
-  applyResults?: SetupBulkImportApplyResult[];
-};
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LeagueLandingDashboardPage() {
   const params = useParams<{ leagueId: string }>();

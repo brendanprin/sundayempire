@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CommissionerQueueWorkspace } from "@/components/commissioner/commissioner-queue-workspace";
-import {
-  WeeklyWorkflowChecklist,
-  type WeeklyWorkflowItem,
-} from "@/components/commissioner/weekly-workflow-checklist";
+import { WeeklyWorkflowChecklist } from "@/components/commissioner/weekly-workflow-checklist";
 import {
   InviteManagementPanel,
   type CommissionerInviteRow,
@@ -18,505 +15,46 @@ import {
 } from "@/lib/compliance/remediation";
 import { formatEnumLabel } from "@/lib/format-label";
 import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
-import { LeagueSummaryPayload } from "@/types/league";
-import { SnapshotPreviewReceipt, SnapshotRestoreImpactSummary } from "@/types/snapshot";
 import type { TradeHomeResponse } from "@/types/trade-workflow";
+import { OperationsSectionShell } from "@/app/(app)/commissioner/_components/operations-section-shell";
+import {
+  buildInviteDeliveryFollowUp,
+  formatLeagueMembershipContext,
+  formatSignedValue,
+  getIsoWeekBucket,
+  joinStatusMessage,
+  postSnapshotImport,
+  toCommissionerRulingRecord,
+  PHASES,
+  ROLLOVER_CONFIRM_TEXT,
+  FIX_CONFIRM_TEXT,
+  SNAPSHOT_CONFIRM_TEXT,
+  SNAPSHOT_IMPACT_KEYS,
+  WEEKLY_CHECKLIST_ITEMS,
+  type CommissionerDisputeItem,
+  type CommissionerRulingRecord,
+  type ComplianceQueuePayload,
+  type ComplianceScanPayload,
+  type EmailDeliveryPayload,
+  type EmergencyFixPayload,
+  type FixFormState,
+  type LeagueInviteFormState,
+  type LeagueInvitesPayload,
+  type LeaguePayload,
+  type LeagueSettingsFormState,
+  type LeagueWorkspace,
+  type LeagueWorkspaceCreateFormState,
+  type LeagueWorkspaceListPayload,
+  type OverrideHistoryPayload,
+  type RolloverPayload,
+  type SnapshotExportPayload,
+  type SnapshotImportApiError,
+  type SnapshotImportPayload,
+  type TeamPayload,
+  type TradeOperationsPayload,
+  type TransactionPayload,
+} from "@/app/(app)/commissioner/_types";
 
-type LeaguePayload = LeagueSummaryPayload;
-
-type TeamPayload = {
-  teams: {
-    id: string;
-    name: string;
-    complianceStatus: "ok" | "warning" | "error";
-  }[];
-};
-
-type TransactionPayload = {
-  transactions: {
-    id: string;
-    type: string;
-    summary: string;
-    createdAt: string;
-    team: {
-      id: string;
-      name: string;
-      abbreviation: string | null;
-    } | null;
-  }[];
-};
-
-type TradeOperationsPayload = Pick<TradeHomeResponse, "summary" | "sections">;
-
-type CommissionerDisputeItem = {
-  id: string;
-  type: "compliance" | "trade";
-  severity: "high" | "medium";
-  title: string;
-  summary: string;
-  dueAt: string;
-};
-
-type CommissionerRulingRecord = {
-  id: string;
-  disputeId: string;
-  disputeTitle: string;
-  decision: "approve" | "deny" | "manual-review";
-  ruleCitation: string;
-  dueAt: string;
-  notes: string;
-  actorEmail: string;
-  publishedAt: string;
-};
-
-type ComplianceQueuePayload = {
-  queue: {
-    remediationRecords: RemediationRecord[];
-  };
-};
-
-type OverrideHistoryPayload = {
-  history: {
-    overrides: {
-      id: string;
-      teamId: string | null;
-      issueId: string | null;
-      overrideType: string;
-      reason: string;
-      entityType: string;
-      entityId: string;
-      metadata: {
-        disputeId?: string;
-        disputeTitle?: string;
-        disputeType?: "compliance" | "trade";
-        decision?: CommissionerRulingRecord["decision"];
-        ruleCitation?: string;
-        dueAt?: string;
-        notes?: string;
-      } | null;
-      createdAt: string;
-      actorUser: {
-        email: string;
-      } | null;
-    }[];
-  };
-};
-
-type LeagueWorkspace = {
-  id: string;
-  name: string;
-  description: string | null;
-  leagueRole: "COMMISSIONER" | "MEMBER";
-  teamId: string | null;
-  teamName: string | null;
-  season: {
-    id: string;
-    year: number;
-    phase: LeaguePayload["season"]["phase"];
-  } | null;
-  counts: {
-    teams: number;
-    memberships: number;
-  };
-  createdAt: string;
-};
-
-type LeagueWorkspaceListPayload = {
-  leagues: LeagueWorkspace[];
-};
-
-function formatLeagueMembershipContext(workspace: Pick<LeagueWorkspace, "leagueRole" | "teamName">) {
-  if (workspace.leagueRole === "COMMISSIONER") {
-    return workspace.teamName ? `Commissioner · Team: ${workspace.teamName}` : "Commissioner";
-  }
-  return workspace.teamName ? `Member · Team: ${workspace.teamName}` : "Member";
-}
-
-type ComplianceScanPayload = {
-  report: {
-    summary: {
-      teamsEvaluated: number;
-      ok: number;
-      warning: number;
-      error: number;
-      totalFindings: number;
-    };
-  };
-};
-
-type RolloverPayload = {
-  rollover: {
-    dryRun: boolean;
-    sourceSeason: {
-      id: string;
-      year: number;
-      phase: string;
-    };
-    targetSeason: {
-      id: string | null;
-      year: number;
-      phase: string;
-      created: boolean;
-    };
-    counts: {
-      contractsEvaluated: number;
-      carriedContracts: number;
-      expiredContracts: number;
-      skippedExistingContracts: number;
-      carriedRosterSlots: number;
-      skippedExistingRosterSlots: number;
-    };
-  };
-};
-
-type EmergencyFixPayload = {
-  fix: {
-    team: {
-      id: string;
-      name: string;
-    };
-    dryRun: boolean;
-    policy: {
-      targetRosterMax: number;
-      targetCapType: "soft" | "hard" | "custom";
-      targetCapValue: number;
-    };
-    before: {
-      rosterCount: number;
-      totalCapHit: number;
-    };
-    after: {
-      rosterCount: number;
-      totalCapHit: number;
-    };
-    droppedPlayers: {
-      playerId: string;
-      name: string;
-      position: string;
-      salary: number;
-      rosterSlotsRemoved: number;
-    }[];
-    unresolved: {
-      rosterExcess: number;
-      capOverage: number;
-      hasUnresolved: boolean;
-    };
-  };
-};
-
-type SnapshotExportPayload = {
-  snapshot: Record<string, unknown>;
-  counts: {
-    leagues: number;
-    seasons: number;
-    rulesets: number;
-    owners: number;
-    teams: number;
-    players: number;
-    rosterSlots: number;
-    contracts: number;
-    capPenalties: number;
-    futurePicks: number;
-    drafts: number;
-    draftSelections: number;
-    trades: number;
-    tradeAssets: number;
-    transactions: number;
-  };
-};
-
-type SnapshotImportPayload = {
-  mode: "preview" | "apply";
-  replaceExisting: boolean;
-  counts: SnapshotExportPayload["counts"];
-  preview?: SnapshotPreviewReceipt;
-  impact?: SnapshotRestoreImpactSummary;
-  findings: {
-    code: string;
-    message: string;
-    path?: string;
-  }[];
-  applied?: boolean;
-};
-
-const PHASES: LeaguePayload["season"]["phase"][] = [
-  "PRESEASON",
-  "REGULAR_SEASON",
-  "PLAYOFFS",
-  "OFFSEASON",
-];
-const ROLLOVER_CONFIRM_TEXT = "RUN ROLLOVER";
-const FIX_CONFIRM_TEXT = "APPLY FIX";
-const SNAPSHOT_CONFIRM_TEXT = "APPLY RESTORE";
-const SNAPSHOT_IMPACT_KEYS = [
-  "teams",
-  "players",
-  "rosterSlots",
-  "contracts",
-  "futurePicks",
-  "transactions",
-] as const;
-
-const WEEKLY_CHECKLIST_ITEMS: WeeklyWorkflowItem[] = [
-  {
-    id: "phase-review",
-    title: "Confirm active phase and weekly transition window",
-    description:
-      "Validate the league is operating in the expected season phase before running weekly actions.",
-  },
-  {
-    id: "compliance-scan",
-    title: "Run league compliance scan and review blockers",
-    description:
-      "Surface roster and cap violations before trades and waiver processing are finalized.",
-  },
-  {
-    id: "trade-approval-queue",
-    title: "Review flagged trade proposals awaiting commissioner decision",
-    description: "Clear the review queue so owners know which trade proposals can advance this week.",
-    href: "/trades?from=workflow&step=trade-approval-queue",
-    ctaLabel: "Open Trades",
-  },
-  {
-    id: "trade-processing-queue",
-    title: "Settle approved trade proposals",
-    description:
-      "Complete proposal settlement so player and pick ownership stay current before lineups lock.",
-    href: "/trades?from=workflow&step=trade-processing-queue",
-    ctaLabel: "Open Settlement Queue",
-  },
-  {
-    id: "audit-health-check",
-    title: "Review commissioner audit activity",
-    description:
-      "Check recent operational records across lifecycle, compliance, trades, drafts, auctions, and sync.",
-    href: "/commissioner/audit",
-    ctaLabel: "Open Audit",
-  },
-];
-
-function getIsoWeekBucket(date: Date) {
-  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
-  return `${utcDate.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
-function formatSignedValue(value: number) {
-  return value >= 0 ? `+${value}` : `${value}`;
-}
-
-function toCommissionerRulingRecord(
-  override: OverrideHistoryPayload["history"]["overrides"][number],
-): CommissionerRulingRecord | null {
-  if (override.overrideType !== "MANUAL_RULING") {
-    return null;
-  }
-
-  const metadata = override.metadata ?? {};
-  const disputeId = typeof metadata.disputeId === "string" ? metadata.disputeId : override.entityId;
-  const disputeTitle =
-    typeof metadata.disputeTitle === "string" && metadata.disputeTitle.trim().length > 0
-      ? metadata.disputeTitle
-      : `${override.entityType} ${override.entityId}`;
-  const dueAt =
-    typeof metadata.dueAt === "string" && metadata.dueAt.trim().length > 0
-      ? metadata.dueAt
-      : override.createdAt;
-  const decision =
-    metadata.decision === "approve" || metadata.decision === "deny" || metadata.decision === "manual-review"
-      ? metadata.decision
-      : "manual-review";
-  const ruleCitation =
-    typeof metadata.ruleCitation === "string" && metadata.ruleCitation.trim().length > 0
-      ? metadata.ruleCitation
-      : "RULE-MANUAL-001";
-
-  return {
-    id: override.id,
-    disputeId,
-    disputeTitle,
-    decision,
-    ruleCitation,
-    dueAt,
-    notes:
-      typeof metadata.notes === "string" && metadata.notes.trim().length > 0
-        ? metadata.notes
-        : override.reason,
-    actorEmail: override.actorUser?.email ?? "commissioner@local.league",
-    publishedAt: override.createdAt,
-  };
-}
-
-type FixFormState = {
-  teamId: string;
-  targetRosterMax: string;
-  targetCapType: "soft" | "hard" | "custom";
-  targetCapValue: string;
-};
-
-type LeagueSettingsFormState = {
-  name: string;
-  description: string;
-  regularSeasonWeeks: string;
-  playoffStartWeek: string;
-  playoffEndWeek: string;
-};
-
-type LeagueWorkspaceCreateFormState = {
-  name: string;
-  description: string;
-  seasonYear: string;
-};
-
-type LeagueInviteFormState = {
-  ownerName: string;
-  ownerEmail: string;
-  teamName: string;
-  teamAbbreviation: string;
-  divisionLabel: string;
-};
-
-type LeagueInvitesPayload = {
-  invites: CommissionerInviteRow[];
-  capabilities: {
-    copyFreshLink: boolean;
-  };
-};
-
-type EmailDeliveryPayload = {
-  state: "sent" | "captured" | "logged" | "failed" | "not_configured" | "unknown";
-  label: string;
-  detail: string;
-  attemptedAt: string | null;
-  canRetry: boolean;
-  inviteStillValid: boolean;
-};
-
-type SnapshotImportApiError = {
-  message: string;
-  findings: SnapshotImportPayload["findings"];
-};
-
-function joinStatusMessage(base: string, followUp: string | null) {
-  return followUp ? `${base} ${followUp}` : base;
-}
-
-function buildInviteDeliveryFollowUp(
-  delivery: EmailDeliveryPayload | null | undefined,
-  options: {
-    copiedFreshLink?: boolean;
-  } = {},
-) {
-  if (!delivery) {
-    return null;
-  }
-
-  if (options.copiedFreshLink && (delivery.state === "failed" || delivery.state === "not_configured")) {
-    return "Use the copied link directly while outbound email delivery is unavailable.";
-  }
-
-  return delivery.detail;
-}
-
-function OperationsSectionShell(props: {
-  id: string;
-  title: string;
-  description: string;
-  summary: string;
-  testId: string;
-  defaultOpen?: boolean;
-  tone?: "default" | "warning" | "danger";
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(Boolean(props.defaultOpen));
-  const toneClasses =
-    props.tone === "danger"
-      ? "border-red-700/60 bg-red-950/15"
-      : props.tone === "warning"
-        ? "border-amber-800/40 bg-amber-950/10"
-        : "border-slate-800/80 bg-slate-950/30";
-
-  return (
-    <section
-      id={props.id}
-      data-testid={props.testId}
-      className={`scroll-mt-24 rounded-lg border p-4 ${toneClasses}`}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
-        data-testid={`${props.testId}-toggle`}
-        aria-expanded={open}
-      >
-        <div>
-          <h3 className="text-sm font-semibold text-slate-100">{props.title}</h3>
-          <p className="mt-1 text-xs text-slate-400">{props.description}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border border-slate-700 bg-slate-950/80 px-3 py-1 text-xs text-slate-300">
-            {props.summary}
-          </span>
-          <span className="rounded-full border border-slate-700 px-2 py-1 text-[11px] text-slate-300">
-            {open ? "Collapse" : "Expand"}
-          </span>
-        </div>
-      </button>
-      {open ? <div className="mt-4 space-y-4">{props.children}</div> : null}
-    </section>
-  );
-}
-
-function parseJsonMaybe(input: string): unknown {
-  if (!input.trim()) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(input);
-  } catch {
-    return { message: input.slice(0, 250) };
-  }
-}
-
-async function postSnapshotImport(
-  body: Record<string, unknown>,
-): Promise<{ ok: true; payload: SnapshotImportPayload } | { ok: false; error: SnapshotImportApiError }> {
-  const response = await fetch("/api/commissioner/snapshot/import", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const raw = await response.text();
-  const payload = parseJsonMaybe(raw);
-
-  if (response.ok && payload && typeof payload === "object" && !("error" in payload)) {
-    return { ok: true, payload: payload as SnapshotImportPayload };
-  }
-
-  const errorObject =
-    payload && typeof payload === "object" && "error" in payload
-      ? (payload as {
-          error?: {
-            message?: string;
-            context?: {
-              findings?: SnapshotImportPayload["findings"];
-            } | null;
-          };
-        }).error
-      : null;
-
-  return {
-    ok: false,
-    error: {
-      message: errorObject?.message?.trim() || "Snapshot import request failed.",
-      findings: Array.isArray(errorObject?.context?.findings) ? errorObject.context.findings : [],
-    },
-  };
-}
 
 export default function CommissionerPage() {
   const [league, setLeague] = useState<LeaguePayload | null>(null);

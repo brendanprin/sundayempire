@@ -17,6 +17,11 @@ import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
 import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
+import {
+  buildDefaultSlotLabel,
+  buildNextAvailableSlotLabel,
+  parseSlotType,
+} from "@/app/api/teams/[teamId]/roster/roster-utils";
 
 type RouteContext = {
   params: Promise<{
@@ -33,42 +38,6 @@ type RosterMutationAction =
   | "move_to_starter"
   | "move_to_bench"
   | "move_to_ir";
-
-function parseSlotType(raw: unknown): TeamSlotType | null {
-  if (typeof raw !== "string") {
-    return null;
-  }
-
-  if (raw === "STARTER" || raw === "BENCH" || raw === "IR" || raw === "TAXI") {
-    return raw;
-  }
-
-  return null;
-}
-
-function buildDefaultSlotLabel(slotType: TeamSlotType, existingCount: number) {
-  return `${slotType}${existingCount + 1}`;
-}
-
-function buildNextAvailableSlotLabel(
-  slotType: TeamSlotType,
-  existingSlots: { id: string; slotType: TeamSlotType; slotLabel: string | null }[],
-  excludeRosterSlotId?: string,
-) {
-  const usedLabels = new Set(
-    existingSlots
-      .filter((slot) => slot.slotType === slotType && slot.id !== excludeRosterSlotId)
-      .map((slot) => slot.slotLabel)
-      .filter((slotLabel): slotLabel is string => Boolean(slotLabel)),
-  );
-
-  let index = 1;
-  while (usedLabels.has(`${slotType}${index}`)) {
-    index += 1;
-  }
-
-  return `${slotType}${index}`;
-}
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { teamId } = await routeContext.params;
