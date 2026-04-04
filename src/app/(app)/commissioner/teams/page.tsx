@@ -262,6 +262,19 @@ export default function CommissionerTeamsPage() {
       );
       const failed = results.filter((r) => r.status === "rejected");
       const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      // Always clear the entries that succeeded so they don't sit in pending state
+      const failedOwnerIds = new Set(
+        entries
+          .filter((_, i) => results[i].status === "rejected")
+          .map(([ownerId]) => ownerId),
+      );
+      setMemberAssignTargets((prev) => {
+        const next = { ...prev };
+        for (const [ownerId] of entries) {
+          if (!failedOwnerIds.has(ownerId)) delete next[ownerId];
+        }
+        return next;
+      });
       if (failed.length > 0) {
         const reasons = failed
           .map((r) => (r.status === "rejected" && r.reason instanceof Error ? r.reason.message : "Unknown error"))
@@ -269,7 +282,6 @@ export default function CommissionerTeamsPage() {
         setError(`${failed.length} assignment(s) failed. ${succeeded} succeeded. ${reasons}`);
       } else {
         setMessage(`${succeeded} member${succeeded === 1 ? "" : "s"} assigned to their franchises.`);
-        setMemberAssignTargets({});
       }
       await reloadWorkspace();
     } catch (err) {

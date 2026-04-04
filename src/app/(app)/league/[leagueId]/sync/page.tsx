@@ -141,6 +141,7 @@ export default function SyncIssuesQueuePage() {
         warnings: payload.summary.warnings,
         errors: payload.summary.errors,
       });
+      setRunForm({ sourceLabel: "", rosterCsv: "", transactionCsv: "" });
       await loadQueue();
     } catch (requestError) {
       setRunError(requestError instanceof Error ? requestError.message : "Failed to run host platform sync.");

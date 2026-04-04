@@ -437,11 +437,14 @@ export function SyncIssuesQueueView(props: Props) {
             </div>
           ) : null}
 
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex items-center justify-end gap-3">
+            {!props.runForm.rosterCsv.trim() && !props.runPending ? (
+              <p className="text-xs text-slate-500">Roster CSV is required to run a sync.</p>
+            ) : null}
             <Button
               type="button"
               onClick={() => void props.onRunSync()}
-              disabled={props.runPending}
+              disabled={props.runPending || !props.runForm.rosterCsv.trim()}
               variant="primary"
               loading={props.runPending}
             >
