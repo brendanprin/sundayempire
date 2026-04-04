@@ -151,6 +151,7 @@ export default function TeamDetailPage() {
         tone="error"
         message="My Roster / Cap could not load."
         safetyCopy={`${error} Existing roster, cap, and contract records are safe. Refresh to retry, or reopen the team route from the directory.`}
+        onRetry={loadPage}
         actionHref="/teams"
         actionLabel="Open Teams Directory"
         testId="team-route-state"

@@ -110,6 +110,7 @@ export function CanonicalRouteState(props: {
   safetyCopy?: string;
   actionHref?: string;
   actionLabel?: string;
+  onRetry?: () => void;
   testId?: string;
   headingLevel?: "h1" | "h2";
   children?: ReactNode;
@@ -161,24 +162,45 @@ export function CanonicalRouteState(props: {
           <>
             <p className="text-sm font-medium">{props.message}</p>
             {props.safetyCopy ? <p className="mt-2 text-sm opacity-90">{props.safetyCopy}</p> : null}
-            {props.actionHref && props.actionLabel ? (
-              <Link
-                href={props.actionHref}
-                className="mt-4 inline-flex rounded-lg px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-current/50"
-                style={{
-                  border: "1px solid rgba(255, 255, 255, 0.3)",
-                  color: "var(--foreground)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                {props.actionLabel}
-              </Link>
-            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {props.onRetry ? (
+                <button
+                  type="button"
+                  onClick={props.onRetry}
+                  className="inline-flex rounded-lg px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-current/50"
+                  style={{
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    color: "var(--foreground)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Try again
+                </button>
+              ) : null}
+              {props.actionHref && props.actionLabel ? (
+                <Link
+                  href={props.actionHref}
+                  className="inline-flex rounded-lg px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-current/50"
+                  style={{
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    color: "var(--foreground)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {props.actionLabel}
+                </Link>
+              ) : null}
+            </div>
           </>
         )}
 

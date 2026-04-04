@@ -112,6 +112,7 @@ export default function SyncIssueDetailPage() {
         tone="error"
         message="Sync Issue Detail could not load."
         safetyCopy={`${error} Existing mismatch and resolution records are unchanged. Refresh to retry, or return to the Sync Queue.`}
+        onRetry={loadDetail}
         actionHref={`/league/${leagueId}/sync`}
         actionLabel="Back to Sync Queue"
         testId="sync-issue-route-state"

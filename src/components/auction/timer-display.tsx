@@ -9,6 +9,7 @@ type TimerDisplayProps = {
   showUrgency?: boolean;
   label?: string;
   className?: string;
+  concludedLabel?: string | null;
 };
 
 type TimeDisplay = {
@@ -117,13 +118,14 @@ function getUrgencyClasses(urgency: TimeDisplay['urgency'], size: TimerDisplayPr
   return `${baseClasses} ${urgencyStyles[urgency]} ${sizeStyles[size || 'standard']}`;
 }
 
-export function TimerDisplay({ 
-  seconds, 
-  deadline, 
-  size = 'standard', 
+export function TimerDisplay({
+  seconds,
+  deadline,
+  size = 'standard',
   showUrgency = true,
   label,
-  className = ''
+  className = '',
+  concludedLabel,
 }: TimerDisplayProps) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   // VA-S16: Timer reset detection state
@@ -207,7 +209,9 @@ export function TimerDisplay({
         <p className={`text-xs ${
           shouldEmphasize ? 'text-orange-200 font-medium' : 'text-slate-400'
         }`}>
-          {timeDisplay.description}
+          {timeDisplay.urgency === 'ended' && concludedLabel
+            ? concludedLabel
+            : timeDisplay.description}
         </p>
       )}
       

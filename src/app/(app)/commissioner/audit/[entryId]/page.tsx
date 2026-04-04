@@ -80,6 +80,7 @@ export default function CommissionerAuditDetailPage() {
         tone="error"
         message="Audit Entry Detail could not load."
         safetyCopy={`${error} Existing audit history is unchanged. Refresh to retry, or return to Commissioner Audit.`}
+        onRetry={loadEntry}
         actionHref="/commissioner/audit"
         actionLabel="Back to Commissioner Audit"
         testId="commissioner-audit-detail-route-state"

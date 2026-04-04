@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { formatEnumLabel } from "@/lib/format-label";
 import type { SyncIssuesQueueProjection } from "@/types/sync";
@@ -38,6 +39,7 @@ type Props = {
   onFilterChange: (field: keyof QueueFilters, value: string) => void;
   onRunFormChange: (field: "sourceLabel" | "rosterCsv" | "transactionCsv", value: string) => void;
   onRunSync: () => Promise<void> | void;
+  onQuickDismiss?: (issueId: string) => Promise<void>;
 };
 
 function severityTone(severity: string) {
@@ -152,6 +154,21 @@ function buildIssueGroups(issues: SyncIssuesQueueProjection["issues"]) {
 
 export function SyncIssuesQueueView(props: Props) {
   const issueGroups = buildIssueGroups(props.queue.issues);
+  const [dismissing, setDismissing] = useState<Set<string>>(new Set());
+
+  async function handleQuickDismiss(issueId: string) {
+    if (!props.onQuickDismiss) return;
+    setDismissing((prev) => new Set(prev).add(issueId));
+    try {
+      await props.onQuickDismiss(issueId);
+    } finally {
+      setDismissing((prev) => {
+        const next = new Set(prev);
+        next.delete(issueId);
+        return next;
+      });
+    }
+  }
 
   return (
     <div className="space-y-6" data-testid="sync-issues-queue-view">
@@ -303,10 +320,9 @@ export function SyncIssuesQueueView(props: Props) {
                 </div>
                 <div className="mt-3 space-y-2">
                   {group.issues.map((issue) => (
-                    <Link
+                    <div
                       key={issue.id}
-                      href={`/league/${props.leagueId}/sync/${issue.id}`}
-                      className={`block rounded-lg border p-3 transition hover:border-slate-600 ${severityTone(issue.severity)}`}
+                      className={`rounded-lg border p-3 ${severityTone(issue.severity)}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -330,7 +346,25 @@ export function SyncIssuesQueueView(props: Props) {
                         <span>{issue.player ? `Player: ${issue.player.name}` : "Player: unresolved"}</span>
                         <span>{issue.complianceIssueId ? "Compliance issue linked" : "No compliance issue linked"}</span>
                       </div>
-                    </Link>
+                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-current/10 pt-2.5">
+                        <Link
+                          href={`/league/${props.leagueId}/sync/${issue.id}`}
+                          className="text-xs font-medium opacity-80 hover:opacity-100 transition-opacity"
+                        >
+                          Investigate →
+                        </Link>
+                        {props.onQuickDismiss && issue.status === "OPEN" && (
+                          <button
+                            type="button"
+                            onClick={() => void handleQuickDismiss(issue.id)}
+                            disabled={dismissing.has(issue.id)}
+                            className="rounded border border-current/20 px-2 py-0.5 text-xs opacity-70 transition hover:opacity-100 disabled:opacity-40"
+                          >
+                            {dismissing.has(issue.id) ? "Dismissing…" : "Dismiss"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </section>

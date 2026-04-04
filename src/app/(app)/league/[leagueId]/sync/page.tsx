@@ -71,6 +71,22 @@ export default function SyncIssuesQueuePage() {
     };
   }, [loadQueue]);
 
+  const quickDismiss = useCallback(
+    async (issueId: string) => {
+      await requestJson(
+        `/api/sync/issues/${issueId}/resolve`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ resolutionType: "DISMISS_FALSE_POSITIVE" }),
+        },
+        "Failed to dismiss sync issue.",
+      );
+      await loadQueue();
+    },
+    [loadQueue],
+  );
+
   const runSync = useCallback(async () => {
     setRunPending(true);
     setRunError(null);
@@ -158,6 +174,7 @@ export default function SyncIssuesQueuePage() {
         tone="error"
         message="Sync Queue could not load."
         safetyCopy={`${error} Existing sync jobs, mismatches, and resolutions are unchanged. Refresh to retry, or return to Commissioner Operations.`}
+        onRetry={loadQueue}
         actionHref="/commissioner"
         actionLabel="Open Commissioner Operations"
         testId="sync-queue-route-state"
@@ -191,6 +208,7 @@ export default function SyncIssuesQueuePage() {
       onFilterChange={(field, value) => setFilters((current) => ({ ...current, [field]: value }))}
       onRunFormChange={(field, value) => setRunForm((current) => ({ ...current, [field]: value }))}
       onRunSync={runSync}
+      onQuickDismiss={quickDismiss}
     />
   );
 }

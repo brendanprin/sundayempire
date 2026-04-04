@@ -52,6 +52,7 @@ export default function TradesHomePage() {
         tone="error"
         message="Trades could not load."
         safetyCopy={`${error} Existing trade proposals are unchanged. Refresh to retry, or return to the dashboard.`}
+        onRetry={load}
         testId="trades-route-state"
       />
     );

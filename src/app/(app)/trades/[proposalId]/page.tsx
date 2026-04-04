@@ -100,6 +100,7 @@ export default function TradeProposalDetailPage() {
         tone="error"
         message="Trade Review could not load."
         safetyCopy={`${error} Existing proposal and evaluation data are unchanged. Refresh to retry, or return to Trades.`}
+        onRetry={load}
         actionHref="/trades"
         actionLabel="Open Trades"
         testId="trade-review-route-state"

@@ -184,11 +184,11 @@ export function ComplianceOversightPanel(props: {
             {totalFindings > 0 && (
               <div className="mt-3">
                 <Link
-                  href="#urgent-queue"
+                  href="/commissioner/audit?severity=error"
                   className="inline-flex text-xs font-medium text-red-400 hover:text-red-300"
                   data-testid="compliance-urgent-link"
                 >
-                  View urgent items ↑
+                  View urgent items →
                 </Link>
               </div>
             )}

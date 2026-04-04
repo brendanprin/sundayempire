@@ -130,6 +130,7 @@ export default function PlayerDetailPage() {
         tone="error"
         message="Player / Contract Detail could not load."
         safetyCopy={`${error} Existing player and contract records are safe. Refresh to retry, or reopen the player from the directory.`}
+        onRetry={loadPage}
         actionHref="/players"
         actionLabel="Open Players Directory"
         testId="player-route-state"
