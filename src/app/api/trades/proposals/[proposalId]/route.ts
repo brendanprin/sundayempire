@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireTradeProposalLeagueRole } from "@/lib/authorization";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole, requireTradeProposalLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createTradeProposalDetailProjection } from "@/lib/read-models/trades/trade-proposal-detail-projection";
 import { createTradeProposalWorkflowService } from "@/lib/domain/trades/trade-proposal-service";
@@ -32,17 +30,9 @@ function toUpdateErrorResponse(error: unknown) {
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { proposalId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, [
-    "COMMISSIONER", "MEMBER",
-  ]);
-  if (auth.response || !auth.actor) {
-    return auth.response ?? apiError(401, "AUTH_REQUIRED", "Authentication is required.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const season = await prisma.season.findUnique({
     where: { id: context.seasonId },
@@ -58,7 +48,7 @@ export async function GET(request: NextRequest, routeContext: RouteContext) {
     seasonYear: context.seasonYear,
     seasonPhase: season.phase,
     leagueName: context.leagueName,
-    actor: auth.actor,
+    actor,
     proposalId,
   });
 

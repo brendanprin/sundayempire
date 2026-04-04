@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { evaluateLeagueCompliance } from "@/lib/compliance/service";
 import { getLeagueCommissionerIntegrity } from "@/lib/domain/league-membership/commissioner-assignment";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
 
@@ -54,16 +53,9 @@ function countByStatus(rows: { status: string; _count: { _all: number } }[]) {
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const checkedAt = new Date().toISOString();
   const subsystems: DiagnosticSubsystem[] = [];
@@ -76,14 +68,14 @@ export async function GET(request: NextRequest) {
     id: "role-access",
     label: "Role Access",
     status: "pass",
-    detail: `Authenticated as commissioner ${auth.actor?.email ?? "unknown"}.`,
+    detail: `Authenticated as commissioner ${actor?.email ?? "unknown"}.`,
     remediation: {
       label: "Review memberships",
       href: "/teams",
     },
     metrics: {
-      leagueRole: auth.actor?.leagueRole ?? null,
-      teamScope: auth.actor?.teamId ?? null,
+      leagueRole: actor?.leagueRole ?? null,
+      teamScope: actor?.teamId ?? null,
     },
   });
 

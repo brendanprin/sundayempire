@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createActivityFeedProjection } from "@/lib/read-models/activity/activity-feed-projection";
 import { parseIntegerParam } from "@/lib/request";
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, [
-    "COMMISSIONER", "MEMBER",
-  ]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const limit = parseIntegerParam(request.nextUrl.searchParams.get("limit"));
   const projection = await createActivityFeedProjection(prisma).read({

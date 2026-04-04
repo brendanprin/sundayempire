@@ -6,6 +6,7 @@ import {
   getAuthActorForLeague,
   getAuthenticatedUser,
 } from "@/lib/auth";
+import { parseJsonBody } from "@/lib/request";
 import { getActiveLeagueCookie } from "@/lib/auth/active-league";
 import {
   CommissionerAssignmentError,
@@ -131,10 +132,9 @@ export async function POST(request: NextRequest) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    targetUserId?: unknown;
-    leagueId?: unknown;
-  };
+  const json = await parseJsonBody<{ targetUserId?: unknown; leagueId?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (typeof body.targetUserId !== "string" || body.targetUserId.trim().length === 0) {
     return apiError(400, "INVALID_REQUEST", "targetUserId is required.");

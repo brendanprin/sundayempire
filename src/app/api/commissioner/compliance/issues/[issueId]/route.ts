@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireActorTeamScope, requireLeagueRole } from "@/lib/auth";
+import { requireActorTeamScope } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createActivityPublisher } from "@/lib/domain/activity/activity-publisher";
 import {
   formatCommissionerRulingPublishedActivity,
@@ -10,7 +11,6 @@ import {
 import { createCommissionerOverrideService } from "@/lib/domain/compliance/commissioner-override-service";
 import { createComplianceIssueService } from "@/lib/domain/compliance/compliance-issue-service";
 import { createComplianceReadModels } from "@/lib/domain/compliance/read-models";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -21,15 +21,9 @@ type RouteContext = {
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { issueId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const detail = await createComplianceReadModels(prisma).readIssueDetail({
     leagueId: context.leagueId,
@@ -40,8 +34,8 @@ export async function GET(request: NextRequest, routeContext: RouteContext) {
     return apiError(404, "COMPLIANCE_ISSUE_NOT_FOUND", "Compliance issue was not found.");
   }
 
-  if (auth.actor?.leagueRole === "MEMBER" && detail.issue.teamId) {
-    const scopeResponse = requireActorTeamScope(auth.actor, detail.issue.teamId);
+  if (actor?.leagueRole === "MEMBER" && detail.issue.teamId) {
+    const scopeResponse = requireActorTeamScope(actor, detail.issue.teamId);
     if (scopeResponse) {
       return scopeResponse;
     }
@@ -52,15 +46,9 @@ export async function GET(request: NextRequest, routeContext: RouteContext) {
 
 export async function PATCH(request: NextRequest, routeContext: RouteContext) {
   const { issueId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const issue = await prisma.complianceIssue.findFirst({
     where: {
@@ -101,8 +89,8 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
 
   const action = await createComplianceIssueService(prisma).appendAction({
     issueId: issue.id,
-    actorUserId: auth.actor?.userId ?? null,
-    actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+    actorUserId: actor?.userId ?? null,
+    actorRoleSnapshot: actor?.leagueRole ?? null,
     actionType: nextStatus === "RESOLVED" ? "RESOLVED" : "STATUS_CHANGED",
     summary:
       nextStatus === "WAIVED"
@@ -125,8 +113,8 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
       teamId: issue.teamId,
       issueId: issue.id,
       complianceActionId: action.id,
-      actorUserId: auth.actor?.userId ?? null,
-      actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+      actorUserId: actor?.userId ?? null,
+      actorRoleSnapshot: actor?.leagueRole ?? null,
       overrideType: "ISSUE_WAIVER",
       reason: (body.reason as string).trim(),
       entityType: "compliance_issue",
@@ -154,7 +142,7 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
     await createActivityPublisher(prisma).publishSafe({
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      actorUserId: auth.actor?.userId ?? null,
+      actorUserId: actor?.userId ?? null,
       ...formatComplianceIssueResolvedActivity({
         issueId: detail.issue.id,
         code: detail.issue.code,
@@ -174,7 +162,7 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
     await createActivityPublisher(prisma).publishSafe({
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      actorUserId: auth.actor?.userId ?? null,
+      actorUserId: actor?.userId ?? null,
       ...formatComplianceIssueWaivedActivity({
         issueId: detail.issue.id,
         code: detail.issue.code,
@@ -191,7 +179,7 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
       await createActivityPublisher(prisma).publishSafe({
         leagueId: context.leagueId,
         seasonId: context.seasonId,
-        actorUserId: auth.actor?.userId ?? null,
+        actorUserId: actor?.userId ?? null,
         ...formatCommissionerRulingPublishedActivity({
           overrideId: latestOverride.id,
           overrideType: latestOverride.overrideType,

@@ -2,10 +2,9 @@ import { TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { requireLeagueRole } from "@/lib/auth";
 import { toDraftSummary } from "@/lib/draft";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 import {
   CreateDraftRequest,
@@ -18,11 +17,9 @@ import {
 } from "@/types/draft";
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const params = request.nextUrl.searchParams;
   const rawStatus = params.get("status");
@@ -135,7 +132,9 @@ export async function POST(request: NextRequest) {
 
   const context = access.context;
 
-  const body = (await request.json().catch(() => ({}))) as CreateDraftRequest;
+  const json = await parseJsonBody<CreateDraftRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (!isDraftType(body.type)) {
     return apiError(

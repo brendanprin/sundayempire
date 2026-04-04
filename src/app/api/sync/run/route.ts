@@ -1,33 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { getActiveLeagueContext } from "@/lib/league-context";
-import { requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createSyncRunService } from "@/lib/domain/sync/sync-run-service";
+import { parseJsonBody } from "@/lib/request";
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const json = await parseJsonBody<Record<string, unknown>>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   try {
     const result = await createSyncRunService(prisma).run({
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      requestedByUserId: auth.actor?.userId ?? null,
-      actor: auth.actor
+      requestedByUserId: actor?.userId ?? null,
+      actor: actor
         ? {
-            email: auth.actor.email,
-            leagueRole: auth.actor.leagueRole,
-            teamId: auth.actor.teamId,
+            email: actor.email,
+            leagueRole: actor.leagueRole,
+            teamId: actor.teamId,
           }
         : null,
       body,

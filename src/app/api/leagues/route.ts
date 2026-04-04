@@ -2,6 +2,7 @@ import { LeagueRole, TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { requirePlatformRole } from "@/lib/auth";
+import { parseJsonBody } from "@/lib/request";
 import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import { createLeagueInviteService } from "@/lib/domain/auth/LeagueInviteService";
 import { assertLeagueHasOperationalCommissioner } from "@/lib/domain/league-membership/commissioner-assignment";
@@ -141,12 +142,14 @@ export async function POST(request: NextRequest) {
   }
   const user = access.user;
 
-  const body = (await request.json().catch(() => ({}))) as {
+  const json = await parseJsonBody<{
     name?: unknown;
     description?: unknown;
     seasonYear?: unknown;
     designatedCommissionerEmail?: unknown;
-  };
+  }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (typeof body.name !== "string" || body.name.trim().length < 2) {
     return apiError(400, "INVALID_REQUEST", "League name must be at least 2 characters.");

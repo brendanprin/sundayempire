@@ -5,6 +5,7 @@ import {
   requireActorTeamScope,
 } from "@/lib/auth";
 import { createCutImpactPreviewService } from "@/lib/domain/contracts/cut-impact-preview-service";
+import { parseJsonBody } from "@/lib/request";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -30,11 +31,13 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     return teamScopeResponse;
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
+  const json = await parseJsonBody<{
     rosterSlotId?: string;
     playerId?: string;
     afterTradeDeadline?: boolean;
-  };
+  }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (!body.rosterSlotId && !body.playerId) {
     return apiError(400, "INVALID_REQUEST", "rosterSlotId or playerId is required.");

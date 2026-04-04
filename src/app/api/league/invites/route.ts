@@ -7,6 +7,7 @@ import {
   type ManagedLeagueInvite,
   createLeagueInviteService,
 } from "@/lib/domain/auth/LeagueInviteService";
+import { parseJsonBody } from "@/lib/request";
 import { prisma } from "@/lib/prisma";
 import { toCanonicalLeagueRole } from "@/lib/role-model";
 import { logTransaction } from "@/lib/transactions";
@@ -79,13 +80,15 @@ export async function POST(request: NextRequest) {
 
   const context = access.context;
   const actor = access.actor;
-  const body = (await request.json().catch(() => ({}))) as {
+  const json = await parseJsonBody<{
     ownerName?: unknown;
     ownerEmail?: unknown;
     teamName?: unknown;
     teamAbbreviation?: unknown;
     divisionLabel?: unknown;
-  };
+  }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (typeof body.ownerName !== "string" || body.ownerName.trim().length < 2) {
     return apiError(400, "INVALID_REQUEST", "ownerName must be at least 2 characters.");

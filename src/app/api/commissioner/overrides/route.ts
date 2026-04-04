@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createActivityPublisher } from "@/lib/domain/activity/activity-publisher";
 import {
   formatCommissionerOverrideRecordedActivity,
@@ -8,7 +8,6 @@ import {
 } from "@/lib/domain/activity/formatters";
 import { createCommissionerOverrideService } from "@/lib/domain/compliance/commissioner-override-service";
 import { createComplianceReadModels } from "@/lib/domain/compliance/read-models";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 
 const OVERRIDE_TYPES = new Set([
@@ -21,15 +20,9 @@ const OVERRIDE_TYPES = new Set([
 ]);
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const history = await createComplianceReadModels(prisma).readOverrideHistory({
     leagueId: context.leagueId,
@@ -50,15 +43,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const body = (await request.json()) as {
     teamId?: unknown;
@@ -90,8 +77,8 @@ export async function POST(request: NextRequest) {
     seasonId: context.seasonId,
     teamId: typeof body.teamId === "string" && body.teamId.trim().length > 0 ? body.teamId : null,
     issueId: typeof body.issueId === "string" && body.issueId.trim().length > 0 ? body.issueId : null,
-    actorUserId: auth.actor?.userId ?? null,
-    actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+    actorUserId: actor?.userId ?? null,
+    actorRoleSnapshot: actor?.leagueRole ?? null,
     overrideType: body.overrideType as
       | "PHASE_TRANSITION"
       | "EMERGENCY_FIX"
@@ -125,7 +112,7 @@ export async function POST(request: NextRequest) {
   await createActivityPublisher(prisma).publishSafe({
     leagueId: context.leagueId,
     seasonId: context.seasonId,
-    actorUserId: auth.actor?.userId ?? null,
+    actorUserId: actor?.userId ?? null,
     ...(body.overrideType === "MANUAL_RULING"
       ? formatCommissionerRulingPublishedActivity({
           overrideId: override.id,

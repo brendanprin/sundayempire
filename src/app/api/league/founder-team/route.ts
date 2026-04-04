@@ -7,6 +7,7 @@ import {
   type TeamMembershipDbClient,
 } from "@/lib/domain/team-membership/repository";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 
 const FOUNDER_SETUP_SKIP_SUMMARY = "Founder postponed team setup.";
@@ -293,14 +294,16 @@ export async function POST(request: NextRequest) {
 
   const actor = access.actor;
   const context = access.context;
-  const body = (await request.json().catch(() => ({}))) as {
+  const json = await parseJsonBody<{
     action?: unknown;
     teamId?: unknown;
     teamName?: unknown;
     teamAbbreviation?: unknown;
     divisionLabel?: unknown;
     ownerName?: unknown;
-  };
+  }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const action = typeof body.action === "string" ? body.action.trim().toLowerCase() : "";
   const normalizedAction: FounderSetupAction | null =
     action === "create" || action === "claim" || action === "skip" ? action : null;

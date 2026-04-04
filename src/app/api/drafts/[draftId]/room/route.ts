@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createRookieDraftRoomProjection } from "@/lib/read-models/draft/rookie-draft-room-projection";
 import { RookieDraftRoomResponse } from "@/types/draft";
@@ -14,21 +13,9 @@ type RouteContext = {
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { draftId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, [
-    "COMMISSIONER", "MEMBER",
-  ]);
-  if (auth.response) {
-    return auth.response;
-  }
-  if (!auth.actor) {
-    return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
-  }
-  const actor = auth.actor;
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const params = request.nextUrl.searchParams;
   const projection = await createRookieDraftRoomProjection(prisma).read({

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TransactionType } from "@prisma/client";
 import { apiError } from "@/lib/api";
-import { isActorTeamScopedMember, requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { isActorTeamScopedMember } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { parseIntegerParam } from "@/lib/request";
 import { parseTransactionAuditMetadata } from "@/lib/transactions";
@@ -21,16 +21,9 @@ function readLegacyMetadataTradeId(value: unknown): string | null {
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const params = request.nextUrl.searchParams;
   const rawLimit = parseIntegerParam(params.get("limit"));
@@ -54,10 +47,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (
-    auth.actor &&
-    isActorTeamScopedMember(auth.actor) &&
+    actor &&
+    isActorTeamScopedMember(actor) &&
     teamId &&
-    teamId !== auth.actor.teamId
+    teamId !== actor.teamId
   ) {
     return apiError(
       403,
@@ -67,7 +60,7 @@ export async function GET(request: NextRequest) {
   }
 
   const scopedTeamId =
-    auth.actor && isActorTeamScopedMember(auth.actor) ? auth.actor.teamId : teamId;
+    actor && isActorTeamScopedMember(actor) ? actor.teamId : teamId;
 
   if (scopedTeamId) {
     const team = await prisma.team.findFirst({

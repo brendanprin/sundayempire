@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
+import { parseJsonBody } from "@/lib/request";
 import { prisma } from "@/lib/prisma";
 import { isPilotEventType } from "@/types/pilot";
 
@@ -41,7 +41,9 @@ function acceptedButNotRecorded() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as UiEventPostBody;
+  const json = await parseJsonBody<UiEventPostBody>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   if (!isPilotEventType(body.eventType) || !body.eventType.startsWith("ui.")) {
     return apiError(400, "INVALID_REQUEST", "eventType must be a supported UI event type.");
   }
@@ -52,17 +54,11 @@ export async function POST(request: NextRequest) {
   }
 
   const allowAnonymousAuthEvent = isAnonymousSafeAuthEvent(body.eventType);
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return allowAnonymousAuthEvent
-      ? acceptedButNotRecorded()
-      : apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) {
+    return allowAnonymousAuthEvent ? acceptedButNotRecorded() : access.response;
   }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return allowAnonymousAuthEvent ? acceptedButNotRecorded() : auth.response;
-  }
+  const { actor, context } = access;
 
   const eventStep = asTrimmedString(body.eventStep);
   const status = asTrimmedString(body.status);
@@ -76,7 +72,7 @@ export async function POST(request: NextRequest) {
   const event = await recordPilotEventSafe(prisma, {
     leagueId: context.leagueId,
     seasonId: context.seasonId,
-    actor: auth.actor,
+    actor,
     eventType: body.eventType,
     eventCategory: "ui",
     eventStep: eventStep ?? undefined,

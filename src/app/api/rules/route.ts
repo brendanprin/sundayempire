@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { TransactionType } from "@prisma/client";
 import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
 import { RulesApiPayload, RulesetEditableFields } from "@/types/rules";
@@ -151,12 +149,10 @@ async function loadRulesPayload(leagueId: string, activeRulesetId?: string) {
   );
 }
 
-export async function GET() {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+export async function GET(request: NextRequest) {
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const payload = await loadRulesPayload(context.leagueId, context.ruleset.id);
   if (!payload) {

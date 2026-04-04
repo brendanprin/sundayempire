@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createNotificationSummaryReadModel } from "@/lib/read-models/notifications/notification-summary";
 import { parseIntegerParam } from "@/lib/request";
@@ -110,15 +109,9 @@ function buildBatchDescription(input: {
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const params = request.nextUrl.searchParams;
   const rawLimit = parseIntegerParam(params.get("limit"));
@@ -139,8 +132,8 @@ export async function GET(request: NextRequest) {
   const sinceHours = rawSinceHours ? Math.min(rawSinceHours, 24 * 30) : 24 * 7;
   const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
 
-  const actorEmail = auth.actor?.email?.toLowerCase() ?? null;
-  const actorUserId = auth.actor?.userId ?? null;
+  const actorEmail = actor?.email?.toLowerCase() ?? null;
+  const actorUserId = actor?.userId ?? null;
   const readState =
     actorEmail === null
       ? null

@@ -4,6 +4,7 @@ import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { runOffseasonRollover } from "@/lib/commissioner/rollover";
 import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
 
 export async function POST(request: NextRequest) {
@@ -15,9 +16,9 @@ export async function POST(request: NextRequest) {
   const context = access.context;
   const auth = { actor: access.actor };
 
-  const body = (await request.json().catch(() => ({}))) as {
-    dryRun?: unknown;
-  };
+  const json = await parseJsonBody<{ dryRun?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (body.dryRun !== undefined && typeof body.dryRun !== "boolean") {
     return apiError(400, "INVALID_REQUEST", "dryRun must be a boolean when provided.");

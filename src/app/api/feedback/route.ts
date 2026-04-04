@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
 import { prisma } from "@/lib/prisma";
-import { parseIntegerParam } from "@/lib/request";
+import { parseIntegerParam, parseJsonBody } from "@/lib/request";
 import {
   isPilotFeedbackCategory,
   isPilotFeedbackSeverity,
@@ -32,26 +31,20 @@ function asTrimmedString(value: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const requestedLimit = parseIntegerParam(request.nextUrl.searchParams.get("limit"));
   if (requestedLimit !== undefined && requestedLimit < 1) {
     return apiError(400, "INVALID_REQUEST", "limit must be a positive integer.");
   }
   const limit = Math.min(requestedLimit ?? 20, 100);
-  const commissionerView = auth.actor?.leagueRole === "COMMISSIONER";
+  const commissionerView = actor?.leagueRole === "COMMISSIONER";
 
   const where = {
     leagueId: context.leagueId,
-    ...(commissionerView ? {} : { actorEmail: auth.actor?.email ?? "" }),
+    ...(commissionerView ? {} : { actorEmail: actor?.email ?? "" }),
   };
 
   const [feedback, byStatus, byCategory] = await Promise.all([
@@ -102,17 +95,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const body = (await request.json().catch(() => ({}))) as FeedbackPostBody;
+  const json = await parseJsonBody<FeedbackPostBody>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   if (!isPilotFeedbackCategory(body.category)) {
     return apiError(400, "INVALID_REQUEST", "category must be a valid feedback category.");
   }
@@ -141,9 +130,9 @@ export async function POST(request: NextRequest) {
     data: {
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      actorEmail: auth.actor?.email ?? null,
-      actorRole: auth.actor?.leagueRole ?? null,
-      actorTeamId: auth.actor?.teamId ?? null,
+      actorEmail: actor?.email ?? null,
+      actorRole: actor?.leagueRole ?? null,
+      actorTeamId: actor?.teamId ?? null,
       category: body.category,
       severity: body.severity,
       message,
@@ -166,7 +155,7 @@ export async function POST(request: NextRequest) {
   await recordPilotEventSafe(prisma, {
     leagueId: context.leagueId,
     seasonId: context.seasonId,
-    actor: auth.actor,
+    actor: actor,
     eventType: PILOT_EVENT_TYPES.PILOT_FEEDBACK_SUBMITTED,
     eventCategory: "feedback",
     eventStep: "submit",

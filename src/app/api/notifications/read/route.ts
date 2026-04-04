@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const actorEmail = auth.actor?.email?.trim().toLowerCase() ?? "";
+  const actorEmail = actor?.email?.trim().toLowerCase() ?? "";
   if (!actorEmail) {
     return apiError(
       400,
@@ -25,11 +18,11 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date();
-  if (auth.actor?.userId) {
+  if (actor?.userId) {
     await prisma.notification.updateMany({
       where: {
         leagueId: context.leagueId,
-        recipientUserId: auth.actor.userId,
+        recipientUserId: actor.userId,
         readAt: null,
       },
       data: {

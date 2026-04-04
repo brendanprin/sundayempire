@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { createSyncIssueDetailProjection } from "@/lib/read-models/sync/sync-issue-detail-projection";
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ issueId: string }> },
+  routeContext: { params: Promise<{ issueId: string }> },
 ) {
-  const leagueContext = await getActiveLeagueContext();
-  if (!leagueContext) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { context: leagueContext } = access;
 
-  const auth = await requireLeagueRole(request, leagueContext.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const params = await context.params;
+  const params = await routeContext.params;
   const issueId = params.issueId?.trim();
   if (!issueId) {
     return apiError(400, "INVALID_REQUEST", "issueId is required.");

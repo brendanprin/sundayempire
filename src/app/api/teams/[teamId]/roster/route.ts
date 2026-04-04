@@ -1,8 +1,8 @@
 import { TeamSlotType, TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireTeamLeagueRole } from "@/lib/authorization";
-import { requireActorTeamScope, requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole, requireTeamLeagueRole } from "@/lib/authorization";
+import { requireActorTeamScope } from "@/lib/auth";
 import { getIntroducedErrorFindings } from "@/lib/compliance/diff";
 import { loadTeamValidationContext } from "@/lib/compliance/context";
 import { evaluateComplianceFromContext } from "@/lib/compliance/service";
@@ -13,7 +13,6 @@ import { createLifecycleService } from "@/lib/domain/lifecycle/service";
 import { createRosterAssignmentService } from "@/lib/domain/roster-assignment/service";
 import { evaluateRosterWritePolicy } from "@/lib/domain/roster/roster-write-policy";
 import { createTeamSeasonStateRecalculationService } from "@/lib/domain/team-season-state/recalculation-service";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
 import { prisma } from "@/lib/prisma";
 import { logTransaction } from "@/lib/transactions";
@@ -73,16 +72,9 @@ function buildNextAvailableSlotLabel(
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { teamId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const team = await prisma.team.findFirst({
     where: {

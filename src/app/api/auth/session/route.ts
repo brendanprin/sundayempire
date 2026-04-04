@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { resolvePostAuthenticationDestination } from "@/lib/auth-entry";
 import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
+import { parseJsonBody } from "@/lib/request";
 import {
   AUTH_SESSION_MAX_AGE_SECONDS,
   HEADER_LEAGUE_ID,
@@ -366,7 +367,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as SessionPostBody;
+  const json = await parseJsonBody<SessionPostBody>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (body.mode === "demo") {
     return handleDemoIdentitySignIn(request, body);

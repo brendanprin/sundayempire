@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { analyzeTradeProposal, parseTradeRequest } from "@/lib/trades";
+import { parseJsonBody } from "@/lib/request";
 import { TradeAnalyzeRequest, TradeAnalyzeResponse } from "@/types/trade";
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const season = await prisma.season.findUnique({
     where: {
@@ -31,7 +24,9 @@ export async function POST(request: NextRequest) {
     return apiError(404, "SEASON_NOT_FOUND", "Active season was not found.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as TradeAnalyzeRequest;
+  const json = await parseJsonBody<TradeAnalyzeRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const parsed = parseTradeRequest(body);
 
   if (!parsed.request) {
@@ -40,10 +35,10 @@ export async function POST(request: NextRequest) {
     });
   }
   if (
-    auth.actor?.leagueRole === "MEMBER" &&
-    auth.actor.teamId &&
-    parsed.request.teamAId !== auth.actor.teamId &&
-    parsed.request.teamBId !== auth.actor.teamId
+    actor?.leagueRole === "MEMBER" &&
+    actor.teamId &&
+    parsed.request.teamAId !== actor.teamId &&
+    parsed.request.teamBId !== actor.teamId
   ) {
     return apiError(
       403,
@@ -52,7 +47,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (auth.actor?.leagueRole === "MEMBER" && !auth.actor.teamId) {
+  if (actor?.leagueRole === "MEMBER" && !actor.teamId) {
     return apiError(
       403,
       "FORBIDDEN",

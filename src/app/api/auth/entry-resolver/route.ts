@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import { resolveAuthenticatedEntry } from "@/lib/auth/authenticated-entry-resolver";
 import { parseLeagueIdFromReturnTo } from "@/lib/return-to";
+import { parseJsonBody } from "@/lib/request";
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -54,8 +55,9 @@ export async function POST(request: NextRequest) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }
 
-  const body = await request.json().catch(() => ({}));
-  const { leagueId } = body;
+  const json = await parseJsonBody<{ leagueId?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const { leagueId } = json.data;
 
   if (typeof leagueId !== "string" || !leagueId.trim()) {
     return apiError(400, "INVALID_REQUEST", "leagueId is required.");

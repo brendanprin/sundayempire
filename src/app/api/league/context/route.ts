@@ -5,6 +5,7 @@ import { setActiveLeagueCookie } from "@/lib/auth/active-league";
 import { createActorContextService } from "@/lib/application/actor-context/service";
 import { selectPreferredSeason } from "@/lib/domain/lifecycle/season-selection";
 import { getActiveLeagueContext } from "@/lib/league-context";
+import { parseJsonBody } from "@/lib/request";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -42,9 +43,9 @@ export async function POST(request: NextRequest) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    leagueId?: unknown;
-  };
+  const json = await parseJsonBody<{ leagueId?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   if (typeof body.leagueId !== "string" || body.leagueId.trim().length === 0) {
     return apiError(400, "INVALID_REQUEST", "leagueId is required.");
   }

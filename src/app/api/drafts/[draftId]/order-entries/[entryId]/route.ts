@@ -7,6 +7,7 @@ import { createRookieDraftOrderService } from "@/lib/domain/draft/rookie-draft-o
 import { prisma } from "@/lib/prisma";
 import { createDraftSetupProjection } from "@/lib/read-models/draft/draft-setup-projection";
 import { logRuntime, resolveRequestId } from "@/lib/runtime-log";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 import { DraftOrderEntryCorrectionRequest, DraftOrderEntryCorrectionResponse } from "@/types/draft";
 
@@ -46,7 +47,9 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
   const context = access.context;
   const actor = access.actor;
 
-  const body = (await request.json().catch(() => ({}))) as DraftOrderEntryCorrectionRequest;
+  const json = await parseJsonBody<DraftOrderEntryCorrectionRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const selectingTeamId = parseRequiredString(body.selectingTeamId);
   const owningTeamId = parseRequiredString(body.owningTeamId) ?? selectingTeamId;
   const reason = parseRequiredString(body.reason);

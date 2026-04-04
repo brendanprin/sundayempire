@@ -14,8 +14,8 @@ export type TeamListItem = {
   capSpaceSoft: number;
   capSpaceHard: number;
   complianceStatus: "ok" | "warning" | "error";
-  complianceErrors?: number;
-  complianceWarnings?: number;
+  complianceErrors: number;
+  complianceWarnings: number;
   futurePicksOwnedCount: number;
 };
 
@@ -36,8 +36,8 @@ export type TeamDetailSummary = {
   capSpaceSoft: number;
   capSpaceHard: number;
   complianceStatus: "ok" | "warning" | "error";
-  complianceErrors?: number;
-  complianceWarnings?: number;
+  complianceErrors: number;
+  complianceWarnings: number;
   compliance?: {
     status: "ok" | "warning" | "error";
     evaluatedAt: string;

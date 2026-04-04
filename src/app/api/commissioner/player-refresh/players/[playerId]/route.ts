@@ -1,31 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { createCommissionerPlayerRefreshService } from "@/lib/domain/player/player-refresh-review-service";
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ playerId: string }> },
+  routeContext: { params: Promise<{ playerId: string }> },
 ) {
-  const leagueContext = await getActiveLeagueContext();
-  if (!leagueContext) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context: leagueContext } = access;
 
-  const auth = await requireLeagueRole(request, leagueContext.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const params = await context.params;
+  const params = await routeContext.params;
   const playerId = params.playerId?.trim();
   if (!playerId) {
     return apiError(400, "INVALID_REQUEST", "playerId is required.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const json = await parseJsonBody<Record<string, unknown>>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   if (typeof body.restricted !== "boolean") {
     return apiError(
       400,
@@ -40,14 +36,14 @@ export async function PATCH(
       seasonId: leagueContext.seasonId,
       playerId,
       restricted: body.restricted,
-      reviewedByUserId: auth.actor?.userId ?? "",
+      reviewedByUserId: actor?.userId ?? "",
       changeId: typeof body.changeId === "string" ? body.changeId : null,
       notes: typeof body.notes === "string" ? body.notes : null,
-      actor: auth.actor
+      actor: actor
         ? {
-            email: auth.actor.email,
-            leagueRole: auth.actor.leagueRole,
-            teamId: auth.actor.teamId,
+            email: actor.email,
+            leagueRole: actor.leagueRole,
+            teamId: actor.teamId,
           }
         : null,
     });

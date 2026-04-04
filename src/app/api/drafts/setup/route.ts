@@ -2,7 +2,6 @@ import { TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { requireLeagueRole } from "@/lib/auth";
 import { createAuctionPoolService } from "@/lib/domain/auction/auction-pool-service";
 import {
   buildDefaultVeteranAuctionTitle,
@@ -11,10 +10,10 @@ import {
 } from "@/lib/domain/auction/shared";
 import { buildDefaultRookieDraftTitle } from "@/lib/domain/draft/shared";
 import { createRookieDraftOrderService } from "@/lib/domain/draft/rookie-draft-order-service";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { createAuctionSetupProjection } from "@/lib/read-models/auction/auction-setup-projection";
 import { createDraftSetupProjection } from "@/lib/read-models/draft/draft-setup-projection";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 import {
   DraftSetupRequest,
@@ -64,21 +63,10 @@ function parseRequestedBoolean(value: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
-  const auth = await requireLeagueRole(request, context.leagueId, [
-    "COMMISSIONER", "MEMBER",
-  ]);
-  if (auth.response) {
-    return auth.response;
-  }
-  if (!auth.actor) {
-    return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
-  }
-  const actor = auth.actor;
   const requestedType = parseRequestedType(request.nextUrl.searchParams.get("type"));
 
   if (requestedType === "VETERAN_AUCTION") {
@@ -126,7 +114,9 @@ export async function POST(request: NextRequest) {
   const context = access.context;
   const actor = access.actor;
 
-  const body = (await request.json().catch(() => ({}))) as DraftSetupRequest;
+  const json = await parseJsonBody<DraftSetupRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const requestedType = parseRequestedType(body.type);
   const requestedDraftId = parseRequestedId(body.draftId);
   const requestedTitle = parseRequestedTitle(body.title, context.seasonYear, requestedType);
@@ -286,7 +276,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return apiError(409, "AUCTION_SETUP_FAILED", "Veteran auction setup could not be completed.");
+      return apiError(500, "AUCTION_SETUP_FAILED", "Veteran auction setup encountered an unexpected error.");
     }
   }
 

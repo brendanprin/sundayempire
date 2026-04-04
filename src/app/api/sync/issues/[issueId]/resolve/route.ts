@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createActivityPublisher } from "@/lib/domain/activity/activity-publisher";
 import { formatSyncMismatchResolvedActivity } from "@/lib/domain/activity/formatters";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { createSyncIssueDetailProjection } from "@/lib/read-models/sync/sync-issue-detail-projection";
+import { parseJsonBody } from "@/lib/request";
 import { createSyncResolutionService } from "@/lib/domain/sync/sync-resolution-service";
 
 const VALID_RESOLUTION_TYPES = new Set([
@@ -16,28 +16,21 @@ const VALID_RESOLUTION_TYPES = new Set([
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ issueId: string }> },
+  routeContext: { params: Promise<{ issueId: string }> },
 ) {
-  const leagueContext = await getActiveLeagueContext();
-  if (!leagueContext) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context: leagueContext } = access;
 
-  const auth = await requireLeagueRole(request, leagueContext.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
-
-  const params = await context.params;
+  const params = await routeContext.params;
   const issueId = params.issueId?.trim();
   if (!issueId) {
     return apiError(400, "INVALID_REQUEST", "issueId is required.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    resolutionType?: unknown;
-    reason?: unknown;
-  };
+  const json = await parseJsonBody<{ resolutionType?: unknown; reason?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   if (typeof body.resolutionType !== "string" || !VALID_RESOLUTION_TYPES.has(body.resolutionType)) {
     return apiError(400, "INVALID_REQUEST", "resolutionType must be a supported sync resolution type.");
@@ -48,12 +41,12 @@ export async function POST(
       mismatchId: issueId,
       resolutionType: body.resolutionType as never,
       resolutionReason: typeof body.reason === "string" ? body.reason : null,
-      actorUserId: auth.actor?.userId ?? null,
-      actor: auth.actor
+      actorUserId: actor?.userId ?? null,
+      actor: actor
         ? {
-            email: auth.actor.email,
-            leagueRole: auth.actor.leagueRole,
-            teamId: auth.actor.teamId,
+            email: actor.email,
+            leagueRole: actor.leagueRole,
+            teamId: actor.teamId,
           }
         : null,
     });
@@ -78,7 +71,7 @@ export async function POST(
     await createActivityPublisher(prisma).publishSafe({
       leagueId: leagueContext.leagueId,
       seasonId: leagueContext.seasonId,
-      actorUserId: auth.actor?.userId ?? null,
+      actorUserId: actor?.userId ?? null,
       ...formatSyncMismatchResolvedActivity({
         mismatchId: projection.mismatch.id,
         mismatchType: projection.mismatch.mismatchType,

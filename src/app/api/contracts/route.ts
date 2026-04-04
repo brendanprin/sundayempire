@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TransactionType } from "@prisma/client";
 import { apiError } from "@/lib/api";
+import { isActorTeamScopedMember } from "@/lib/auth";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { isActorTeamScopedMember, requireLeagueRole } from "@/lib/auth";
 import { getIntroducedErrorFindings } from "@/lib/compliance/diff";
 import { loadTeamValidationContext } from "@/lib/compliance/context";
 import { evaluateComplianceFromContext } from "@/lib/compliance/service";
@@ -10,7 +10,6 @@ import { createCommissionerOverrideService } from "@/lib/domain/compliance/commi
 import { createComplianceIssueService } from "@/lib/domain/compliance/compliance-issue-service";
 import { createContractLedgerService } from "@/lib/domain/contracts/contract-ledger-service";
 import { ACTIVE_CONTRACT_STATUSES, resolveContractStatus } from "@/lib/domain/contracts/shared";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 import { parseBooleanParam } from "@/lib/request";
 import { logRuntime, resolveRequestId } from "@/lib/runtime-log";
@@ -43,23 +42,16 @@ function validateContractConstraints(
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const params = request.nextUrl.searchParams;
   const expiringOnly = parseBooleanParam(params.get("expiring")) ?? false;
   const rookieOptionEligible = parseBooleanParam(params.get("rookieOptionEligible")) ?? false;
   const taggedOnly = parseBooleanParam(params.get("tagged")) ?? false;
   const memberTeamId =
-    auth.actor && isActorTeamScopedMember(auth.actor) ? auth.actor.teamId : null;
+    actor && isActorTeamScopedMember(actor) ? actor.teamId : null;
 
   const rawLimit = parseInt(params.get("limit") ?? "200", 10);
   const rawOffset = parseInt(params.get("offset") ?? "0", 10);

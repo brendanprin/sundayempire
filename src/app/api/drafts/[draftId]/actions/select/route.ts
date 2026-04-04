@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api";
 import { requireDraftLeagueRole } from "@/lib/authorization";
 import { createRookieSelectionService } from "@/lib/domain/draft/rookie-selection-service";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { RookieDraftActionResponse, RookieDraftSelectActionRequest } from "@/types/draft";
 
 type RouteContext = {
@@ -20,7 +21,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const context = access.context;
   const actor = access.actor;
 
-  const body = (await request.json().catch(() => ({}))) as RookieDraftSelectActionRequest;
+  const json = await parseJsonBody<RookieDraftSelectActionRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const playerId = typeof body.playerId === "string" && body.playerId.trim() ? body.playerId.trim() : null;
   if (!playerId) {
     return apiError(400, "INVALID_REQUEST", "playerId is required.");

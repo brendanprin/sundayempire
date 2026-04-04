@@ -4,6 +4,7 @@ import { requireDraftLeagueRole } from "@/lib/authorization";
 import { createAuctionBiddingService } from "@/lib/domain/auction/auction-bidding-service";
 import { createAuctionRoomProjection } from "@/lib/read-models/auction/auction-room-projection";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { AuctionReviewRequest, VeteranAuctionRoomResponse } from "@/types/draft";
 
 type RouteContext = {
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const context = access.context;
   const auth = { actor: access.actor };
 
-  const body = (await request.json().catch(() => ({}))) as AuctionReviewRequest;
+  const json = await parseJsonBody<AuctionReviewRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const winningBidId =
     typeof body.winningBidId === "string" && body.winningBidId.trim() ? body.winningBidId.trim() : null;
   const reason = typeof body.reason === "string" ? body.reason : "";

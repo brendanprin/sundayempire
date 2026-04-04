@@ -6,6 +6,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/auth";
 import { setActiveLeagueCookie } from "@/lib/auth/active-league";
+import { parseJsonBody } from "@/lib/request";
 import {
   createLeagueInviteService,
   LeagueInviteAcceptanceError,
@@ -47,7 +48,9 @@ export async function POST(request: NextRequest) {
     return apiError(401, "AUTH_REQUIRED", "Authentication is required.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as AcceptInviteRequestBody;
+  const json = await parseJsonBody<AcceptInviteRequestBody>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (token.length === 0) {
     return apiError(400, "INVALID_REQUEST", "token is required.");

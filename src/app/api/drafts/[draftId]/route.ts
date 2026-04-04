@@ -1,10 +1,10 @@
 import { DraftStatus, TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireDraftLeagueRole } from "@/lib/authorization";
+import { requireCurrentLeagueRole, requireDraftLeagueRole } from "@/lib/authorization";
 import { toDraftSummary } from "@/lib/draft";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 import {
   DRAFT_LIFECYCLE_ACTIONS,
@@ -106,11 +106,9 @@ function validateInProgressStatus(status: DraftStatus) {
 
 export async function GET(request: NextRequest, routeContext: RouteContext) {
   const { draftId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const loaded = await loadDraftForActiveSeason({
     draftId,
@@ -332,7 +330,9 @@ export async function PATCH(request: NextRequest, routeContext: RouteContext) {
   }
 
   const draft = loaded.draft;
-  const body = (await request.json().catch(() => ({}))) as DraftLifecycleActionRequest;
+  const json = await parseJsonBody<DraftLifecycleActionRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const action = body.action;
 
   if (!isDraftLifecycleAction(action)) {

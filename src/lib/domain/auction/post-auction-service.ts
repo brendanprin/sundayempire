@@ -21,17 +21,24 @@ export function createPostAuctionService(client: AuctionDbClient = prisma) {
     }) {
       const now = input.now ?? new Date();
 
-      // Get league ruleset for roster requirements
-      const ruleset = await client.leagueRuleSet.findFirst({
-        where: {
-          leagueId: input.leagueId,
-          isActive: true,
-        },
-        orderBy: [{ version: "desc" }],
-      });
+      // Get league ruleset and active season year in parallel
+      const [ruleset, season] = await Promise.all([
+        client.leagueRuleSet.findFirst({
+          where: { leagueId: input.leagueId, isActive: true },
+          orderBy: [{ version: "desc" }],
+        }),
+        client.season.findUnique({
+          where: { id: input.seasonId },
+          select: { year: true },
+        }),
+      ]);
 
       if (!ruleset) {
         throw new Error("Active ruleset not found for emergency fill-in detection.");
+      }
+
+      if (!season) {
+        throw new Error("Season not found for emergency fill-in detection.");
       }
 
       // Identify teams with short rosters
@@ -115,7 +122,7 @@ export function createPostAuctionService(client: AuctionDbClient = prisma) {
               const contractEffects = await auctionContractCreationService.createAwardedContract({
                 leagueId: input.leagueId,
                 seasonId: input.seasonId,
-                seasonYear: 2026, // TODO: Get from season
+                seasonYear: season.year,
                 teamId: team.id,
                 playerId: player.id,
                 salary: 1, // Minimum contract per constitution

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Position } from "@prisma/client";
-import { apiError } from "@/lib/api";
 import { ACTIVE_CONTRACT_STATUSES } from "@/lib/domain/contracts/shared";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { parseBooleanParam } from "@/lib/request";
 
@@ -31,10 +30,9 @@ type PlayerRow = {
 };
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const params = request.nextUrl.searchParams;
   const search = params.get("search")?.trim() ?? "";

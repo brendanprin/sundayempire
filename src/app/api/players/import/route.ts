@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
 import type { PlayerImportRequest } from "@/lib/player-import";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { createCommissionerPlayerRefreshService } from "@/lib/domain/player/player-refresh-review-service";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,9 @@ export async function POST(request: NextRequest) {
   const context = access.context;
   const auth = { actor: access.actor };
 
-  const body = (await request.json().catch(() => ({}))) as PlayerImportRequest;
+  const json = await parseJsonBody<PlayerImportRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
 
   try {
     const result = await createCommissionerPlayerRefreshService(prisma).triggerRefresh({

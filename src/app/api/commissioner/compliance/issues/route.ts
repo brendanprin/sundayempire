@@ -4,12 +4,11 @@ import {
 } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireLeagueRole } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createActivityPublisher } from "@/lib/domain/activity/activity-publisher";
 import { formatComplianceIssueCreatedActivity } from "@/lib/domain/activity/formatters";
 import { createComplianceIssueService } from "@/lib/domain/compliance/compliance-issue-service";
 import { createComplianceReadModels } from "@/lib/domain/compliance/read-models";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 
 const ISSUE_TYPES = new Set<ComplianceIssueType>([
@@ -31,15 +30,9 @@ const ISSUE_SEVERITIES = new Set<ComplianceIssueSeverity>([
 ]);
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { context } = access;
 
   const status = request.nextUrl.searchParams.get("status");
   const teamId = request.nextUrl.searchParams.get("teamId");
@@ -82,15 +75,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const body = (await request.json()) as {
     teamId?: unknown;
@@ -131,8 +118,8 @@ export async function POST(request: NextRequest) {
     message: body.message,
     explicitDueAt:
       typeof body.dueAt === "string" && body.dueAt.trim().length > 0 ? body.dueAt : null,
-    createdByUserId: auth.actor?.userId ?? null,
-    actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+    createdByUserId: actor?.userId ?? null,
+    actorRoleSnapshot: actor?.leagueRole ?? null,
   });
 
   const detail = await createComplianceReadModels(prisma).readIssueDetail({
@@ -144,7 +131,7 @@ export async function POST(request: NextRequest) {
     await createActivityPublisher(prisma).publishSafe({
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      actorUserId: auth.actor?.userId ?? null,
+      actorUserId: actor?.userId ?? null,
       ...formatComplianceIssueCreatedActivity({
         issueId: detail.issue.id,
         code: detail.issue.code,

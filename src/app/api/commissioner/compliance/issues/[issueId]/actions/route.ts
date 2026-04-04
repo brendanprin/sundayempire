@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
-import { requireActorTeamScope, requireLeagueRole } from "@/lib/auth";
+import { requireActorTeamScope } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createComplianceIssueService } from "@/lib/domain/compliance/compliance-issue-service";
 import { createComplianceReadModels } from "@/lib/domain/compliance/read-models";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -35,15 +35,9 @@ function isRemediationStepArray(value: unknown): value is Array<{
 
 export async function POST(request: NextRequest, routeContext: RouteContext) {
   const { issueId } = await routeContext.params;
-  const context = await getActiveLeagueContext();
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const issue = await prisma.complianceIssue.findFirst({
     where: {
@@ -60,11 +54,11 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     return apiError(404, "COMPLIANCE_ISSUE_NOT_FOUND", "Compliance issue was not found.");
   }
 
-  if (auth.actor?.leagueRole === "MEMBER") {
+  if (actor?.leagueRole === "MEMBER") {
     if (!issue.teamId) {
       return apiError(403, "FORBIDDEN", "Members can only act on team-scoped compliance issues.");
     }
-    const scopeResponse = requireActorTeamScope(auth.actor, issue.teamId);
+    const scopeResponse = requireActorTeamScope(actor, issue.teamId);
     if (scopeResponse) {
       return scopeResponse;
     }
@@ -86,8 +80,8 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   ) {
     await createComplianceIssueService(prisma).updateRemediationState({
       issueId: issue.id,
-      actorUserId: auth.actor?.userId ?? null,
-      actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+      actorUserId: actor?.userId ?? null,
+      actorRoleSnapshot: actor?.leagueRole ?? null,
       acknowledgedAt:
         body.remediation.acknowledgedAt === null || typeof body.remediation.acknowledgedAt === "string"
           ? body.remediation.acknowledgedAt
@@ -104,7 +98,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     return NextResponse.json(detail);
   }
 
-  if (auth.actor?.leagueRole !== "COMMISSIONER") {
+  if (actor?.leagueRole !== "COMMISSIONER") {
     return apiError(403, "FORBIDDEN", "Only commissioners can add non-remediation compliance actions.");
   }
 
@@ -114,8 +108,8 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   await createComplianceIssueService(prisma).appendAction({
     issueId: issue.id,
-    actorUserId: auth.actor?.userId ?? null,
-    actorRoleSnapshot: auth.actor?.leagueRole ?? null,
+    actorUserId: actor?.userId ?? null,
+    actorRoleSnapshot: actor?.leagueRole ?? null,
     actionType:
       typeof body.toStatus === "string" && body.toStatus === "RESOLVED"
         ? "RESOLVED"

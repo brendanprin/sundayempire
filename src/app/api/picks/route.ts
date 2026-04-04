@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError } from "@/lib/api";
-import { isActorTeamScopedMember, requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
+import { isActorTeamScopedMember } from "@/lib/auth";
+import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { parseIntegerParam } from "@/lib/request";
 
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) {
+    return access.response;
   }
 
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const { actor, context } = access;
+  const params = request.nextUrl.searchParams;
 
-  const seasonYear = parseIntegerParam(request.nextUrl.searchParams.get("seasonYear"));
-  const round = parseIntegerParam(request.nextUrl.searchParams.get("round"));
-  const memberTeamId =
-    auth.actor && isActorTeamScopedMember(auth.actor) ? auth.actor.teamId : null;
+  const seasonYear = parseIntegerParam(params.get("seasonYear"));
+  const round = parseIntegerParam(params.get("round"));
+  const memberTeamId = isActorTeamScopedMember(actor) ? actor.teamId : null;
+
+  const rawLimit = parseInt(params.get("limit") ?? "300", 10);
+  const rawOffset = parseInt(params.get("offset") ?? "0", 10);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(1, rawLimit), 1000) : 300;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
 
   const picks = await prisma.futurePick.findMany({
     where: {
@@ -31,21 +31,15 @@ export async function GET(request: NextRequest) {
     },
     include: {
       originalTeam: {
-        select: {
-          id: true,
-          name: true,
-          abbreviation: true,
-        },
+        select: { id: true, name: true, abbreviation: true },
       },
       currentTeam: {
-        select: {
-          id: true,
-          name: true,
-          abbreviation: true,
-        },
+        select: { id: true, name: true, abbreviation: true },
       },
     },
     orderBy: [{ seasonYear: "asc" }, { round: "asc" }, { overall: "asc" }],
+    take: limit,
+    skip: offset,
   });
 
   const normalized = picks.map((pick) => ({
@@ -68,5 +62,10 @@ export async function GET(request: NextRequest) {
       year: context.seasonYear,
     },
     picks: normalized,
+    pagination: {
+      limit,
+      offset,
+      hasMore: picks.length === limit,
+    },
   });
 }

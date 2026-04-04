@@ -4,6 +4,7 @@ import { apiError } from "@/lib/api";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
 import { createLeagueInviteService, deriveLeagueInviteStatus } from "@/lib/domain/auth/LeagueInviteService";
 import { prisma } from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/request";
 import { logTransaction } from "@/lib/transactions";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -479,10 +480,9 @@ export async function POST(request: NextRequest) {
     return access.response;
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    mode?: unknown;
-    csvText?: unknown;
-  };
+  const json = await parseJsonBody<{ mode?: unknown; csvText?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const mode = typeof body.mode === "string" ? body.mode.trim().toLowerCase() : "";
   const normalizedMode: BootstrapMode | null =
     mode === "validate" || mode === "apply" ? mode : null;

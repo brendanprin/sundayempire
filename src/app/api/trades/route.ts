@@ -1,12 +1,12 @@
 import { TransactionType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
+import { isActorTeamScopedMember } from "@/lib/auth";
 import { requireCurrentLeagueRole } from "@/lib/authorization";
-import { isActorTeamScopedMember, requireLeagueRole } from "@/lib/auth";
-import { getActiveLeagueContext } from "@/lib/league-context";
 import { recordPilotEventSafe, requestTelemetry } from "@/lib/pilot-events";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromRequestActor, logTransaction } from "@/lib/transactions";
+import { parseJsonBody } from "@/lib/request";
 import { analyzeTradeProposal, parseTradeRequest, toTradeSummary, tradeInclude } from "@/lib/trades";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
 import {
@@ -19,16 +19,9 @@ import {
 
 // Legacy compatibility route for pre-Sprint 7 trade flows.
 export async function GET(request: NextRequest) {
-  const context = await getActiveLeagueContext();
-
-  if (!context) {
-    return apiError(404, "LEAGUE_CONTEXT_NOT_FOUND", "No active league context was found.");
-  }
-
-  const auth = await requireLeagueRole(request, context.leagueId, ["COMMISSIONER", "MEMBER"]);
-  if (auth.response) {
-    return auth.response;
-  }
+  const access = await requireCurrentLeagueRole(request, ["COMMISSIONER", "MEMBER"]);
+  if (access.response) return access.response;
+  const { actor, context } = access;
 
   const statusParam = request.nextUrl.searchParams.get("status");
   if (statusParam !== null && !isTradeStatus(statusParam)) {
@@ -41,9 +34,9 @@ export async function GET(request: NextRequest) {
     where: {
       leagueId: context.leagueId,
       seasonId: context.seasonId,
-      ...(auth.actor && isActorTeamScopedMember(auth.actor)
+      ...(actor && isActorTeamScopedMember(actor)
         ? {
-            OR: [{ teamAId: auth.actor.teamId! }, { teamBId: auth.actor.teamId! }],
+            OR: [{ teamAId: actor.teamId! }, { teamBId: actor.teamId! }],
           }
         : {}),
       ...(statusParam ? { status: statusParam } : {}),
@@ -92,7 +85,9 @@ export async function POST(request: NextRequest) {
     return apiError(404, "SEASON_NOT_FOUND", "Active season was not found.");
   }
 
-  const body = (await request.json().catch(() => ({}))) as CreateTradeRequest;
+  const json = await parseJsonBody<CreateTradeRequest>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const parsed = parseTradeRequest(body);
 
   if (!parsed.request) {

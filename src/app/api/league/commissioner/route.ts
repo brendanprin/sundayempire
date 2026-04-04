@@ -7,6 +7,7 @@ import {
   CommissionerAssignmentError,
   getLeagueCommissionerIntegrity,
 } from "@/lib/domain/league-membership/commissioner-assignment";
+import { parseJsonBody } from "@/lib/request";
 import { prisma } from "@/lib/prisma";
 import { readLeagueCommissionerGovernanceSnapshot } from "@/lib/read-models/commissioner-governance/commissioner-governance-read-model";
 import { logTransaction } from "@/lib/transactions";
@@ -48,9 +49,9 @@ export async function POST(request: NextRequest) {
     return access.response;
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    targetUserId?: unknown;
-  };
+  const json = await parseJsonBody<{ targetUserId?: unknown }>(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   if (typeof body.targetUserId !== "string" || body.targetUserId.trim().length === 0) {
     return apiError(400, "INVALID_REQUEST", "targetUserId is required.");
   }
