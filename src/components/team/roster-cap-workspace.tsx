@@ -34,6 +34,7 @@ export function RosterCapWorkspace(props: {
   previewLoadingLabel: string | null;
   previewError: string | null;
   onPreviewCut: (playerId: string) => void;
+  onConfirmCut?: (playerId: string) => Promise<void>;
   onPreviewFranchiseTag: (contractId: string) => void;
   onPreviewRookieOption: (contractId: string) => void;
 }) {
@@ -233,6 +234,7 @@ export function RosterCapWorkspace(props: {
         previewLoadingLabel={props.previewLoadingLabel}
         previewError={props.previewError}
         onPreviewCut={handlePreviewCut}
+        onConfirmCut={props.onConfirmCut}
         testId="cut-decision-modal"
       />
     </div>

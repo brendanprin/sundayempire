@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Button, LoadingSpinner } from "@/components/ui";
 import type { ContractImpactPreview, TeamCapDetailProjection } from "@/types/detail";
 
@@ -12,6 +12,7 @@ interface CutDecisionModalProps {
   previewLoadingLabel: string | null;
   previewError: string | null;
   onPreviewCut?: (playerId: string) => void;
+  onConfirmCut?: (playerId: string) => Promise<void>;
   testId?: string;
 }
 
@@ -87,8 +88,38 @@ export function CutDecisionModal({
   previewLoadingLabel,
   previewError,
   onPreviewCut,
+  onConfirmCut,
   testId
 }: CutDecisionModalProps) {
+  const [confirmStep, setConfirmStep] = useState(false);
+  const [cutting, setCutting] = useState(false);
+  const [cutSuccess, setCutSuccess] = useState(false);
+  const [cutError, setCutError] = useState<string | null>(null);
+
+  function handleClose() {
+    setConfirmStep(false);
+    setCutting(false);
+    setCutSuccess(false);
+    setCutError(null);
+    onClose();
+  }
+
+  async function handleExecuteCut() {
+    if (!contract || !onConfirmCut) return;
+    setCutting(true);
+    setCutError(null);
+    try {
+      await onConfirmCut(contract.player.id);
+      setCutSuccess(true);
+      setConfirmStep(false);
+      setTimeout(() => handleClose(), 2000);
+    } catch (err) {
+      setCutError(err instanceof Error ? err.message : "Cut failed. Please try again.");
+    } finally {
+      setCutting(false);
+    }
+  }
+
   if (!isOpen) {
     return null;
   }
@@ -348,8 +379,44 @@ export function CutDecisionModal({
           </div>
 
           {/* Sticky Footer */}
-          <div className="px-8 py-6 border-t border-slate-700 bg-slate-900/50">
-            {contract && preview && (
+          <div className="sticky bottom-0 px-8 py-6 border-t border-slate-700 bg-slate-900/95">
+            {/* Success state */}
+            {cutSuccess && (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-700/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
+                <svg className="h-4 w-4 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span><span className="font-medium">{contract?.player.name}</span> has been cut. Cap space and roster updated.</span>
+              </div>
+            )}
+
+            {/* Cut error */}
+            {cutError && !cutSuccess && (
+              <div className="mb-3 rounded-lg border border-red-700/50 bg-red-950/30 px-3 py-2 text-sm text-red-200">
+                {cutError}
+              </div>
+            )}
+
+            {/* Confirm step */}
+            {confirmStep && !cutSuccess && (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-red-700/50 bg-red-950/20 px-4 py-3 text-sm text-red-100">
+                  <p className="font-semibold">Confirm: Cut {contract?.player.name}?</p>
+                  <p className="mt-1 text-red-300">This cannot be undone. The player will be immediately released and dead cap applied.</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button type="button" variant="secondary" onClick={() => { setConfirmStep(false); setCutError(null); }} disabled={cutting}>
+                    Cancel
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={handleExecuteCut} loading={cutting} disabled={cutting}>
+                    {cutting ? "Cutting..." : "Yes, Cut Player"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Normal state */}
+            {contract && preview && !confirmStep && !cutSuccess && (
               <div className="flex items-center justify-between gap-6">
                 <div className={`text-sm ${preview.legal ? "text-slate-300" : "text-red-400"}`}>
                   {preview.legal ? (
@@ -369,18 +436,14 @@ export function CutDecisionModal({
                   )}
                 </div>
                 <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={onClose}
-                  >
+                  <Button type="button" variant="secondary" onClick={handleClose}>
                     Close
                   </Button>
                   {preview.legal && (
                     <Button
                       type="button"
                       variant="destructive"
-                      disabled={!preview.legal}
+                      onClick={() => setConfirmStep(true)}
                     >
                       Proceed with Cut
                     </Button>
@@ -398,7 +461,7 @@ export function CutDecisionModal({
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={onClose}
+                    onClick={handleClose}
                   >
                     Close
                   </Button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { TradeStatusBadge } from "@/components/trades/trade-status-badge";
@@ -155,6 +156,8 @@ export function TradeReviewDetailView(props: {
   onReject: () => Promise<void> | void;
   onProcess: () => Promise<void> | void;
 }) {
+  const [declineConfirming, setDeclineConfirming] = useState(false);
+
   const proposerAssets = props.detail.proposal.assets.filter(
     (asset) => asset.fromTeamId === props.detail.proposal.proposerTeam.id,
   );
@@ -421,16 +424,43 @@ export function TradeReviewDetailView(props: {
                 </Button>
               ) : null}
               {props.detail.permissions.canDecline ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={props.onDecline}
-                  disabled={Boolean(props.busyLabel)}
-                  loading={props.busyLabel === "decline"}
-                  className="w-full"
-                >
-                  {props.busyLabel === "decline" ? "Declining..." : "Decline Trade Proposal"}
-                </Button>
+                declineConfirming ? (
+                  <div className="space-y-2 rounded-lg border border-red-700/50 bg-red-950/20 p-3">
+                    <p className="text-sm font-medium text-red-100">Decline this trade proposal?</p>
+                    <p className="text-xs text-red-300">The other party will be notified. This cannot be undone.</p>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setDeclineConfirming(false)}
+                        disabled={Boolean(props.busyLabel)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={async () => { await props.onDecline(); setDeclineConfirming(false); }}
+                        disabled={Boolean(props.busyLabel)}
+                        loading={props.busyLabel === "decline"}
+                        className="flex-1"
+                      >
+                        {props.busyLabel === "decline" ? "Declining..." : "Yes, Decline"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setDeclineConfirming(true)}
+                    disabled={Boolean(props.busyLabel)}
+                    className="w-full"
+                  >
+                    Decline Trade Proposal
+                  </Button>
+                )
               ) : null}
 
               {props.detail.permissions.canCommissionerReview ? (

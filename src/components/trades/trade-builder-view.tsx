@@ -517,7 +517,14 @@ export function TradeBuilderView(props: {
                               : "border-slate-700 bg-slate-900 text-slate-200"
                         }`}
                       >
-                        <p className="font-medium">{finding.code}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{finding.code}</p>
+                          {finding.category === "hard_block" && (
+                            <span className="shrink-0 rounded-full border border-rose-600/60 bg-rose-950/60 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-rose-300">
+                              Blocks submission
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1">{finding.message}</p>
                       </div>
                     ))

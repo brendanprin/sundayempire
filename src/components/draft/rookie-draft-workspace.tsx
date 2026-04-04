@@ -669,6 +669,41 @@ export function RookieDraftWorkspace() {
         </div>
       ) : null}
 
+      {/* On the clock banner — shown at the top whenever the draft is live */}
+      {draft?.status === "IN_PROGRESS" && room?.currentPick && (
+        <div
+          className={`flex items-center justify-between gap-4 rounded-xl border px-5 py-4 ${
+            viewerIsOnTheClock
+              ? "border-emerald-500/50 bg-[radial-gradient(circle_at_left,rgba(16,185,129,0.18),transparent_60%),rgba(2,6,23,0.9)] shadow-[0_8px_32px_rgba(16,185,129,0.14)]"
+              : "border-amber-500/30 bg-amber-950/20"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`text-lg ${viewerIsOnTheClock ? "text-emerald-300" : "text-amber-300"}`}>
+              {viewerIsOnTheClock ? "🟢" : "⏳"}
+            </span>
+            <div>
+              <p className={`text-sm font-semibold ${viewerIsOnTheClock ? "text-emerald-100" : "text-amber-100"}`}>
+                {viewerIsOnTheClock
+                  ? "You are on the clock"
+                  : `${currentPickTeamName} is on the clock`}
+              </p>
+              <p className="text-xs text-slate-400">
+                Pick {room.currentPick.round}.{room.currentPick.pickNumber}
+                {viewerIsOnTheClock
+                  ? " — Select a rookie from the prospect pool below or pass the slot."
+                  : " — You can review prospects while they pick."}
+              </p>
+            </div>
+          </div>
+          {viewerIsOnTheClock && (
+            <span className="shrink-0 animate-pulse rounded-full border border-emerald-500/60 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">
+              Your pick
+            </span>
+          )}
+        </div>
+      )}
+
       {isSetupView ? (
         <div className="space-y-3 md:space-y-4">
           <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 md:p-5">

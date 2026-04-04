@@ -79,6 +79,22 @@ export default function TeamDetailPage() {
     };
   }, [loadPage]);
 
+  const executeCut = useCallback(
+    async (playerId: string) => {
+      await requestJson(
+        `/api/teams/${teamId}/roster`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "cut", playerId }),
+        },
+        "Failed to cut player.",
+      );
+      await loadPage();
+    },
+    [teamId, loadPage],
+  );
+
   const runPreview = useCallback(
     async (label: string, url: string, body: Record<string, unknown>) => {
       setPreviewLoadingLabel(label);
@@ -167,6 +183,7 @@ export default function TeamDetailPage() {
       onPreviewCut={(playerId) =>
         runPreview("Cut Preview", `/api/teams/${teamId}/preview/cut`, { playerId })
       }
+      onConfirmCut={executeCut}
       onPreviewFranchiseTag={(contractId) =>
         runPreview(
           "Franchise Tag Preview",

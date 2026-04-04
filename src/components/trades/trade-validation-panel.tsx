@@ -113,8 +113,13 @@ export function TradeValidationPanel(props: {
             Run Trade Validation to capture policy findings, blockers, and decision status.
           </p>
         </div>
+      ) : isStale ? (
+        <div className="rounded-lg border border-dashed border-amber-700/40 bg-amber-950/10 px-4 py-6 text-center">
+          <p className="text-sm font-medium text-amber-200 mb-1">Findings are out of date</p>
+          <p className="text-xs text-amber-400">The trade package changed since the last validation. Save and re-validate to see current findings before submitting.</p>
+        </div>
       ) : (
-        <div className={`space-y-3 ${isStale ? "opacity-40" : ""}`}>
+        <div className="space-y-3">
           {/* Remediation Context */}
           {props.evaluation.remediation?.reasons.length ? (
             <div className="rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-3">
