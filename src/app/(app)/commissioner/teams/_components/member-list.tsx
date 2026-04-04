@@ -131,8 +131,10 @@ export function MemberList(props: {
   onCancel: (ownerId: string) => void;
   onStartEdit: (ownerId: string) => void;
   onAssign: (ownerId: string) => void;
+  onBulkAssign: () => Promise<void>;
 }) {
   const { unassignedOwners, unassignedTeams, ownerEdits, memberAssignTargets, editingOwnerId, busyAction } = props;
+  const pendingCount = Object.values(memberAssignTargets).filter(Boolean).length;
 
   return (
     <section
@@ -158,31 +160,50 @@ export function MemberList(props: {
           All members are assigned to a franchise.
         </p>
       ) : (
-        <ul className="space-y-1.5">
-          {unassignedOwners.map((owner) => {
-            const edit = ownerEdits[owner.id] ?? { name: owner.name, email: owner.email ?? "" };
-            const isEditing = editingOwnerId === owner.id;
-            const assignTarget = memberAssignTargets[owner.id] ?? "";
+        <>
+          <ul className="space-y-1.5">
+            {unassignedOwners.map((owner) => {
+              const edit = ownerEdits[owner.id] ?? { name: owner.name, email: owner.email ?? "" };
+              const isEditing = editingOwnerId === owner.id;
+              const assignTarget = memberAssignTargets[owner.id] ?? "";
 
-            return (
-              <MemberListItem
-                key={owner.id}
-                owner={owner}
-                edit={edit}
-                unassignedTeams={unassignedTeams}
-                assignTarget={assignTarget}
-                isEditing={isEditing}
-                busyAction={busyAction}
-                onEditChange={(next) => props.onEditChange(owner.id, next)}
-                onAssignTargetChange={(teamId) => props.onAssignTargetChange(owner.id, teamId)}
-                onSave={() => props.onSave(owner.id)}
-                onCancel={() => props.onCancel(owner.id)}
-                onStartEdit={() => props.onStartEdit(owner.id)}
-                onAssign={() => props.onAssign(owner.id)}
-              />
-            );
-          })}
-        </ul>
+              return (
+                <MemberListItem
+                  key={owner.id}
+                  owner={owner}
+                  edit={edit}
+                  unassignedTeams={unassignedTeams}
+                  assignTarget={assignTarget}
+                  isEditing={isEditing}
+                  busyAction={busyAction}
+                  onEditChange={(next) => props.onEditChange(owner.id, next)}
+                  onAssignTargetChange={(teamId) => props.onAssignTargetChange(owner.id, teamId)}
+                  onSave={() => props.onSave(owner.id)}
+                  onCancel={() => props.onCancel(owner.id)}
+                  onStartEdit={() => props.onStartEdit(owner.id)}
+                  onAssign={() => props.onAssign(owner.id)}
+                />
+              );
+            })}
+          </ul>
+
+          {pendingCount >= 2 && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-amber-700/40 bg-amber-950/20 px-3 py-2.5">
+              <p className="text-xs text-amber-300">
+                {pendingCount} assignments ready to apply
+              </p>
+              <button
+                type="button"
+                data-testid="bulk-assign-btn"
+                onClick={() => void props.onBulkAssign()}
+                disabled={busyAction !== null}
+                className="rounded border border-amber-600/60 bg-amber-900/30 px-3 py-1 text-xs font-medium text-amber-200 transition hover:bg-amber-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {busyAction === "bulk-assign" ? "Applying…" : `Apply All ${pendingCount} Assignments`}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

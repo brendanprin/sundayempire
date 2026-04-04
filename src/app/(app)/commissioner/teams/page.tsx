@@ -236,6 +236,49 @@ export default function CommissionerTeamsPage() {
     }
   }
 
+  async function bulkAssign() {
+    const entries = Object.entries(memberAssignTargets).filter(([, teamId]) => !!teamId);
+    if (entries.length === 0) return;
+    setBusyAction("bulk-assign");
+    setError(null);
+    setMessage(null);
+    try {
+      const results = await Promise.allSettled(
+        entries.map(([ownerId, teamId]) => {
+          const team = teams.find((t) => t.id === teamId);
+          const owner = owners.find((o) => o.id === ownerId);
+          if (!team || !owner) return Promise.reject(new Error("Missing team or member data."));
+          return requestJson(`/api/teams/${teamId}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              name: team.name,
+              abbreviation: team.abbreviation ?? null,
+              divisionLabel: team.divisionLabel ?? null,
+              ownerId,
+            }),
+          }, `Failed to assign ${owner.name} to ${team.name}.`);
+        }),
+      );
+      const failed = results.filter((r) => r.status === "rejected");
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      if (failed.length > 0) {
+        const reasons = failed
+          .map((r) => (r.status === "rejected" && r.reason instanceof Error ? r.reason.message : "Unknown error"))
+          .join(" ");
+        setError(`${failed.length} assignment(s) failed. ${succeeded} succeeded. ${reasons}`);
+      } else {
+        setMessage(`${succeeded} member${succeeded === 1 ? "" : "s"} assigned to their franchises.`);
+        setMemberAssignTargets({});
+      }
+      await reloadWorkspace();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bulk assignment failed.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   // ── Team actions ──────────────────────────────────────────────────────────
 
   async function createTeam() {
@@ -464,6 +507,7 @@ export default function CommissionerTeamsPage() {
         }}
         onStartEdit={startEditingOwner}
         onAssign={assignOwnerToTeam}
+        onBulkAssign={bulkAssign}
       />
 
       <SetupUtilitiesSection
