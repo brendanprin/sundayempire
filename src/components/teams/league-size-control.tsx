@@ -15,21 +15,23 @@ export function LeagueSizeControl({
   const [showSizeForm, setShowSizeForm] = useState(false);
   const [newSize, setNewSize] = useState(summary.totalSlots.toString());
   const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const size = parseInt(newSize, 10);
 
     if (size < summary.filledSlots) {
-      alert(`Cannot reduce league size below ${summary.filledSlots} (current filled teams)`);
+      setValidationError(`Cannot reduce below ${summary.filledSlots} (current filled teams).`);
       return;
     }
 
     if (size < 4 || size > 32) {
-      alert("League size must be between 4 and 32 teams");
+      setValidationError("League size must be between 4 and 32.");
       return;
     }
 
+    setValidationError(null);
     setLoading(true);
     try {
       if (onChangeLeagueSize) {
@@ -56,35 +58,41 @@ export function LeagueSizeControl({
           Change Size
         </button>
       ) : (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <input
-            type="number"
-            value={newSize}
-            onChange={(e) => setNewSize(e.target.value)}
-            min={Math.max(4, summary.filledSlots)}
-            max={32}
-            className="w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-            disabled={loading || Boolean(busyAction)}
-          >
-            {loading ? "..." : "Set"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowSizeForm(false);
-              setNewSize(summary.totalSlots.toString());
-            }}
-            className="rounded bg-slate-600 px-2 py-1 text-xs font-medium text-white hover:bg-slate-500"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-        </form>
+        <div className="space-y-1.5">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <input
+              type="number"
+              value={newSize}
+              onChange={(e) => { setNewSize(e.target.value); setValidationError(null); }}
+              min={Math.max(4, summary.filledSlots)}
+              max={32}
+              className="w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              disabled={loading || Boolean(busyAction)}
+            >
+              {loading ? "..." : "Set"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSizeForm(false);
+                setNewSize(summary.totalSlots.toString());
+                setValidationError(null);
+              }}
+              className="rounded bg-slate-600 px-2 py-1 text-xs font-medium text-white hover:bg-slate-500"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+          </form>
+          {validationError ? (
+            <p className="text-xs text-red-400">{validationError}</p>
+          ) : null}
+        </div>
       )}
     </div>
   );

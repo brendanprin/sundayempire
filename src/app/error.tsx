@@ -14,7 +14,7 @@ export default function ErrorPage({
     >
       <h2 className="text-xl font-semibold">Something went wrong</h2>
       <p className="text-sm text-red-200">
-        The page failed to load. You can retry the action below.
+        The page failed to load. Reload to try again.
       </p>
       <p className="rounded border border-red-800/70 bg-red-950/40 px-3 py-2 text-xs text-red-300">
         {error.digest

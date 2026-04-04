@@ -187,7 +187,7 @@ export function MemberList(props: {
             })}
           </ul>
 
-          {pendingCount >= 2 && (
+          {pendingCount >= 1 && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-amber-700/40 bg-amber-950/20 px-3 py-2.5">
               <p className="text-xs text-amber-300">
                 {pendingCount} assignments ready to apply
