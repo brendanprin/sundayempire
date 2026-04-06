@@ -155,33 +155,53 @@ test.describe("Trade Happy Path Build Submit Review", () => {
 
         evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "05-trade-validation")).screenshots);
 
-        // Step 7: Submit trade
-        const submitButton = page.getByRole("button", { name: /submit|propose|send/i });
-        if (await submitButton.isVisible()) {
-          await submitButton.click();
+        // Step 7: Submit trade — first click should show confirmation step, not fire immediately
+        const submitIntentButton = page.getByTestId("trade-submit-intent");
+        if (await submitIntentButton.isVisible()) {
+          await submitIntentButton.click();
           await waitForPageStable(page);
-          
+
+          // Confirmation panel must appear before anything is sent
+          const confirmPanel = page.getByTestId("trade-submit-confirm");
+          if (!(await confirmPanel.isVisible())) {
+            errors.push("trade-submit-confirm panel did not appear after clicking submit intent button");
+          }
+
+          // Cancel should dismiss the confirmation without submitting
+          const cancelButton = page.getByTestId("trade-submit-cancel");
+          if (await cancelButton.isVisible()) {
+            await cancelButton.click();
+            await waitForPageStable(page);
+            if (await confirmPanel.isVisible()) {
+              errors.push("Confirmation panel still visible after clicking cancel");
+            }
+            // Re-open and proceed
+            await submitIntentButton.click();
+            await waitForPageStable(page);
+          }
+
+          // Confirm & Send
+          const confirmButton = page.getByTestId("trade-submit-confirm-button");
+          if (await confirmButton.isVisible()) {
+            await confirmButton.click();
+            await waitForPageStable(page);
+          }
+
           evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "06-trade-submitted")).screenshots);
         }
 
-        // Step 8: Assert submitted trade detail renders stored evaluation
-        const tradeDetailIndicators = [
-          page.getByText(/submitted|proposed|pending/i),
-          page.locator('[data-testid*="proposal"]'),
-          page.locator('[data-testid*="trade-detail"]'),
-          page.getByText(/evaluation|analysis/i)
-        ];
-
-        let detailVisible = false;
-        for (const indicator of tradeDetailIndicators) {
-          if (await indicator.first().isVisible()) {
-            detailVisible = true;
-            break;
+        // Step 8: Assert submitted trade detail renders the review workspace
+        const tradeWorkspace = page.getByTestId("trade-review-workspace");
+        if (!(await tradeWorkspace.isVisible())) {
+          errors.push("trade-review-workspace not visible after submission");
+        } else {
+          // The view-only note or validation panel confirms the submitted state
+          const submittedNote = page.getByText(/submitted|awaiting response/i);
+          const validationPanel = page.getByTestId("trade-review-validation");
+          const hasState = (await submittedNote.first().isVisible()) || (await validationPanel.isVisible());
+          if (!hasState) {
+            errors.push("No submitted state indicator visible after trade submission");
           }
-        }
-
-        if (!detailVisible) {
-          errors.push("Trade detail with stored evaluation not visible after submission");
         }
 
         evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "07-trade-detail")).screenshots);

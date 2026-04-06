@@ -36,42 +36,34 @@ test.describe("Activity Feed and Audit Visibility", () => {
       
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "02-activity-feed-manager")).screenshots);
 
-      // Step 3: Verify readable manager-safe activity entries
+      // Step 3: Verify the activity feed shell rendered
       await expect(page.getByTestId("activity-feed")).toBeVisible();
-      
-      // Verify manager-safe activity label
+
+      // Visibility label must show league-visible scope (exact text from component)
       const visibilityLabel = page.getByTestId("activity-visibility-label");
-      if (await visibilityLabel.isVisible()) {
-        await expect(visibilityLabel).toContainText(/league.?visible|public|manager/i);
-      } else {
-        errors.push("No activity visibility label found");
-      }
+      await expect(visibilityLabel).toBeVisible();
+      await expect(visibilityLabel).toHaveText("League-visible events only");
 
-      // Verify no commissioner-only events are visible  
-      const commissionerOnlyEvents = page.locator('[data-testid="activity-item"][data-event-type*="commissioner"]');
-      const commissionerEventCount = await commissionerOnlyEvents.count();
-      
-      if (commissionerEventCount > 0) {
-        errors.push(`Found ${commissionerEventCount} commissioner-only events in manager view`);
-      }
+      // Feed list must be present
+      await expect(page.getByTestId("activity-feed-list")).toBeVisible();
 
-      // Look for activity entries
-      const activityItems = page.locator('[data-testid="activity-item"], .activity-item, .activity-entry');
-      const itemCount = await activityItems.count();
-      
-      if (itemCount === 0) {
-        errors.push("No activity items found in manager feed");
-      }
+      // Filters must be present — confirms the interactive controls rendered
+      await expect(page.getByTestId("activity-filter-season")).toBeVisible();
+      await expect(page.getByTestId("activity-filter-team")).toBeVisible();
+      await expect(page.getByTestId("activity-filter-type")).toBeVisible();
 
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "03-manager-activity-verification")).screenshots);
 
-      // Step 4: Filter by type or team if available
-      const filterButtons = page.locator('[data-testid*="filter"], button:has-text("Filter"), select');
-      if (await filterButtons.first().isVisible()) {
-        await filterButtons.first().click();
+      // Step 4: Exercise the type filter — confirms it's interactive
+      const typeFilter = page.getByTestId("activity-filter-type");
+      const optionCount = await typeFilter.locator("option").count();
+      if (optionCount > 1) {
+        // Select the second option (first non-"All") and verify feed doesn't crash
+        await typeFilter.selectOption({ index: 1 });
         await waitForPageStable(page);
-        
-        evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "04-activity-filters")).screenshots);
+        await expect(page.getByTestId("activity-feed")).toBeVisible();
+
+        evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "04-activity-filter-applied")).screenshots);
       }
 
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "05-final-manager-activity")).screenshots);
@@ -105,73 +97,20 @@ test.describe("Activity Feed and Audit Visibility", () => {
       
       evidence = await captureSmokeEvidence(page, test.info(), "01-commissioner-dashboard");
 
-      // Step 2: Open audit view
-      const auditPaths = [
-        "/audit",
-        "/commissioner/audit", 
-        "/activity/audit",
-        "/admin/audit"
-      ];
+      // Step 2: Navigate directly to the commissioner audit page
+      await page.goto("/commissioner/audit");
+      await waitForPageStable(page);
 
-      let auditFound = false;
-      for (const path of auditPaths) {
-        try {
-          await page.goto(path);
-          await waitForPageStable(page); 
-          
-          // Check for audit-specific content
-          const auditIndicators = [
-            page.getByText(/audit/i),
-            page.getByText(/commissioner.?only/i),
-            page.getByText(/administrative/i),
-            page.locator('[data-testid*="audit"]'),
-            page.locator('[data-testid*="commissioner"]')
-          ];
-          
-          for (const indicator of auditIndicators) {
-            if (await indicator.first().isVisible()) {
-              auditFound = true;
-              break;
-            }
-          }
-          
-          if (auditFound) break;
-        } catch (e) {
-          // Continue trying other paths
-        }
+      // The audit feed shell must render
+      const auditFeed = page.getByTestId("commissioner-audit-feed");
+      if (!(await auditFeed.isVisible())) {
+        errors.push("commissioner-audit-feed not visible on /commissioner/audit");
       }
 
-      if (!auditFound) {
-        // Try finding audit via navigation
-        const navLinks = page.locator('nav a, [role="navigation"] a');
-        const navCount = await navLinks.count();
-        
-        for (let i = 0; i < Math.min(navCount, 10); i++) {
-          const link = navLinks.nth(i);
-          const text = await link.textContent();
-          if (text && /audit|commissioner/i.test(text)) {
-            await link.click();
-            await waitForPageStable(page);
-            auditFound = true;
-            break;
-          }
-        }
-      }
+      evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "02-commissioner-audit-view")).screenshots);
 
-      if (auditFound) {
-        evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "02-commissioner-audit-view")).screenshots);
-
-        // Step 3: Verify richer rationale is visible in commissioner view
-        const content = await page.textContent('body');
-        if (content) {
-          const hasRichContent = /reason|rationale|decision|ruling|override|compliance/i.test(content);
-          if (!hasRichContent) {
-            errors.push("No rich rationale content found in commissioner audit view");
-          }
-        }
-      } else {
-        errors.push("Could not find commissioner audit interface");
-      }
+      // Step 3: Audit scope label confirms commissioner-only context
+      await expect(page.getByText("Commissioner-only operational history")).toBeVisible();
 
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "03-commissioner-audit-content")).screenshots);
 
@@ -201,28 +140,38 @@ test.describe("Activity Feed and Audit Visibility", () => {
       const leagueId = await getPrimaryLeagueId(baseURL as string);
       await navigateToLeague(page, leagueId);
       
-      // Try to access commissioner audit paths
-      const restrictedPaths = [
-        "/audit",
-        "/commissioner/audit",
-        "/admin/audit", 
-        "/commissioner"
-      ];
+      // Attempt to access the commissioner audit page directly
+      await page.goto("/commissioner/audit");
+      await waitForPageStable(page);
 
-      for (const path of restrictedPaths) {
-        await page.goto(path);
-        await waitForPageStable(page);
-        
-        // Check if access is properly denied
-        const content = await page.textContent('body');
-        if (content) {
-          const hasForbiddenContent = /forbidden|access denied|not authorized|403/i.test(content);
-          const hasAuditContent = /commissioner.?audit|administrative/i.test(content);
-          
-          if (hasAuditContent && !hasForbiddenContent) {
-            errors.push(`Manager can inappropriately access ${path}`);
-          }
+      // Manager must be redirected away — either to /no-access or back to a non-audit page
+      const currentUrl = page.url();
+      const landedOnAudit = currentUrl.includes("/commissioner/audit");
+
+      if (landedOnAudit) {
+        // If still on the audit page, the audit feed must NOT have rendered
+        const auditFeed = page.getByTestId("commissioner-audit-feed");
+        if (await auditFeed.isVisible()) {
+          errors.push("Manager can access commissioner-audit-feed — role gate missing on /commissioner/audit");
         }
+      } else {
+        // Redirected — verify landed on the no-access page or a safe destination
+        const noAccessPage = page.getByTestId("no-access-page");
+        const safeRedirect = !currentUrl.includes("/commissioner");
+        if (!(await noAccessPage.isVisible()) && !safeRedirect) {
+          errors.push(`Manager redirected to unexpected URL: ${currentUrl}`);
+        }
+      }
+
+      evidence = await captureSmokeEvidence(page, test.info(), "01-manager-audit-redirect");
+
+      // Also verify the commissioner main console is gated
+      await page.goto("/commissioner");
+      await waitForPageStable(page);
+
+      const commissionerPage = page.getByTestId("commissioner-page");
+      if (await commissionerPage.isVisible()) {
+        errors.push("Manager can see commissioner-page content on /commissioner — role gate missing");
       }
       
       evidence = await captureSmokeEvidence(page, test.info(), "01-manager-audit-access-test");

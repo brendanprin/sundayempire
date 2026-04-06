@@ -60,7 +60,7 @@ export async function loginAs(
           : "login-role-option-member-no-team";
 
     await page.getByTestId(roleTestId).click();
-    await page.getByTestId("login-identity-select").selectOption(user.email);
+    await page.getByTestId("login-demo-email-select").selectOption(user.email);
     await page.getByTestId("login-demo-submit").click();
   } else {
     await page.getByTestId("login-email-input").fill(user.email);

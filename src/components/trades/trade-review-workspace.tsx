@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
@@ -168,13 +169,15 @@ export function TradeReviewWorkspace(props: {
   onReject: () => Promise<void> | void;
   onProcess: () => Promise<void> | void;
 }) {
+  const [submitPending, setSubmitPending] = useState(false);
+
   const proposerAssets = props.detail.proposal.assets.filter(
     (asset) => asset.fromTeamId === props.detail.proposal.proposerTeam.id,
   );
   const counterpartyAssets = props.detail.proposal.assets.filter(
     (asset) => asset.fromTeamId === props.detail.proposal.counterpartyTeam.id,
   );
-  
+
   const decisionState = buildDecisionState(props.detail);
   const actionGuidance = buildActionGuidance(props.detail);
   const submitActionState = buildSubmitActionState(props.detail);
@@ -362,22 +365,59 @@ export function TradeReviewWorkspace(props: {
                 </Link>
               )}
 
-              {/* Submit */}
-              {submitActionState && !submitActionState.blocked && (
+              {/* Submit — two-step confirmation to prevent accidental proposals */}
+              {submitActionState && !submitActionState.blocked && !submitPending && (
                 <Button
                   type="button"
                   variant={props.detail.currentEvaluation?.outcome === "FAIL_REQUIRES_COMMISSIONER" ? "secondary" : "primary"}
-                  onClick={props.onSubmitProposal}
+                  onClick={() => setSubmitPending(true)}
                   disabled={Boolean(props.busyLabel)}
-                  loading={props.busyLabel === "submit"}
                   className={`w-full ${
                     props.detail.currentEvaluation?.outcome === "FAIL_REQUIRES_COMMISSIONER"
                       ? "border-amber-700/50 bg-amber-950/30 text-amber-100 hover:border-amber-500"
                       : ""
                   }`}
+                  data-testid="trade-submit-intent"
                 >
-                  {props.busyLabel === "submit" ? "Submitting..." : submitActionState.buttonLabel}
+                  {submitActionState.buttonLabel}
                 </Button>
+              )}
+              {submitActionState && !submitActionState.blocked && submitPending && (
+                <div
+                  className="space-y-2 rounded-lg border border-amber-700/50 bg-amber-950/20 px-3 py-3"
+                  data-testid="trade-submit-confirm"
+                >
+                  <p className="text-sm text-amber-100">
+                    Send this proposal to{" "}
+                    <span className="font-medium">{props.detail.proposal.counterpartyTeam.name}</span>?
+                    Once submitted it will appear in their inbox.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={props.detail.currentEvaluation?.outcome === "FAIL_REQUIRES_COMMISSIONER" ? "secondary" : "primary"}
+                      onClick={async () => {
+                        setSubmitPending(false);
+                        await props.onSubmitProposal();
+                      }}
+                      disabled={Boolean(props.busyLabel)}
+                      loading={props.busyLabel === "submit"}
+                      className="flex-1"
+                      data-testid="trade-submit-confirm-button"
+                    >
+                      {props.busyLabel === "submit" ? "Submitting..." : "Confirm & Send"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmitPending(false)}
+                      disabled={Boolean(props.busyLabel)}
+                      className="px-3 text-sm text-slate-400 hover:text-slate-200 disabled:opacity-50"
+                      data-testid="trade-submit-cancel"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Accept/Decline */}
