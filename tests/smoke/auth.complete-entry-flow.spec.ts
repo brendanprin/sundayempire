@@ -38,12 +38,12 @@ test.describe.serial("Auth Entry Flow - Smoke Tests", () => {
     await expect(page.locator("h1")).toContainText(/Sign in/i);
 
     // Step 3: Complete authentication (demo or magic-link)
-    const demoToggle = page.locator('[data-testid="demo-auth-toggle"]');
-    const isDemoVisible = await demoToggle.isVisible();
-    
+    const demoTrigger = page.locator('[data-testid="login-show-demo-section"]');
+    const isDemoVisible = await demoTrigger.isVisible();
+
     if (isDemoVisible) {
       // Use demo auth for faster smoke test
-      await demoToggle.click();
+      await demoTrigger.click();
       await page.locator('[data-testid="login-role-option-commissioner"]').click();
       await page.locator('button:has-text("Use Demo Identity")').click();
     } else {
@@ -140,11 +140,11 @@ test.describe.serial("Auth Entry Flow - Smoke Tests", () => {
     // Use demo auth to get multi-league user
     await page.goto("/login");
     
-    const demoToggle = page.locator('[data-testid="demo-auth-toggle"]');
-    const isDemoVisible = await demoToggle.isVisible();
-    
+    const demoTrigger = page.locator('[data-testid="login-show-demo-section"]');
+    const isDemoVisible = await demoTrigger.isVisible();
+
     if (isDemoVisible) {
-      await demoToggle.click();
+      await demoTrigger.click();
       await page.locator('[data-testid="login-role-option-commissioner"]').click();
       await page.locator('button:has-text("Use Demo Identity")').click();
       await waitForPageStable(page);

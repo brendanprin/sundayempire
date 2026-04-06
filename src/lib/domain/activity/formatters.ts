@@ -472,6 +472,28 @@ export function formatAuctionPlayerAwardedActivity(input: {
   });
 }
 
+export function formatEmergencyFillInActivity(input: {
+  draftId: string;
+  filledCount: number;
+  teamNames: string[];
+  occurredAt?: Date | null;
+}) {
+  const teamList = input.teamNames.join(", ");
+  return createActivity(ACTIVITY_EVENT_TYPES.auction.emergencyFillIn, {
+    title: "Emergency fill-in",
+    body: `${input.filledCount} player${input.filledCount === 1 ? "" : "s"} assigned via emergency fill-in to: ${teamList}.`,
+    payload: {
+      draftId: input.draftId,
+      filledCount: input.filledCount,
+      teamNames: input.teamNames,
+    },
+    sourceEntityType: ACTIVITY_SOURCE_ENTITY_TYPES.draft,
+    sourceEntityId: input.draftId,
+    dedupeKey: `auction.emergency_fill_in:${input.draftId}`,
+    occurredAt: input.occurredAt ?? null,
+  });
+}
+
 export function formatAuctionCompletedActivity(input: {
   draftId: string;
   title: string;

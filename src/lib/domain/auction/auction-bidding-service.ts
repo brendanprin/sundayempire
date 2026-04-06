@@ -3,6 +3,7 @@ import { createActivityPublisher } from "@/lib/domain/activity/activity-publishe
 import {
   formatAuctionCompletedActivity,
   formatAuctionPlayerAwardedActivity,
+  formatEmergencyFillInActivity,
 } from "@/lib/domain/activity/formatters";
 import { createCommissionerOverrideService } from "@/lib/domain/compliance/commissioner-override-service";
 import { createComplianceIssueService } from "@/lib/domain/compliance/compliance-issue-service";
@@ -605,8 +606,18 @@ export function createAuctionBiddingService(client: AuctionDbClient = prisma) {
       });
       
       if (emergencyFillResult.triggered && emergencyFillResult.fillInResults.length > 0) {
-        // TODO: Add activity event for emergency fill-in completion
-        console.log(`Emergency fill-in completed: ${emergencyFillResult.fillInResults.length} players assigned.`);
+        const uniqueTeamNames = [...new Set(emergencyFillResult.fillInResults.map((r) => r.teamName))];
+        await activityPublisher.publishSafe({
+          leagueId: input.draft.leagueId,
+          seasonId: input.draft.seasonId,
+          actorUserId: input.actorUserId ?? null,
+          ...formatEmergencyFillInActivity({
+            draftId: input.draft.id,
+            filledCount: emergencyFillResult.fillInResults.length,
+            teamNames: uniqueTeamNames,
+            occurredAt: now,
+          }),
+        });
       }
     }
 

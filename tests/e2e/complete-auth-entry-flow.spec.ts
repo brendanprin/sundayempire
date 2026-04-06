@@ -13,7 +13,7 @@ const NO_TEAM_EMAIL = "readonly@local.league";
 // Helper to check if demo auth is enabled
 async function isDemoAuthEnabled(page: Page): Promise<boolean> {
   await page.goto("/login");
-  return page.locator('[data-testid="demo-auth-section"]').isVisible();
+  return page.locator('[data-testid="login-show-demo-section"]').isVisible();
 }
 
 // Helper to clear all authentication state
@@ -90,15 +90,14 @@ test.describe("Complete Authentication Entry Flow", () => {
     test("demo path only works in non-prod environments", async ({ page }) => {
       await page.goto("/login");
       
-      const demoSection = page.locator('[data-testid="demo-auth-section"]');
-      const isDemoVisible = await demoSection.isVisible();
-      
+      const demoTrigger = page.locator('[data-testid="login-show-demo-section"]');
+      const isDemoVisible = await demoTrigger.isVisible();
+
       // Demo should only be visible when enabled via env vars
       if (process.env.AUTH_DEMO_LOGIN_ENABLED === "1") {
-        await expect(demoSection).toBeVisible();
-        await expect(page.locator('[data-testid="demo-auth-toggle"]')).toBeVisible();
+        await expect(demoTrigger).toBeVisible();
       } else {
-        await expect(demoSection).not.toBeVisible();
+        await expect(demoTrigger).not.toBeVisible();
       }
     });
 
@@ -112,7 +111,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       if (demoEnabled) {
         // Use demo auth for faster testing
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-commissioner"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
         
@@ -145,7 +144,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       // Get to league selection page
       if (demoEnabled) {
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-commissioner"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
       } else {
@@ -185,7 +184,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       
       if (demoEnabled) {
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-member-with-team"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
       } else {
@@ -216,7 +215,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       
       if (demoEnabled) {
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-commissioner"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
         
@@ -238,7 +237,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       
       if (demoEnabled) {
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-member-with-team"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
         
@@ -261,7 +260,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       
       if (demoEnabled) {
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-member-no-team"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
         
@@ -315,7 +314,7 @@ test.describe("Complete Authentication Entry Flow", () => {
       if (demoEnabled) {
         // Sign in and navigate to landing destination
         await page.goto("/login");
-        await page.locator('[data-testid="demo-auth-toggle"]').click();
+        await page.locator('[data-testid="login-show-demo-section"]').click();
         await page.locator('[data-testid="login-role-option-member-with-team"]').click();
         await page.locator('button:has-text("Use Demo Identity")').click();
         
@@ -344,15 +343,14 @@ test.describe("Complete Authentication Entry Flow", () => {
     test("demo auth panel visibility matches environment configuration", async ({ page }) => {
       await page.goto("/login");
       
-      const demoSection = page.locator('[data-testid="demo-auth-section"]');
+      const demoTrigger = page.locator('[data-testid="login-show-demo-section"]');
       const authCompatEnabled = process.env.AUTH_COMPAT_ALLOW_LEGACY_IDENTITY === "1";
       const demoLoginEnabled = process.env.AUTH_DEMO_LOGIN_ENABLED === "1";
-      
+
       if (authCompatEnabled && demoLoginEnabled) {
-        await expect(demoSection).toBeVisible();
-        await expect(page.locator('[data-testid="demo-auth-toggle"]')).toBeVisible();
+        await expect(demoTrigger).toBeVisible();
       } else {
-        await expect(demoSection).not.toBeVisible();
+        await expect(demoTrigger).not.toBeVisible();
       }
     });
 
@@ -369,9 +367,9 @@ test.describe("Complete Authentication Entry Flow", () => {
       await page.goto("/login");
       
       // Should not show demo auth section in production mode
-      const demoSection = page.locator('[data-testid="demo-auth-section"]');
+      const demoTrigger = page.locator('[data-testid="login-show-demo-section"]');
       if (originalDemoEnabled !== "1") {
-        await expect(demoSection).not.toBeVisible();
+        await expect(demoTrigger).not.toBeVisible();
       }
       
       // Should require email submission

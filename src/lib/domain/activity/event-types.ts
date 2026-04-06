@@ -30,6 +30,7 @@ export const ACTIVITY_EVENT_TYPES = {
   auction: {
     playerAwarded: "auction.player_awarded",
     completed: "auction.completed",
+    emergencyFillIn: "auction.emergency_fill_in",
   },
   sync: {
     mismatchResolved: "sync.mismatch.resolved",
@@ -189,6 +190,11 @@ export type ActivityEventPayloadMap = {
   [ACTIVITY_EVENT_TYPES.auction.completed]: {
     draftId: string;
     title: string;
+  };
+  [ACTIVITY_EVENT_TYPES.auction.emergencyFillIn]: {
+    draftId: string;
+    filledCount: number;
+    teamNames: string[];
   };
   [ACTIVITY_EVENT_TYPES.sync.mismatchResolved]: {
     mismatchId: string;

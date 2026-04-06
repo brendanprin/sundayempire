@@ -37,6 +37,7 @@ export default function CommissionerTeamsPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [memberAssignTargets, setMemberAssignTargets] = useState<Record<string, string>>({});
+  const [assignmentStatuses, setAssignmentStatuses] = useState<Record<string, "pending" | "success" | "error">>({});
   const [setupOpen, setSetupOpen] = useState(false);
   const [assignmentFlow, setAssignmentFlow] = useState<AssignmentFlow | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -242,12 +243,16 @@ export default function CommissionerTeamsPage() {
     setBusyAction("bulk-assign");
     setError(null);
     setMessage(null);
+    setAssignmentStatuses(Object.fromEntries(entries.map(([ownerId]) => [ownerId, "pending"])));
     try {
       const results = await Promise.allSettled(
         entries.map(([ownerId, teamId]) => {
           const team = teams.find((t) => t.id === teamId);
           const owner = owners.find((o) => o.id === ownerId);
-          if (!team || !owner) return Promise.reject(new Error("Missing team or member data."));
+          if (!team || !owner) {
+            setAssignmentStatuses((prev) => ({ ...prev, [ownerId]: "error" }));
+            return Promise.reject(new Error("Missing team or member data."));
+          }
           return requestJson(`/api/teams/${teamId}`, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
@@ -257,12 +262,13 @@ export default function CommissionerTeamsPage() {
               divisionLabel: team.divisionLabel ?? null,
               ownerId,
             }),
-          }, `Failed to assign ${owner.name} to ${team.name}.`);
+          }, `Failed to assign ${owner.name} to ${team.name}.`)
+            .then((result) => { setAssignmentStatuses((prev) => ({ ...prev, [ownerId]: "success" })); return result; })
+            .catch((err) => { setAssignmentStatuses((prev) => ({ ...prev, [ownerId]: "error" })); throw err; });
         }),
       );
       const failed = results.filter((r) => r.status === "rejected");
       const succeeded = results.filter((r) => r.status === "fulfilled").length;
-      // Always clear the entries that succeeded so they don't sit in pending state
       const failedOwnerIds = new Set(
         entries
           .filter((_, i) => results[i].status === "rejected")
@@ -282,6 +288,7 @@ export default function CommissionerTeamsPage() {
         setError(`${failed.length} assignment(s) failed. ${succeeded} succeeded. ${reasons}`);
       } else {
         setMessage(`${succeeded} member${succeeded === 1 ? "" : "s"} assigned to their franchises.`);
+        setTimeout(() => setAssignmentStatuses({}), 3000);
       }
       await reloadWorkspace();
     } catch (err) {
@@ -504,6 +511,7 @@ export default function CommissionerTeamsPage() {
         unassignedTeams={unassignedTeams}
         ownerEdits={ownerEdits}
         memberAssignTargets={memberAssignTargets}
+        assignmentStatuses={assignmentStatuses}
         editingOwnerId={editingOwnerId}
         busyAction={busyAction}
         onEditChange={(ownerId, next) =>

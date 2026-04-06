@@ -48,8 +48,10 @@ export async function loginAs(
 
   await expect(page.getByRole("heading", { name: "Sign In", exact: true })).toBeVisible();
 
+  const demoTrigger = page.getByTestId("login-show-demo-section");
   const demoPanel = page.getByTestId("login-demo-auth-panel");
-  if (await demoPanel.isVisible().catch(() => false)) {
+  if (await demoTrigger.isVisible().catch(() => false)) {
+    await demoTrigger.click();
     const roleTestId =
       role === "commissioner"
         ? "login-role-option-commissioner"

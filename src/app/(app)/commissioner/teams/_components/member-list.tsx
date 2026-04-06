@@ -5,6 +5,7 @@ function MemberListItem(props: {
   edit: OwnerForm;
   unassignedTeams: TeamRow[];
   assignTarget: string;
+  assignmentStatus?: "pending" | "success" | "error";
   isEditing: boolean;
   busyAction: string | null;
   onEditChange: (next: OwnerForm) => void;
@@ -14,7 +15,7 @@ function MemberListItem(props: {
   onStartEdit: () => void;
   onAssign: () => void;
 }) {
-  const { owner, edit, unassignedTeams, assignTarget, isEditing, busyAction } = props;
+  const { owner, edit, unassignedTeams, assignTarget, assignmentStatus, isEditing, busyAction } = props;
   const isSavingOwner = busyAction === `save-owner:${owner.id}`;
   const isAssigning = busyAction === `assign-to-team:${owner.id}`;
 
@@ -67,7 +68,18 @@ function MemberListItem(props: {
       ) : (
         <>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-slate-100">{owner.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm text-slate-100">{owner.name}</p>
+              {assignmentStatus === "pending" && (
+                <span className="text-xs text-amber-400">applying…</span>
+              )}
+              {assignmentStatus === "success" && (
+                <span className="text-xs text-emerald-400">assigned</span>
+              )}
+              {assignmentStatus === "error" && (
+                <span className="text-xs text-red-400">failed</span>
+              )}
+            </div>
             <p className="truncate text-xs text-slate-500">
               {owner.email ?? (
                 <span className="italic text-slate-600">No email on record</span>
@@ -123,6 +135,7 @@ export function MemberList(props: {
   unassignedTeams: TeamRow[];
   ownerEdits: Record<string, OwnerForm>;
   memberAssignTargets: Record<string, string>;
+  assignmentStatuses: Record<string, "pending" | "success" | "error">;
   editingOwnerId: string | null;
   busyAction: string | null;
   onEditChange: (ownerId: string, next: OwnerForm) => void;
@@ -133,7 +146,7 @@ export function MemberList(props: {
   onAssign: (ownerId: string) => void;
   onBulkAssign: () => Promise<void>;
 }) {
-  const { unassignedOwners, unassignedTeams, ownerEdits, memberAssignTargets, editingOwnerId, busyAction } = props;
+  const { unassignedOwners, unassignedTeams, ownerEdits, memberAssignTargets, assignmentStatuses, editingOwnerId, busyAction } = props;
   const pendingCount = Object.values(memberAssignTargets).filter(Boolean).length;
 
   return (
@@ -174,6 +187,7 @@ export function MemberList(props: {
                   edit={edit}
                   unassignedTeams={unassignedTeams}
                   assignTarget={assignTarget}
+                  assignmentStatus={assignmentStatuses[owner.id]}
                   isEditing={isEditing}
                   busyAction={busyAction}
                   onEditChange={(next) => props.onEditChange(owner.id, next)}
