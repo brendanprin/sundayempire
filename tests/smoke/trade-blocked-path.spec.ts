@@ -120,69 +120,32 @@ test.describe("Trade Blocked Path", () => {
         }
       }
 
-      // Step 6: Assert blocked findings and remediation guidance are visible
-      const blockingIndicators = [
-        page.getByText(/blocked|invalid|violation|error/i),
-        page.getByText(/cannot|not allowed|forbidden/i),
-        page.locator('[data-testid*="blocked"]'),
-        page.locator('[data-testid*="error"]'),
-        page.locator('[data-testid*="violation"]'),
-        page.locator('.error, .blocked, .violation')
-      ];
-
-      let blockingVisible = false;
-      for (const indicator of blockingIndicators) {
-        if (await indicator.first().isVisible()) {
-          blockingVisible = true;
-          break;
+      // Step 6: Assert the trade review workspace rendered and shows a blocked note
+      const tradeWorkspace = page.getByTestId("trade-review-workspace");
+      if (!(await tradeWorkspace.isVisible())) {
+        errors.push("trade-review-workspace not visible — blocked trade detail page did not render");
+      } else {
+        const blockedNote = page.getByTestId("trade-review-blocked-note");
+        if (!(await blockedNote.isVisible())) {
+          errors.push("trade-review-blocked-note not visible — blocked state not surfaced in the review workspace");
         }
-      }
 
-      if (!blockingVisible) {
-        errors.push("No blocking/error indicators found - may not have successfully created blocked scenario");
+        // Validation panel must also be present to show the specific findings
+        const validationPanel = page.getByTestId("trade-validation-panel");
+        if (!(await validationPanel.isVisible())) {
+          errors.push("trade-validation-panel not visible — no validation findings shown for blocked trade");
+        }
       }
 
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "04-blocking-validation")).screenshots);
 
-      // Step 7: Assert no misleading positive submit action is shown in blocked state
-      const submitButtons = page.getByRole("button", { name: /submit|propose|send/i });
-      const submitCount = await submitButtons.count();
-      
-      if (submitCount > 0) {
-        // Check if submit buttons are properly disabled
-        for (let i = 0; i < submitCount; i++) {
-          const button = submitButtons.nth(i);
-          const isEnabled = await button.isEnabled();
-          if (isEnabled) {
-            // This might be a problem - check if there are clear blocking messages
-            const pageContent = await page.textContent('body');
-            if (!pageContent || !/blocked|invalid|error/i.test(pageContent)) {
-              errors.push("Submit button is enabled despite blocking conditions");
-            }
-          }
+      // Step 7: Submit button must be absent or disabled when the trade is blocked
+      const submitButton = page.getByRole("button", { name: /^Submit/i });
+      if (await submitButton.isVisible()) {
+        const isEnabled = await submitButton.isEnabled();
+        if (isEnabled) {
+          errors.push("Submit button is enabled despite blocked trade state — user could submit an invalid trade");
         }
-      }
-
-      // Look for remediation guidance
-      const guidanceIndicators = [
-        page.getByText(/fix|resolve|correct/i),
-        page.getByText(/recommendation|suggestion/i),
-        page.getByText(/try|consider|instead/i),
-        page.locator('[data-testid*="guidance"]'),
-        page.locator('[data-testid*="recommendation"]'),
-        page.locator('.guidance, .help-text, .remediation')
-      ];
-
-      let guidanceVisible = false;
-      for (const indicator of guidanceIndicators) {
-        if (await indicator.first().isVisible()) {
-          guidanceVisible = true;
-          break;
-        }
-      }
-
-      if (!guidanceVisible) {
-        errors.push("No remediation guidance found for blocked trade");
       }
 
       evidence.screenshots.push(...(await captureSmokeEvidence(page, test.info(), "05-final-blocked-state")).screenshots);
@@ -214,19 +177,32 @@ test.describe("Trade Blocked Path", () => {
       
       await page.goto("/trades");
       await waitForPageStable(page);
-      
-      evidence = await captureSmokeEvidence(page, test.info(), "01-trade-validation-errors");
 
-      // Look for any existing blocked trades or validation messages
-      const pageContent = await page.textContent('body');
-      
-      if (pageContent) {
-        const hasValidationContent = /validation|blocked|error|invalid/i.test(pageContent);
-        
-        if (!hasValidationContent) {
-          errors.push("No validation or error messaging found on trades page");
+      // Trades home must render the list shell — not a loading or error state
+      const tradesHome = page.getByTestId("trades-home");
+      if (!(await tradesHome.isVisible())) {
+        errors.push("trades-home not visible — /trades page did not render the list shell");
+      }
+
+      evidence = await captureSmokeEvidence(page, test.info(), "01-trades-home-rendered");
+
+      // Navigate to the trade builder and assert the validation panel is present
+      await page.goto("/trades/new");
+      await waitForPageStable(page);
+
+      const tradeBuilder = page.getByTestId("trade-builder");
+      if (!(await tradeBuilder.isVisible())) {
+        errors.push("trade-builder not visible on /trades/new");
+      } else {
+        const validationPanel = page.getByTestId("trade-validation-panel");
+        if (!(await validationPanel.isVisible())) {
+          errors.push("trade-validation-panel not visible in trade builder — validation feedback surface is missing");
         }
       }
+
+      evidence.screenshots.push(
+        ...(await captureSmokeEvidence(page, test.info(), "02-trade-builder-validation-panel")).screenshots,
+      );
 
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));

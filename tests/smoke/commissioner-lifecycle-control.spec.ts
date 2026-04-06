@@ -92,14 +92,15 @@ test.describe("Commissioner Lifecycle Control", () => {
       if (!lifecycleAccessFound) {
         errors.push("Could not find commissioner lifecycle control interface");
       } else {
-        // Step 3: Verify current phase and blocker/readiness messaging
-        const currentPhase = await page.textContent('body');
-        if (!currentPhase) {
-          errors.push("Could not read page content for phase verification");
+        // Step 3: Verify current phase is displayed in the phase card
+        const phaseCard = page.getByTestId("commissioner-routine-phase-card");
+        if (!(await phaseCard.isVisible())) {
+          errors.push("Phase card (commissioner-routine-phase-card) not visible");
         } else {
-          const hasPhaseInfo = /preseason|regular.?season|playoffs|offseason/i.test(currentPhase);
+          const phaseText = await phaseCard.textContent();
+          const hasPhaseInfo = /preseason|regular.?season|playoffs|offseason/i.test(phaseText ?? "");
           if (!hasPhaseInfo) {
-            errors.push("No recognizable phase information found");
+            errors.push(`Phase card visible but contains no recognizable phase label. Got: "${phaseText?.trim()}"`);
           }
         }
 
@@ -165,32 +166,29 @@ test.describe("Commissioner Lifecycle Control", () => {
       const leagueId = await getPrimaryLeagueId(baseURL as string);
       await navigateToLeague(page, leagueId);
       
-      // Look for readiness indicators
-      const pageContent = await page.textContent('body');
-      
-      if (pageContent) {
-        // Look for common readiness/blocker terms
-        const readinessIndicators = [
-          /ready/i,
-          /blocked/i,
-          /warning/i,
-          /error/i,
-          /compliance/i,
-          /issue/i,
-          /pending/i
-        ];
-        
-        let foundReadinessInfo = false;
-        for (const pattern of readinessIndicators) {
-          if (pattern.test(pageContent)) {
-            foundReadinessInfo = true;
-            break;
-          }
-        }
-        
-        if (!foundReadinessInfo) {
-          errors.push("No readiness or blocker messaging found");
-        }
+      // Assert commissioner console structural panels are present
+      await page.goto("/commissioner");
+      await waitForPageStable(page);
+
+      const phaseCard = page.getByTestId("commissioner-routine-phase-card");
+      const complianceCard = page.getByTestId("commissioner-routine-compliance-card");
+      const remediationSection = page.getByTestId("commissioner-remediation-evidence");
+
+      if (!(await phaseCard.isVisible())) {
+        errors.push("commissioner-routine-phase-card not visible on /commissioner");
+      }
+      if (!(await complianceCard.isVisible())) {
+        errors.push("commissioner-routine-compliance-card not visible on /commissioner");
+      }
+      if (!(await remediationSection.isVisible())) {
+        errors.push("commissioner-remediation-evidence not visible on /commissioner");
+      }
+
+      // Phase card must show a named phase, not a loading placeholder
+      const phaseText = await phaseCard.textContent();
+      const hasNamedPhase = /preseason|regular.?season|playoffs|offseason/i.test(phaseText ?? "");
+      if (!hasNamedPhase) {
+        errors.push(`Phase card shows no named phase. Got: "${phaseText?.trim()}"`);
       }
       
       evidence = await captureSmokeEvidence(page, test.info(), "01-readiness-validation");

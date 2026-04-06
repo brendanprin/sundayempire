@@ -172,21 +172,48 @@ test.describe.serial("Auth Entry Flow - Smoke Tests", () => {
     }
   });
 
-  test("SMOKE: Error handling - Invalid auth", async ({ page }) => {
-    // Visit invalid magic link
-    await page.goto("/login?token=invalid-token-12345");
+  test("SMOKE: Magic link error states show specific messages and recovery completes", async ({ page }) => {
+    // --- Expired link ---
+    await page.goto("/login?error=magic_link_expired");
     await waitForPageStable(page);
-    
-    // Should show error but not crash
-    const hasError = await page.locator('[data-testid="auth-error"], text=invalid, text=expired').first().isVisible();
-    if (hasError) {
-      console.log("✅ SMOKE: Invalid auth shows error state safely");
-    }
-    
-    // Should have recovery path
-    await expect(page.locator('input[type="email"], button:has-text("Try Again")').first()).toBeVisible();
-    
-    console.log("✅ SMOKE: Auth error states provide recovery path");
+
+    // Error banner must be visible with the right title
+    await expect(page.getByText("Expired Sign-In Link")).toBeVisible();
+    // Sign-in form must be hidden while error is shown
+    await expect(page.getByTestId("login-email-input")).not.toBeVisible();
+
+    // "Try again" button must be present for resendable errors
+    const tryAgainButton = page.getByRole("button", { name: /try again/i });
+    await expect(tryAgainButton).toBeVisible();
+
+    // Clicking it clears the error and restores the sign-in form
+    await tryAgainButton.click();
+    await expect(page.getByTestId("login-email-input")).toBeVisible();
+    await expect(page.getByTestId("login-submit")).toBeVisible();
+    await expect(page.getByText("Expired Sign-In Link")).not.toBeVisible();
+
+    console.log("✅ SMOKE: Expired magic link — error shown, recovery restores sign-in form");
+
+    // --- Used link ---
+    await page.goto("/login?error=magic_link_used");
+    await waitForPageStable(page);
+
+    await expect(page.getByText("Already Used")).toBeVisible();
+    await expect(page.getByTestId("login-email-input")).not.toBeVisible();
+
+    console.log("✅ SMOKE: Used magic link — error shown correctly");
+
+    // --- Invalid link ---
+    await page.goto("/login?error=magic_link_invalid");
+    await waitForPageStable(page);
+
+    await expect(page.getByText("Invalid Sign-In Link")).toBeVisible();
+    // Invalid links have no resend — "Try again" button should NOT appear
+    await expect(page.getByRole("button", { name: /try again/i })).not.toBeVisible();
+    // But the email input must NOT be shown either (error takes over the form area)
+    await expect(page.getByTestId("login-email-input")).not.toBeVisible();
+
+    console.log("✅ SMOKE: Invalid magic link — correct error, no misleading resend CTA");
   });
 
 });
