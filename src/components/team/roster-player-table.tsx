@@ -14,6 +14,23 @@ function formatMoney(value: number | null) {
   return `$${value.toLocaleString()}`;
 }
 
+const POSITION_COLORS: Record<string, { badge: string; bar: string }> = {
+  QB: { badge: "text-purple-300 bg-purple-900/40 border-purple-700/50", bar: "bg-purple-500/60" },
+  RB: { badge: "text-emerald-300 bg-emerald-900/40 border-emerald-700/50", bar: "bg-emerald-500/60" },
+  WR: { badge: "text-sky-300 bg-sky-900/40 border-sky-700/50", bar: "bg-sky-500/60" },
+  TE: { badge: "text-amber-300 bg-amber-900/40 border-amber-700/50", bar: "bg-amber-500/60" },
+  K:  { badge: "text-slate-300 bg-slate-800/60 border-slate-700/50", bar: "bg-slate-500/60" },
+};
+
+function positionStyle(position: string) {
+  return POSITION_COLORS[position] ?? { badge: "text-slate-300 bg-slate-800/60 border-slate-700/50", bar: "bg-slate-500/60" };
+}
+
+function capSharePercent(salary: number, capTotal: number | null): number {
+  if (!capTotal || capTotal <= 0) return 0;
+  return Math.min(100, (salary / capTotal) * 100);
+}
+
 type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 function badgeClasses(tone: StatusTone) {
@@ -42,6 +59,7 @@ function contractHasDeadCap(
 export function RosterPlayerTable(props: {
   contracts: TeamCapDetailProjection["contracts"];
   deadCapSourceContractIds: Set<string>;
+  capTotal: number | null;
   canPreview: boolean;
   selectedContractId: string | null;
   onContractSelect: (contractId: string | null) => void;
@@ -101,18 +119,38 @@ export function RosterPlayerTable(props: {
               onClick={() => props.onContractSelect(isSelected ? null : contract.id)}
             >
               <td className="px-3 py-3 align-top">
-                <Link 
-                  href={`/players/${contract.player.id}`} 
-                  className="font-medium text-slate-100 hover:text-sky-300"
-                >
-                  {contract.player.name}
-                </Link>
-                <p className="text-xs text-slate-400">
-                  {contract.player.position} · {contract.player.nflTeam ?? "FA"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${positionStyle(contract.player.position).badge}`}>
+                    {contract.player.position}
+                  </span>
+                  <div>
+                    <Link
+                      href={`/players/${contract.player.id}`}
+                      className="font-medium text-slate-100 hover:text-sky-300"
+                    >
+                      {contract.player.name}
+                    </Link>
+                    <p className="text-xs text-slate-500">
+                      {contract.player.nflTeam ?? "FA"}
+                    </p>
+                  </div>
+                </div>
               </td>
-              <td className="px-3 py-3 text-right align-top font-mono">
-                {formatMoney(contract.salary)}
+              <td className="px-3 py-3 align-top">
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-mono text-slate-200">{formatMoney(contract.salary)}</span>
+                  <div className="h-1 w-24 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className={`h-full rounded-full transition-all ${positionStyle(contract.player.position).bar}`}
+                      style={{ width: `${capSharePercent(contract.salary, props.capTotal)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-500">
+                    {props.capTotal && props.capTotal > 0
+                      ? `${capSharePercent(contract.salary, props.capTotal).toFixed(1)}% of cap`
+                      : ""}
+                  </span>
+                </div>
               </td>
               <td className="px-3 py-3 text-right align-top font-mono">
                 {contract.yearsRemaining}/{contract.yearsTotal}

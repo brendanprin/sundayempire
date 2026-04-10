@@ -252,8 +252,13 @@ export default function DevLoginPage() {
   }
 
   // Redirect to canonical login if demo auth is not available
+  useEffect(() => {
+    if (!isDemoAuthAvailable && !isLoading) {
+      router.replace(`/login${returnTo !== "/" ? `?${RETURN_TO_PARAM}=${encodeURIComponent(returnTo)}` : ""}`);
+    }
+  }, [isDemoAuthAvailable, isLoading, returnTo, router]);
+
   if (!isDemoAuthAvailable && !isLoading) {
-    router.replace(`/login${returnTo !== "/" ? `?${RETURN_TO_PARAM}=${encodeURIComponent(returnTo)}` : ""}`);
     return null;
   }
 

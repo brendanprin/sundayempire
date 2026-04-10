@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiRequestError, requestJson } from "@/lib/client-request";
-import { formatLeaguePhaseLabel } from "@/lib/league-phase-label";
 import {
   LOGIN_ERROR_SESSION_EXPIRED,
   buildLoginPath,
@@ -16,7 +14,7 @@ import { PILOT_EVENT_TYPES } from "@/types/pilot";
 type AuthenticatedEntryResolution = {
   kind: "no_league_access" | "single_league_entry" | "multiple_league_choice";
   route: string;
-  context: any;
+  context: Record<string, unknown>;
 };
 
 type EntryResolverResponse = {
@@ -51,7 +49,7 @@ type LeagueWorkspacesPayload = {
   leagues: LeagueWorkspace[];
 };
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INVALID_INVITE_ERROR = "Enter a valid invite link or token.";
 
 function formatMembershipContext(league: LeagueWorkspace) {
   if (league.leagueRole === "COMMISSIONER") {
@@ -127,10 +125,9 @@ export default function MyLeaguesPage() {
   const [joinInviteValue, setJoinInviteValue] = useState("");
   const directoryOpenedAt = useRef(0);
   const directoryViewTracked = useRef(false);
-  const noLeagueWizardAutoOpened = useRef(false);
 
   useEffect(() => {
-    directoryOpenedAt.current = Date.now();
+    directoryOpenedAt.current = performance.now();
   }, []);
 
   // First, check the centralized resolver to see if we should show directory
@@ -151,14 +148,18 @@ export default function MyLeaguesPage() {
         setUserProfile(user);
 
         if (resolution.kind === "single_league_entry") {
-          // User should be routed directly - redirect them now
-          router.push(resolution.route);
+          // The account hub should stay on /my-leagues even when the user only
+          // has one league, so navigation back from a league workspace works.
+          setShouldShowDirectory(true);
+          setResolverChecked(true);
           return;
         }
 
         if (resolution.kind === "no_league_access") {
-          // No league access - send to the dedicated no-access page
-          router.replace(resolution.route);
+          // Authenticated users with zero leagues should land on the account hub
+          // and see the empty state rather than being redirected into creation.
+          setShouldShowDirectory(true);
+          setResolverChecked(true);
           return;
         }
 
@@ -196,7 +197,6 @@ export default function MyLeaguesPage() {
     if (!shouldShowDirectory) return;
 
     let mounted = true;
-    setLeaguesLoading(true);
 
     requestJson<LeagueWorkspacesPayload>("/api/leagues", { cache: "no-store" }, "Failed to load leagues.")
       .then((payload) => {
@@ -245,14 +245,9 @@ export default function MyLeaguesPage() {
     });
   }, [leagues]);
 
-  useEffect(() => {
-    if (leaguesLoading || orderedLeagues.length !== 0 || noLeagueWizardAutoOpened.current) {
-      return;
-    }
-
-    noLeagueWizardAutoOpened.current = true;
-    router.push("/my-leagues/new");
-  }, [leaguesLoading, orderedLeagues.length]);
+  // Intentionally not auto-redirecting to /my-leagues/new.
+  // New users who just accepted a platform invite should see the empty state
+  // and choose their next step rather than being dropped into the wizard.
 
   useEffect(() => {
     if (orderedLeagues.length === 0 || directoryViewTracked.current) {
@@ -273,7 +268,11 @@ export default function MyLeaguesPage() {
     });
   }, [orderedLeagues.length]);
 
-  async function activateLeague(league: LeagueWorkspace, source: "directory" | "auto_single") {
+  async function activateLeague(
+    league: LeagueWorkspace,
+    source: "directory" | "auto_single",
+    interactionTimestampMs?: number,
+  ) {
     setActivatingLeagueId(league.id);
     setError(null);
 
@@ -289,7 +288,10 @@ export default function MyLeaguesPage() {
           context: {
             leagueRole: league.leagueRole,
             hasTeamContext: Boolean(league.teamId),
-            elapsedMs: Date.now() - directoryOpenedAt.current,
+            elapsedMs:
+              typeof interactionTimestampMs === "number"
+                ? Math.max(0, interactionTimestampMs - directoryOpenedAt.current)
+                : null,
           },
         });
       }
@@ -341,7 +343,7 @@ export default function MyLeaguesPage() {
   function handleJoinLeague() {
     const token = parseInviteToken(joinInviteValue);
     if (!token) {
-      setError("Enter a valid invite link or token.");
+      setError(INVALID_INVITE_ERROR);
       return;
     }
 
@@ -514,13 +516,19 @@ export default function MyLeaguesPage() {
                       <input
                         type="text"
                         value={joinInviteValue}
-                        onChange={(event) => setJoinInviteValue(event.target.value)}
+                        onChange={(event) => {
+                          setJoinInviteValue(event.target.value);
+                          if (error === INVALID_INVITE_ERROR) {
+                            setError(null);
+                          }
+                        }}
                         className="flex-1 rounded-lg border bg-transparent px-3 py-2.5 text-sm transition-colors focus:ring-2 focus:ring-[var(--brand-accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
                         style={{
                           borderColor: "var(--brand-structure-muted)",
                           color: "var(--foreground)",
                         }}
                         placeholder="Paste invite link to join league"
+                        data-testid="join-league-input"
                       />
                       <button
                         type="button"
@@ -530,6 +538,7 @@ export default function MyLeaguesPage() {
                           borderColor: "var(--brand-structure-muted)",
                           color: "var(--foreground)" 
                         }}
+                        data-testid="join-league-button"
                       >
                         Join League
                       </button>
@@ -554,6 +563,60 @@ export default function MyLeaguesPage() {
                 >
                   Create Another League
                 </button>
+              </div>
+
+              <div className="mx-auto max-w-2xl">
+                <div
+                  className="rounded-xl border p-4 sm:p-5"
+                  style={{
+                    borderColor: "var(--brand-structure-muted)",
+                    backgroundColor: "var(--brand-surface-elevated)",
+                  }}
+                  data-testid="join-another-league-panel"
+                >
+                  <div className="space-y-3">
+                    <div className="text-center sm:text-left">
+                      <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Join another league
+                      </h3>
+                      <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                        Paste an invite link or token from another commissioner to add it to your account.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        value={joinInviteValue}
+                        onChange={(event) => {
+                          setJoinInviteValue(event.target.value);
+                          if (error === INVALID_INVITE_ERROR) {
+                            setError(null);
+                          }
+                        }}
+                        className="flex-1 rounded-lg border bg-transparent px-3 py-2.5 text-sm transition-colors focus:ring-2 focus:ring-[var(--brand-accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+                        style={{
+                          borderColor: "var(--brand-structure-muted)",
+                          color: "var(--foreground)",
+                        }}
+                        placeholder="Paste invite link to join another league"
+                        data-testid="join-league-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleJoinLeague}
+                        className="rounded-lg border px-4 py-2.5 text-sm font-medium transition hover:bg-[var(--brand-surface-card)]"
+                        style={{
+                          borderColor: "var(--brand-structure-muted)",
+                          color: "var(--foreground)",
+                        }}
+                        data-testid="join-league-button"
+                      >
+                        Join League
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 gap-4" data-testid="my-leagues-grid">
@@ -595,7 +658,7 @@ export default function MyLeaguesPage() {
                         <div className="flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => activateLeague(league, "directory")}
+                            onClick={(event) => activateLeague(league, "directory", event.timeStamp)}
                             disabled={activatingLeagueId === league.id}
                             className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                               activatingLeagueId === league.id

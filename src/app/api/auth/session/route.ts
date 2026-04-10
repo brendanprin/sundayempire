@@ -296,10 +296,12 @@ async function handleMagicLinkRequest(request: NextRequest, body: SessionPostBod
     return apiError(400, "INVALID_REQUEST", "Enter a valid email address.");
   }
 
+  const returnTo = normalizeReturnTo(normalizeOptionalString(body.returnTo));
+
   await magicLinkAuthService.requestMagicLink({
     email,
     origin: request.nextUrl.origin,
-    returnTo: normalizeReturnTo(normalizeOptionalString(body.returnTo)),
+    returnTo,
     requestedByIp: extractClientIpAddress(request),
     requestedByUserAgent: request.headers.get("user-agent")?.trim() ?? null,
   });
@@ -336,7 +338,8 @@ export async function GET(request: NextRequest) {
     // Honor an explicit returnTo unless the user has no league access (avoid landing on
     // protected app routes with no active league context).
     let destinationRoute: string;
-    if (returnTo && resolution.kind !== "no_league_access" && !returnTo.startsWith("/league/") && !returnTo.startsWith("/dashboard")) {
+    const isJoinReturnTo = returnTo?.startsWith("/join");
+    if (returnTo && (resolution.kind !== "no_league_access" || isJoinReturnTo) && !returnTo.startsWith("/league/") && !returnTo.startsWith("/dashboard")) {
       destinationRoute = returnTo;
     } else {
       destinationRoute = resolution.route;

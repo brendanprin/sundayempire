@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeaderBand } from "@/components/layout/page-header-band";
 import { CommissionerGovernancePanel } from "@/components/settings/commissioner-governance-panel";
+import { PlatformInvitePanel } from "@/components/settings/platform-invite-panel";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 type PrimaryLink = {
@@ -88,6 +89,8 @@ export default async function SettingsPage() {
         description="Session controls now stay in the top bar. This screen keeps canonical browse surfaces easy to reach while quarantining retained compatibility routes instead of letting them blend into the main product flow."
         headingLevel="h2"
       />
+
+      <PlatformInvitePanel />
 
       <CommissionerGovernancePanel />
 

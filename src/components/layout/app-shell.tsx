@@ -58,7 +58,7 @@ type NavLink = {
   match?: "exact" | "prefix";
 };
 type NavSection = {
-  id: "primary" | "operations" | "oversight" | "reference";
+  id: "primary" | "operations" | "oversight" | "reference" | "account";
   label: string;
   links: NavLink[];
 };
@@ -112,6 +112,13 @@ function buildNavSections(
           exactNavLink("/settings", "Settings"),
         ],
       },
+      {
+        id: "account",
+        label: "Account",
+        links: [
+          exactNavLink("/my-leagues", "My Leagues"),
+        ],
+      },
     ];
   }
 
@@ -135,6 +142,13 @@ function buildNavSections(
         links: [
           prefixNavLink("/teams", "Teams"),
           prefixNavLink("/players", "Players"),
+        ],
+      },
+      {
+        id: "account",
+        label: "Account",
+        links: [
+          exactNavLink("/my-leagues", "My Leagues"),
         ],
       },
     ];
@@ -176,6 +190,14 @@ function buildNavSections(
       ],
     },
   ];
+
+  sections.push({
+    id: "account",
+    label: "Account",
+    links: [
+      exactNavLink("/my-leagues", "My Leagues"),
+    ],
+  });
 
   if (accountRole === "ADMIN") {
     sections.push({

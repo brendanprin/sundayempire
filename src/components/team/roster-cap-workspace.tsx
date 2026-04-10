@@ -215,6 +215,7 @@ export function RosterCapWorkspace(props: {
         <RosterPlayerTable
           contracts={contractRows}
           deadCapSourceContractIds={deadCapSourceContractIds}
+          capTotal={props.detail.capSummary.activeCapTotal}
           canPreview={canPreview}
           selectedContractId={null}
           onContractSelect={() => {}}

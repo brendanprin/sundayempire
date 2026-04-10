@@ -14,6 +14,7 @@ import { normalizeReturnTo, RETURN_TO_PARAM } from "@/lib/return-to";
 import { prisma } from "@/lib/prisma";
 import { createAuthSessionService, type AuthenticatedSession } from "./AuthSessionService";
 import { createLeagueInviteService } from "./LeagueInviteService";
+import { createPlatformInviteRepository } from "./PlatformInviteRepository";
 import { createMagicLinkDelivery, type MagicLinkDelivery } from "./MagicLinkDelivery";
 import { createMagicLinkRepository, type AuthMagicLinkRecord } from "./MagicLinkRepository";
 import {
@@ -142,17 +143,27 @@ export function createMagicLinkAuthService(
     const email = normalizeEmail(input.email);
     const currentTime = now();
     const user = await findUserByEmail(client, email);
-    const pendingInvite = user ? null : await leagueInviteService.findLatestPendingInviteByEmail(email);
 
-    if (!user && !pendingInvite) {
-      return {
-        accepted: true,
-        created: false,
-        throttled: false,
-        email,
-        expiresAt: null,
-        delivery: null,
-      };
+    if (!user) {
+      // Only create a magic link if the email has a pending invite of some kind.
+      const platformInviteRepo = createPlatformInviteRepository(client);
+      const hasPlatformInvite = Boolean(
+        await platformInviteRepo.findLatestPendingByEmail(email, currentTime),
+      );
+      const hasLeagueInvite = hasPlatformInvite
+        ? false
+        : Boolean(await leagueInviteService.findLatestPendingInviteByEmail(email));
+
+      if (!hasPlatformInvite && !hasLeagueInvite) {
+        return {
+          accepted: true,
+          created: false,
+          throttled: false,
+          email,
+          expiresAt: null,
+          delivery: null,
+        };
+      }
     }
 
     const existingLink = await magicLinkRepository.findLatestActiveByEmail(email, currentTime);
@@ -234,11 +245,27 @@ export function createMagicLinkAuthService(
         throw new MagicLinkConsumeError("INVALID_MAGIC_LINK");
       }
 
-      const user =
-        (await findUserByEmail(transactionClient, record.email)) ??
-        (await createLeagueInviteService(transactionClient, {
-          now,
-        }).findOrCreateUserForInvitedEmail(record.email));
+      const existingUser = await findUserByEmail(transactionClient, record.email);
+      const user = existingUser ?? await (async () => {
+        // Platform invite takes priority — it directly grants platform access.
+        const platformInviteRepo = createPlatformInviteRepository(transactionClient);
+        const pendingPlatformInvite = await platformInviteRepo.findLatestPendingByEmail(
+          record.email,
+          currentTime,
+        );
+        if (pendingPlatformInvite) {
+          return transactionClient.user.create({
+            data: { email: record.email, name: null },
+            select: { id: true, email: true, name: true },
+          });
+        }
+
+        // Fall back to league invite (existing behaviour).
+        return createLeagueInviteService(transactionClient, { now }).findOrCreateUserForInvitedEmail(
+          record.email,
+        );
+      })();
+
       if (!user) {
         throw new MagicLinkConsumeError("MAGIC_LINK_USER_NOT_FOUND");
       }

@@ -564,6 +564,26 @@ export default function LoginPage() {
                 Secure email authentication • No passwords needed • For invited league members
               </p>
 
+              <div className="mt-6 border-t border-gray-700/50 pt-6">
+                <p className="text-sm text-gray-400 mb-3">Starting a new league?</p>
+                <Link
+                  href="/login?returnTo=%2Fmy-leagues%2Fnew"
+                  onClick={() => {
+                    setReturnTo("/my-leagues/new");
+                    setEmail("");
+                    setRequestedEmail(null);
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 transition hover:border-gray-400 hover:text-white"
+                  data-testid="login-create-league-cta"
+                >
+                  Create a league
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+
               {/* Subtle development access entry point */}
               {isDemoAuthAvailable && !showDevModal && (
                 <div className="mt-8">

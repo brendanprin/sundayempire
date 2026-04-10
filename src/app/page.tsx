@@ -15,11 +15,13 @@ export default function LandingPage() {
             height={53}
             priority
           />
-          <Link href="/login">
-            <Button variant="primary" size="lg" className="text-lg px-8 py-3 font-semibold">
-              Sign in
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/login">
+              <Button variant="primary" size="lg" className="text-lg px-8 py-3 font-semibold">
+                Sign in
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -263,11 +265,11 @@ export default function LandingPage() {
           <div className="text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to streamline your dynasty operations?</h2>
             <p className="text-lg mb-6" style={{ color: "var(--muted-foreground)" }}>
-              Join commissioners who trust SundayEmpire for compliant league management
+              SundayEmpire is invite-only. Sign in if you have an account, or ask a member to invite you.
             </p>
             <Link href="/login">
               <Button variant="primary" size="lg" className="text-lg px-8 py-4 font-semibold">
-                Access Your Leagues
+                Sign In
               </Button>
             </Link>
           </div>
@@ -305,12 +307,12 @@ export default function LandingPage() {
                 >
                   Sign in to your leagues
                 </Link>
-                <Link 
-                  href="/invite" 
-                  className="hover:underline transition-colors" 
+                <Link
+                  href="/join"
+                  className="hover:underline transition-colors"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  Join with invite code
+                  Accept a platform invite
                 </Link>
               </div>
             </div>

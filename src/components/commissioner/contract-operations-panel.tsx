@@ -62,6 +62,24 @@ type ContractCreateForm = {
   isRookieContract: boolean;
 };
 
+const POSITION_COLORS: Record<string, string> = {
+  QB: "text-purple-300 bg-purple-900/40 border-purple-700/50",
+  RB: "text-emerald-300 bg-emerald-900/40 border-emerald-700/50",
+  WR: "text-sky-300 bg-sky-900/40 border-sky-700/50",
+  TE: "text-amber-300 bg-amber-900/40 border-amber-700/50",
+  K:  "text-slate-300 bg-slate-800/60 border-slate-700/50",
+};
+
+function positionBadgeClass(position: string) {
+  return POSITION_COLORS[position] ?? "text-slate-300 bg-slate-800/60 border-slate-700/50";
+}
+
+function yearsRemainingClass(years: number) {
+  if (years <= 0) return "text-red-400 font-semibold";
+  if (years === 1) return "text-amber-300 font-semibold";
+  return "text-slate-200";
+}
+
 const DEFAULT_FILTERS: Filters = {
   expiring: false,
   rookieOptionEligible: false,
@@ -86,7 +104,14 @@ export function ContractOperationsPanel() {
     isRookieContract: false,
   });
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [groupByTeam, setGroupByTeam] = useState(false);
+  const [page, setPage] = useState(0);
+  const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const PAGE_SIZE = 25;
 
   const {
     filters,
@@ -108,6 +133,40 @@ export function ContractOperationsPanel() {
     if (filters.tagged) params.set("tagged", "true");
     return params.toString();
   }, [filters]);
+
+  const filteredContracts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return contracts;
+    return contracts.filter(
+      (c) =>
+        c.player.name.toLowerCase().includes(q) ||
+        c.team.name.toLowerCase().includes(q) ||
+        (c.team.abbreviation ?? "").toLowerCase().includes(q) ||
+        c.player.position.toLowerCase().includes(q),
+    );
+  }, [contracts, searchQuery]);
+
+  const groupedContracts = useMemo(() => {
+    if (!groupByTeam) return null;
+    const map = new Map<string, { team: ContractRow["team"]; contracts: ContractRow[] }>();
+    for (const c of filteredContracts) {
+      const existing = map.get(c.team.id);
+      if (existing) {
+        existing.contracts.push(c);
+      } else {
+        map.set(c.team.id, { team: c.team, contracts: [c] });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.team.name.localeCompare(b.team.name));
+  }, [filteredContracts, groupByTeam]);
+
+  const paginatedContracts = useMemo(() => {
+    if (groupByTeam) return filteredContracts;
+    const start = page * PAGE_SIZE;
+    return filteredContracts.slice(start, start + PAGE_SIZE);
+  }, [filteredContracts, groupByTeam, page]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredContracts.length / PAGE_SIZE));
 
   const loadContracts = useCallback(async () => {
     const payload = await requestJson<{ contracts: ContractRow[] }>(
@@ -215,6 +274,121 @@ export function ContractOperationsPanel() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [openMenuId]);
+
+  function renderContractRow(contract: ContractRow) {
+    const isEditing = editingId === contract.id;
+    const canExerciseOption = contract.rookieOptionEligible && !contract.rookieOptionExercised;
+    const canApplyTag = !contract.isFranchiseTag;
+    const isMenuOpen = openMenuId === contract.id;
+
+    if (isEditing) {
+      return (
+        <tr key={contract.id} className="border-b border-slate-700 bg-slate-800/60">
+          <td className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${positionBadgeClass(contract.player.position)}`}>
+                {contract.player.position}
+              </span>
+              <span className="font-medium text-slate-100">{contract.player.name}</span>
+            </div>
+          </td>
+          <td className="px-3 py-2 text-slate-400">{contract.team.abbreviation ?? contract.team.name}</td>
+          <td className="px-3 py-2 text-right">
+            <Input type="number" min={1} value={salaryInput} onChange={(e) => setSalaryInput(e.target.value)} className="w-20 text-right" data-testid={`contract-edit-salary-${contract.id}`} />
+          </td>
+          <td className="px-3 py-2 text-right">
+            <Input type="number" min={1} value={yearsInput} onChange={(e) => setYearsInput(e.target.value)} className="w-16 text-right" data-testid={`contract-edit-years-${contract.id}`} />
+          </td>
+          <td className="px-3 py-2 text-right text-slate-400">{contract.yearsRemaining}</td>
+          <td className="px-3 py-2">
+            <form onSubmit={saveEdit} className="flex items-center gap-1.5">
+              <Button type="submit" variant="primary" disabled={busyAction !== null} loading={busyAction === `edit:${contract.id}`}>Save</Button>
+              <Button type="button" variant="secondary" onClick={cancelEdit}>Cancel</Button>
+            </form>
+          </td>
+        </tr>
+      );
+    }
+
+    return (
+      <tr key={contract.id} className="border-b border-slate-800/70 last:border-b-0 hover:bg-slate-800/30">
+        <td className="px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${positionBadgeClass(contract.player.position)}`}>
+              {contract.player.position}
+            </span>
+            <Link href={`/players/${contract.player.id}`} className="font-medium text-slate-100 hover:text-sky-300">
+              {contract.player.name}
+            </Link>
+            {contract.isFranchiseTag ? <StatusPill label="Tagged" tone="warning" /> : null}
+            {contract.rookieOptionEligible && !contract.rookieOptionExercised ? <StatusPill label="Option Eligible" tone="info" /> : null}
+          </div>
+        </td>
+        <td className="px-3 py-2">
+          <Link href={`/teams/${contract.team.id}`} className="text-slate-300 hover:text-sky-300">
+            {contract.team.abbreviation ?? contract.team.name}
+          </Link>
+        </td>
+        <td className="px-3 py-2 text-right font-mono text-slate-200">${contract.salary}</td>
+        <td className="px-3 py-2 text-right text-slate-400">{contract.yearsTotal}</td>
+        <td className={`px-3 py-2 text-right font-mono ${yearsRemainingClass(contract.yearsRemaining)}`}>
+          {contract.yearsRemaining}
+        </td>
+        <td className="px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            {canApplyTag && (
+              <button
+                type="button"
+                onClick={() => applyFranchiseTag(contract.id)}
+                disabled={busyAction !== null}
+                className="inline-flex items-center rounded border border-amber-700/70 px-2.5 py-1 text-xs font-medium text-amber-200 transition-colors hover:border-amber-500 disabled:opacity-50"
+                data-testid={`contract-primary-action-${contract.id}`}
+              >
+                {busyAction === `tag:${contract.id}` ? "Applying..." : "Apply Tag"}
+              </button>
+            )}
+            <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : contract.id); }}
+                aria-label="More actions"
+                aria-expanded={isMenuOpen}
+                className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                data-testid={`contract-overflow-menu-${contract.id}`}
+              >
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="2.5" r="1.5" />
+                  <circle cx="8" cy="8" r="1.5" />
+                  <circle cx="8" cy="13.5" r="1.5" />
+                </svg>
+              </button>
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1 min-w-[128px] rounded-md border border-slate-700 bg-slate-900 py-1 shadow-xl">
+                  <button type="button" onClick={() => { setOpenMenuId(null); beginEdit(contract); }} disabled={busyAction !== null} className="flex w-full items-center px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40" data-testid={`contract-overflow-item-edit-${contract.id}`}>
+                    Edit
+                  </button>
+                  {canExerciseOption && (
+                    <button type="button" onClick={() => { setOpenMenuId(null); exerciseRookieOption(contract.id); }} disabled={busyAction !== null} className="flex w-full items-center px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40" data-testid={`contract-overflow-item-exercise-option-${contract.id}`}>
+                      Exercise Option
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  function toggleTeamCollapse(teamId: string) {
+    setCollapsedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+  }
 
   function beginEdit(contract: ContractRow) {
     setEditingId(contract.id);
@@ -411,76 +585,141 @@ export function ContractOperationsPanel() {
         </div>
       ) : null}
 
-      <form onSubmit={createContract} className="mt-4 rounded-lg border border-[var(--brand-structure-muted)] bg-[var(--brand-surface-card)] p-4">
-        <h4 className="text-sm font-semibold text-[var(--foreground)]">Create League Contract Entry</h4>
-        <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-          Use this only for commissioner-maintained contract corrections or direct operator entry.
-        </p>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6">
-          <Select
-            value={createForm.teamId}
-            onChange={(event) => setCreateForm((previous) => ({ ...previous, teamId: event.target.value }))}
-          >
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={createForm.playerId}
-            onChange={(event) =>
-              setCreateForm((previous) => ({ ...previous, playerId: event.target.value }))
-            }
-            className="md:col-span-2"
-          >
-            {freeAgents.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name} ({player.position})
-              </option>
-            ))}
-          </Select>
-          <Input
-            type="number"
-            min={1}
-            value={createForm.salary}
-            onChange={(event) => setCreateForm((previous) => ({ ...previous, salary: event.target.value }))}
-            placeholder="Salary"
-          />
-          <Input
-            type="number"
-            min={1}
-            value={createForm.yearsTotal}
-            onChange={(event) =>
-              setCreateForm((previous) => ({ ...previous, yearsTotal: event.target.value }))
-            }
-            placeholder="Years"
-          />
-          <label className="inline-flex items-center gap-2 text-sm text-[var(--foreground)]">
-            <Checkbox
-              checked={createForm.isRookieContract}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  isRookieContract: event.target.checked,
-                }))
-              }
-            />
-            Rookie Contract
-          </label>
-        </div>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={busyAction !== null || !createForm.teamId || !createForm.playerId}
-          loading={busyAction === "create"}
-          className="mt-3"
+      <div className="mt-4 rounded-lg border border-[var(--brand-structure-muted)] bg-[var(--brand-surface-card)]">
+        <button
+          type="button"
+          onClick={() => setShowCreateForm((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
-          {busyAction === "create" ? "Creating..." : "Create Contract"}
-        </Button>
-      </form>
+          <span className="text-sm font-semibold text-[var(--foreground)]">Create League Contract Entry</span>
+          <svg
+            className={`h-4 w-4 text-slate-400 transition-transform ${showCreateForm ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
 
-      <div className="mt-4">
+        {showCreateForm && (
+          <form onSubmit={createContract} className="border-t border-[var(--brand-structure-muted)] px-4 pb-4 pt-3">
+            <p className="mb-3 text-sm text-[var(--muted-foreground)]">
+              Use this only for commissioner-maintained contract corrections or direct operator entry.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+              <Select
+                value={createForm.teamId}
+                onChange={(event) => setCreateForm((previous) => ({ ...previous, teamId: event.target.value }))}
+              >
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={createForm.playerId}
+                onChange={(event) =>
+                  setCreateForm((previous) => ({ ...previous, playerId: event.target.value }))
+                }
+                className="md:col-span-2"
+              >
+                {freeAgents.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name} ({player.position})
+                  </option>
+                ))}
+              </Select>
+              <Input
+                type="number"
+                min={1}
+                value={createForm.salary}
+                onChange={(event) => setCreateForm((previous) => ({ ...previous, salary: event.target.value }))}
+                placeholder="Salary"
+              />
+              <Input
+                type="number"
+                min={1}
+                value={createForm.yearsTotal}
+                onChange={(event) =>
+                  setCreateForm((previous) => ({ ...previous, yearsTotal: event.target.value }))
+                }
+                placeholder="Years"
+              />
+              <label className="inline-flex items-center gap-2 text-sm text-[var(--foreground)]">
+                <Checkbox
+                  checked={createForm.isRookieContract}
+                  onChange={(event) =>
+                    setCreateForm((previous) => ({
+                      ...previous,
+                      isRookieContract: event.target.checked,
+                    }))
+                  }
+                />
+                Rookie Contract
+              </label>
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={busyAction !== null || !createForm.teamId || !createForm.playerId}
+              loading={busyAction === "create"}
+              className="mt-3"
+            >
+              {busyAction === "create" ? "Creating..." : "Create Contract"}
+            </Button>
+          </form>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <svg
+            className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search player, team, or position…"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+            className="w-full rounded-md border border-slate-700 bg-slate-800 py-1.5 pl-8 pr-3 text-sm text-slate-200 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none"
+            data-testid="contracts-search-input"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-300 select-none">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={groupByTeam}
+              onClick={() => { setGroupByTeam((v) => !v); setPage(0); }}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${groupByTeam ? "border-sky-600 bg-sky-600" : "border-slate-600 bg-slate-700"}`}
+              data-testid="contracts-group-by-team-toggle"
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${groupByTeam ? "translate-x-4" : "translate-x-0.5"}`}
+              />
+            </button>
+            Group by team
+          </label>
+
+          <span className="text-xs text-slate-500">
+            {filteredContracts.length} contract{filteredContracts.length !== 1 ? "s" : ""}
+            {searchQuery ? ` matching "${searchQuery}"` : ""}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3">
         <TableFilterToolbar
           testIdPrefix="contracts-table-filters"
           title="Contract Filter Presets"
@@ -537,38 +776,6 @@ export function ContractOperationsPanel() {
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 rounded-lg border border-slate-800 p-4 md:grid-cols-3">
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            data-testid="contracts-filter-expiring"
-            type="checkbox"
-            checked={filters.expiring}
-            onChange={(event) => setFilters((previous) => ({ ...previous, expiring: event.target.checked }))}
-          />
-          Expiring Only
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            data-testid="contracts-filter-option-eligible"
-            type="checkbox"
-            checked={filters.rookieOptionEligible}
-            onChange={(event) =>
-              setFilters((previous) => ({ ...previous, rookieOptionEligible: event.target.checked }))
-            }
-          />
-          Rookie Option Eligible
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            data-testid="contracts-filter-tagged"
-            type="checkbox"
-            checked={filters.tagged}
-            onChange={(event) => setFilters((previous) => ({ ...previous, tagged: event.target.checked }))}
-          />
-          Franchise Tagged
-        </label>
-      </div>
-
       <div className="mt-4">
         <StandardTable testId="contracts-standard-table">
           <table className="min-w-full text-sm">
@@ -583,146 +790,55 @@ export function ContractOperationsPanel() {
               </tr>
             </thead>
             <tbody>
-              {contracts.map((contract) => (
-                <tr key={contract.id} className="border-b border-slate-800/70 last:border-b-0">
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/players/${contract.player.id}`}
-                        className="font-medium text-slate-100 hover:text-sky-300"
+              {groupByTeam && groupedContracts ? (
+                groupedContracts.map(({ team, contracts: teamContracts }) => {
+                  const isCollapsed = collapsedTeams.has(team.id);
+                  const capTotal = teamContracts.reduce((sum, c) => sum + c.salary, 0);
+                  return (
+                    <>
+                      <tr
+                        key={`group-${team.id}`}
+                        className="cursor-pointer border-b border-slate-700 bg-slate-800/50 hover:bg-slate-800"
+                        onClick={() => toggleTeamCollapse(team.id)}
                       >
-                        {contract.player.name}
-                      </Link>
-                      <span className="text-xs text-slate-400">{contract.player.position}</span>
-                      {contract.isFranchiseTag ? (
-                        <StatusPill label="Tagged" tone="warning" />
-                      ) : (
-                        <StatusPill label="Standard" tone="neutral" />
-                      )}
-                      {contract.rookieOptionEligible && !contract.rookieOptionExercised ? (
-                        <StatusPill label="Option Eligible" tone="info" />
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Link href={`/teams/${contract.team.id}`} className="hover:text-sky-300">
-                      {contract.team.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-right">${contract.salary}</td>
-                  <td className="px-3 py-2 text-right">{contract.yearsTotal}</td>
-                  <td className="px-3 py-2 text-right">{contract.yearsRemaining}</td>
-                  <td className="px-3 py-2">
-                    {(() => {
-                      const canExerciseOption =
-                        contract.rookieOptionEligible && !contract.rookieOptionExercised;
-                      const canApplyTag = !contract.isFranchiseTag;
-
-                      // Primary action: Apply Tag only — keeps every row visually consistent
-                      const primaryAction = canApplyTag
-                        ? {
-                            label:
-                              busyAction === `tag:${contract.id}` ? "Applying..." : "Apply Tag",
-                            onClick: () => applyFranchiseTag(contract.id),
-                            busy: busyAction === `tag:${contract.id}`,
-                            className: "border-amber-700/70 text-amber-200 hover:border-amber-500",
-                          }
-                        : null;
-
-                      // Overflow: Edit always; Exercise Option when eligible
-                      const overflowItems: Array<{
-                        id: string;
-                        label: string;
-                        onClick: () => void;
-                      }> = [
-                        {
-                          id: "edit",
-                          label: "Edit",
-                          onClick: () => {
-                            setOpenMenuId(null);
-                            beginEdit(contract);
-                          },
-                        },
-                      ];
-
-                      if (canExerciseOption) {
-                        overflowItems.push({
-                          id: "exercise-option",
-                          label: "Exercise Option",
-                          onClick: () => {
-                            setOpenMenuId(null);
-                            exerciseRookieOption(contract.id);
-                          },
-                        });
-                      }
-
-                      const isMenuOpen = openMenuId === contract.id;
-
-                      return (
-                        <div className="flex items-center gap-1.5">
-                          {primaryAction && (
-                            <button
-                              type="button"
-                              onClick={primaryAction.onClick}
-                              disabled={busyAction !== null}
-                              className={`inline-flex items-center rounded border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${primaryAction.className}`}
-                              data-testid={`contract-primary-action-${contract.id}`}
+                        <td colSpan={6} className="px-3 py-2">
+                          <div className="flex items-center gap-3">
+                            <svg
+                              className={`h-3.5 w-3.5 flex-shrink-0 text-slate-400 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
                             >
-                              {primaryAction.label}
-                            </button>
-                          )}
-
-                          <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(isMenuOpen ? null : contract.id);
-                              }}
-                              aria-label="More actions"
-                              aria-expanded={isMenuOpen}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-                              data-testid={`contract-overflow-menu-${contract.id}`}
-                            >
-                              <svg
-                                className="h-3.5 w-3.5"
-                                fill="currentColor"
-                                viewBox="0 0 16 16"
-                                aria-hidden="true"
-                              >
-                                <circle cx="8" cy="2.5" r="1.5" />
-                                <circle cx="8" cy="8" r="1.5" />
-                                <circle cx="8" cy="13.5" r="1.5" />
-                              </svg>
-                            </button>
-
-                            {isMenuOpen && (
-                              <div className="absolute right-0 top-full z-20 mt-1 min-w-[128px] rounded-md border border-slate-700 bg-slate-900 py-1 shadow-xl">
-                                {overflowItems.map((item) => (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={item.onClick}
-                                    disabled={busyAction !== null}
-                                    className="flex w-full items-center px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40"
-                                    data-testid={`contract-overflow-item-${item.id}-${contract.id}`}
-                                  >
-                                    {item.label}
-                                  </button>
-                                ))}
-                              </div>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                            <span className="font-semibold text-slate-100">{team.name}</span>
+                            {team.abbreviation && (
+                              <span className="text-xs text-slate-500">{team.abbreviation}</span>
                             )}
+                            <span className="ml-auto flex items-center gap-3 text-xs text-slate-400">
+                              <span>{teamContracts.length} player{teamContracts.length !== 1 ? "s" : ""}</span>
+                              <span className="font-mono text-slate-300">${capTotal} cap</span>
+                            </span>
                           </div>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                </tr>
-              ))}
-              {contracts.length === 0 ? (
+                        </td>
+                      </tr>
+                      {!isCollapsed && teamContracts.map((contract) => {
+                        const isEditing = editingId === contract.id;
+                        const canExerciseOption = contract.rookieOptionEligible && !contract.rookieOptionExercised;
+                        const canApplyTag = !contract.isFranchiseTag;
+                        const isMenuOpen = openMenuId === contract.id;
+                        return renderContractRow(contract);
+                      })}
+                    </>
+                  );
+                })
+              ) : null}
+              {!groupByTeam && paginatedContracts.map((contract) => renderContractRow(contract))}
+              {filteredContracts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-slate-400">
-                    No contracts found for selected filters.
+                    {searchQuery ? `No contracts matching "${searchQuery}".` : "No contracts found for selected filters."}
                   </td>
                 </tr>
               ) : null}
@@ -731,46 +847,52 @@ export function ContractOperationsPanel() {
         </StandardTable>
       </div>
 
-      {editingId ? (
-        <form onSubmit={saveEdit} className="mt-4 rounded-lg border border-[var(--brand-structure-muted)] bg-[var(--brand-surface-card)] p-4">
-          <h4 className="text-sm font-semibold text-[var(--foreground)]">Edit Contract</h4>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-[var(--muted-foreground)]">Salary</span>
-              <Input
-                value={salaryInput}
-                onChange={(event) => setSalaryInput(event.target.value)}
-                className="w-full"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-[var(--muted-foreground)]">Years Total</span>
-              <Input
-                value={yearsInput}
-                onChange={(event) => setYearsInput(event.target.value)}
-                className="w-full"
-              />
-            </label>
-            <div className="flex items-end gap-2">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={busyAction !== null}
-                loading={busyAction === `edit:${editingId}`}
-              >
-                {busyAction === `edit:${editingId}` ? "Saving..." : "Save"}
-              </Button>
-              <Button
+      {!groupByTeam && filteredContracts.length > PAGE_SIZE && (
+        <div className="mt-3 flex items-center justify-between text-sm text-slate-400">
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredContracts.length)} of {filteredContracts.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Previous page"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
                 type="button"
-                variant="secondary"
-                onClick={cancelEdit}
+                onClick={() => setPage(i)}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded border text-xs transition-colors ${
+                  i === page
+                    ? "border-sky-600 bg-sky-900/40 text-sky-300"
+                    : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"
+                }`}
               >
-                Cancel
-              </Button>
-            </div>
+                {i + 1}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Next page"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
-        </form>
-      ) : null}
+        </div>
+      )}
+
     </section>
   );
 }

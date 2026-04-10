@@ -531,6 +531,7 @@ model User {
   reviewedPlayerRefreshChanges  PlayerRefreshChange[]
   approvedPlayerIdentityMappings PlayerIdentityMapping[]
   resolvedSyncMismatches        SyncMismatch[]           @relation("UserResolvedSyncMismatches")
+  sentPlatformInvites           PlatformInvite[]         @relation("PlatformInviteInvitedByUser")
 }
 
 model AuthSession {
@@ -591,6 +592,27 @@ model LeagueInvite {
   @@index([acceptedAt, revokedAt, expiresAt])
   @@index([teamId])
   @@index([ownerId])
+  @@index([invitedByUserId])
+  @@index([lastDeliveryState, lastDeliveryAttemptedAt])
+}
+
+model PlatformInvite {
+  id                      String               @id @default(cuid())
+  email                   String
+  tokenHash               String               @unique
+  createdAt               DateTime             @default(now())
+  expiresAt               DateTime
+  acceptedAt              DateTime?
+  revokedAt               DateTime?
+  invitedByUserId         String?
+  lastDeliveryAttemptedAt DateTime?
+  lastDeliveryState       InviteDeliveryState?
+  lastDeliveryErrorCode   String?
+
+  invitedByUser User? @relation("PlatformInviteInvitedByUser", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([acceptedAt, revokedAt, expiresAt])
   @@index([invitedByUserId])
   @@index([lastDeliveryState, lastDeliveryAttemptedAt])
 }

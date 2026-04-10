@@ -179,6 +179,54 @@ export function renderMagicLinkEmailTemplate(input: {
   };
 }
 
+export function renderPlatformInviteEmailTemplate(input: {
+  inviteUrl: string;
+  invitedByName?: string | null;
+  invitedByEmail?: string | null;
+  expiresAt: Date;
+  variant: "initial" | "resend";
+  now?: Date;
+}): RenderedEmailTemplate {
+  const now = input.now ?? new Date();
+  const inviterLabel = input.invitedByName?.trim() || input.invitedByEmail?.trim() || null;
+  const subject =
+    input.variant === "resend"
+      ? "Your updated SundayEmpire invitation"
+      : "You've been invited to SundayEmpire";
+
+  const intro =
+    input.variant === "resend"
+      ? "Here is a fresh invite to join SundayEmpire. If you received an earlier invitation, use this one instead."
+      : `You've been invited to join SundayEmpire, a platform for serious dynasty league operations. Accept to create your account and get started.`;
+
+  return {
+    subject,
+    ...renderEmailLayout({
+      eyebrow: input.variant === "resend" ? "Updated Invitation" : "Platform Invitation",
+      title: "Join SundayEmpire",
+      intro,
+      detailRows: [
+        ...(inviterLabel
+          ? [{ label: "Invited By", value: inviterLabel }]
+          : []),
+      ],
+      ctaLabel: "Accept Invitation",
+      ctaUrl: input.inviteUrl,
+      supportLines: [
+        describeExpiry(input.expiresAt, now),
+        `This invitation is valid until ${formatDateTime(input.expiresAt)}.`,
+        ...(input.variant === "resend"
+          ? ["This is the latest invite link. If an earlier one was pending, use this one now."]
+          : []),
+      ],
+      closingLines: [
+        "To accept, sign in with the same email address that received this message.",
+        "If you were not expecting this invitation, you can safely ignore it.",
+      ],
+    }),
+  };
+}
+
 export function renderLeagueInviteEmailTemplate(input: {
   inviteUrl: string;
   leagueName: string;

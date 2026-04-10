@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
   // Legacy fallback: assume session presence indicates authentication if validation fails
   const hasSession = hasValidSession ?? (hasDurableSession || hasLegacyHeaderIdentity || hasLegacyCookieIdentity);
 
-  if (pathname === "/invite") {
+  if (pathname === "/invite" || pathname === "/join") {
     return NextResponse.next();
   }
 

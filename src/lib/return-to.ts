@@ -1,4 +1,4 @@
-import { AUTH_INVITE_TOKEN_PARAM } from "@/lib/auth-constants";
+import { AUTH_INVITE_TOKEN_PARAM, AUTH_PLATFORM_INVITE_TOKEN_PARAM } from "@/lib/auth-constants";
 
 export const RETURN_TO_PARAM = "returnTo";
 export const SWITCH_SESSION_PARAM = "switch";
@@ -64,6 +64,15 @@ export function buildInvitePath(input: {
   }
 
   return `/invite?${params.toString()}`;
+}
+
+export function buildJoinPath(input: {
+  token: string;
+}) {
+  const params = new URLSearchParams({
+    [AUTH_PLATFORM_INVITE_TOKEN_PARAM]: input.token,
+  });
+  return `/join?${params.toString()}`;
 }
 
 export function buildLoginPath(input: {

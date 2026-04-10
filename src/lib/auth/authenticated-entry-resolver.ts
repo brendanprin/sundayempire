@@ -1,14 +1,13 @@
 import { LeaguePhase } from "@prisma/client";
-import { getAuthActorForLeague } from "@/lib/auth";
 import { listAccessibleLeagueContextsForUser, type LeagueContext } from "@/lib/league-context";
-import { resolveAuthenticatedLeagueEntry, type AuthenticatedLeagueEntry } from "@/lib/auth-entry";
+import { resolveAuthenticatedLeagueEntry } from "@/lib/auth-entry";
 import { CanonicalLeagueRole, toCanonicalLeagueRole } from "@/lib/role-model";
 import { prisma } from "@/lib/prisma";
 
 export type AuthenticatedEntryResolution = 
   | {
       kind: "no_league_access";
-      route: "/no-access";
+      route: "/my-leagues";
       context: {
         hasLeagues: false;
         totalLeagues: 0;
@@ -64,7 +63,7 @@ export async function resolveAuthenticatedEntry(
   if (accessibleContexts.length === 0) {
     return {
       kind: "no_league_access",
-      route: "/no-access",
+      route: "/my-leagues",
       context: {
         hasLeagues: false,
         totalLeagues: 0,
