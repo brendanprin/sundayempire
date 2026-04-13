@@ -404,6 +404,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       })),
     [navSections, pathname],
   );
+
+  const breadcrumb = useMemo(() => {
+    for (const section of sideNavSections) {
+      const activeLink = section.links.find((link) => link.active);
+      if (activeLink) {
+        return { section: section.label, page: activeLink.label };
+      }
+    }
+    return null;
+  }, [sideNavSections]);
   const roleLabel =
     actor?.leagueRole === "COMMISSIONER"
       ? "Commissioner"
@@ -580,16 +590,27 @@ export function AppShell({ children }: { children: ReactNode }) {
               });
             }}
           />
-          <main
-            className="shell-panel shell-main-panel min-w-0 flex-1 p-3 md:p-4"
-            style={{
-              backgroundColor: "var(--brand-surface-elevated)",
-              borderColor: "var(--brand-structure-muted)",
-            }}
-            data-testid="shell-main-panel"
-          >
-            {children}
-          </main>
+          <div className="min-w-0 flex-1 space-y-2">
+            {breadcrumb && (
+              <nav aria-label="Breadcrumb" className="px-1">
+                <ol className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  <li>{breadcrumb.section}</li>
+                  <li aria-hidden="true" className="select-none">›</li>
+                  <li style={{ color: "var(--foreground)" }} aria-current="page">{breadcrumb.page}</li>
+                </ol>
+              </nav>
+            )}
+            <main
+              className="shell-panel shell-main-panel min-w-0 p-3 md:p-4"
+              style={{
+                backgroundColor: "var(--brand-surface-elevated)",
+                borderColor: "var(--brand-structure-muted)",
+              }}
+              data-testid="shell-main-panel"
+            >
+              {children}
+            </main>
+          </div>
         </div>
       </div>
     </div>

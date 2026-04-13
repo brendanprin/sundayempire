@@ -110,6 +110,9 @@ export function RulesDeadlinesView(props: {
   const currentPhase = props.detail.lifecycle.currentPhase
     ? formatLeaguePhaseLabel(props.detail.lifecycle.currentPhase)
     : "Unresolved";
+  const isSeasonLocked = ["REGULAR_SEASON", "PLAYOFFS"].includes(
+    props.detail.lifecycle.currentPhase ?? "",
+  );
   const nextPhase = props.detail.lifecycle.nextPhase
     ? formatLeaguePhaseLabel(props.detail.lifecycle.nextPhase)
     : "None scheduled";
@@ -163,8 +166,20 @@ export function RulesDeadlinesView(props: {
             {props.detail.ruleset ? `v${props.detail.ruleset.version}` : "-"}
           </p>
           <p className="mt-2 text-sm text-slate-400">
-            {props.detail.ruleset ? "Current policy baseline." : "No active ruleset is available."}
+            {props.detail.ruleset
+              ? "Increments each time rules are saved."
+              : "No active ruleset is available."}
           </p>
+          {props.detail.ruleset ? (
+            <p className="mt-1 text-xs text-slate-500">
+              Last modified {formatDateTime(props.detail.ruleset.updatedAt)}
+            </p>
+          ) : null}
+          {isSeasonLocked ? (
+            <span className="mt-3 inline-flex items-center gap-1 rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-[11px] font-medium text-amber-300" data-testid="rules-season-lock-chip">
+              Frozen — {currentPhase}
+            </span>
+          ) : null}
         </DashboardCard>
       </div>
 
@@ -327,10 +342,26 @@ export function RulesDeadlinesView(props: {
             >
               {props.form ? (
                 <div className="space-y-4">
-                  {props.fieldGroups.map((group) => (
-                    <div key={group.title} className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-                      <h4 className="text-sm font-semibold text-slate-100">{group.title}</h4>
-                      <div className="mt-3 grid gap-3">
+                  {isSeasonLocked ? (
+                    <div
+                      className="rounded-lg border border-amber-700/50 bg-amber-950/20 px-4 py-3 text-sm text-amber-200"
+                      data-testid="rules-season-lock-banner"
+                    >
+                      <p className="font-medium text-amber-100">Rules frozen — {currentPhase} is active</p>
+                      <p className="mt-1 text-xs text-amber-200/80">
+                        Rule changes during an active season take effect next offseason. Save with care.
+                      </p>
+                    </div>
+                  ) : null}
+                  {props.fieldGroups.map((group, index) => (
+                    <details key={group.title} className="rounded-lg border border-slate-800 bg-slate-900/60" open={index === 0}>
+                      <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-100 hover:text-slate-50 [&::-webkit-details-marker]:hidden">
+                        {group.title}
+                        <span className="text-xs font-normal text-slate-500 group-open:hidden">
+                          {group.fields.length} fields
+                        </span>
+                      </summary>
+                      <div className="grid gap-3 px-4 pb-4">
                         {group.fields.map((field) => (
                           <label key={field.key} className="space-y-1 text-xs text-slate-400">
                             <span>{field.label}</span>
@@ -344,7 +375,7 @@ export function RulesDeadlinesView(props: {
                           </label>
                         ))}
                       </div>
-                    </div>
+                    </details>
                   ))}
                   <Button
                     type="button"

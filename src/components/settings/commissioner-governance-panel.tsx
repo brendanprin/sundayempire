@@ -143,6 +143,7 @@ export function CommissionerGovernancePanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [isTransferring, setIsTransferring] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
+  const [transferConfirmPending, setTransferConfirmPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -187,6 +188,7 @@ export function CommissionerGovernancePanel() {
       );
       setPayload(nextPayload);
 
+      setTransferConfirmPending(false);
       setTransferUserId((current) => {
         if (current && nextPayload.members.some((member) => member.userId === current)) {
           return current;
@@ -556,7 +558,7 @@ export function CommissionerGovernancePanel() {
                 <span className="mb-1.5 block">Target member</span>
                 <select
                   value={transferUserId}
-                  onChange={(event) => setTransferUserId(event.target.value)}
+                  onChange={(event) => { setTransferUserId(event.target.value); setTransferConfirmPending(false); }}
                   className="w-full rounded-md border bg-transparent px-3 py-2 text-sm text-cyan-50"
                   style={{
                     borderColor: "rgba(34, 211, 238, 0.35)",
@@ -576,17 +578,44 @@ export function CommissionerGovernancePanel() {
                 </select>
               </label>
 
-              <button
-                type="button"
-                onClick={() => {
-                  void transferCommissioner();
-                }}
-                disabled={!transferUserId || transferTargets.length === 0 || isTransferring}
-                className="mt-3 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                data-testid="settings-commissioner-transfer-button"
-              >
-                {isTransferring ? "Transferring..." : "Transfer Commissioner"}
-              </button>
+              {transferConfirmPending ? (
+                <div className="mt-3 rounded-lg border border-amber-700/50 bg-amber-950/30 p-3 text-xs text-amber-100">
+                  <p className="font-medium">
+                    Transfer commissioner authority to {displayUser(transferTargets.find((m) => m.userId === transferUserId) ?? { name: null, email: transferUserId })}?
+                  </p>
+                  <p className="mt-1 opacity-80">You will lose commissioner access immediately.</p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { void transferCommissioner(); }}
+                      disabled={isTransferring}
+                      className="rounded-md bg-amber-300 px-3 py-1.5 text-xs font-medium text-amber-950 transition hover:bg-amber-200 disabled:opacity-60"
+                      data-testid="settings-commissioner-transfer-confirm"
+                    >
+                      {isTransferring ? "Transferring..." : "Confirm Transfer"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTransferConfirmPending(false)}
+                      disabled={isTransferring}
+                      className="rounded-md border border-amber-700/50 px-3 py-1.5 text-xs text-amber-200 hover:text-amber-100 disabled:opacity-60"
+                      data-testid="settings-commissioner-transfer-cancel"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setTransferConfirmPending(true)}
+                  disabled={!transferUserId || transferTargets.length === 0 || isTransferring}
+                  className="mt-3 rounded-md bg-[var(--brand-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--brand-midnight-navy)] transition hover:bg-[var(--brand-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="settings-commissioner-transfer-button"
+                >
+                  Transfer Commissioner
+                </button>
+              )}
             </div>
           ) : null}
 

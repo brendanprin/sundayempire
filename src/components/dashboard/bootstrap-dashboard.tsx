@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   InviteManagementPanel,
   type CommissionerInviteRow,
@@ -88,10 +88,23 @@ interface BootstrapDashboardProps {
 
 export function BootstrapDashboard(props: BootstrapDashboardProps) {
   const { dashboard, founderSetup, setupInvites } = props;
-  
+
+  const leagueId = dashboard.leagueDashboard.league.id;
+  const seenKey = `bootstrap-checklist-seen-${leagueId}`;
+  const [checklistExpanded, setChecklistExpanded] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(seenKey)) {
+      setChecklistExpanded(false);
+    } else {
+      localStorage.setItem(seenKey, "1");
+    }
+  }, [seenKey]);
+
   const mirrorOnly = dashboard.leagueDashboard.status.mirrorOnly;
   const visibleAlerts = dashboard.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status"));
-  
+
   // Build team slots and summary for the new table-first interface
   const teamSlots = buildTeamSlotsFromDashboard(dashboard, setupInvites);
   const membersSummary = buildLeagueMembersSummary(dashboard, teamSlots);
@@ -105,16 +118,32 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         titleTestId="bootstrap-dashboard-league-name"
         description="Let's get your dynasty football league operational. Complete these essential steps to prepare for your first season."
         supportingContent={
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="shell-chip shell-chip--accent">
-              {dashboard.setupChecklist.completedItemCount}/{dashboard.setupChecklist.totalItemCount} setup tasks complete
-            </span>
-            <span className="shell-chip shell-chip--neutral">
-              Season {dashboard.leagueDashboard.season?.year ?? "Setup"}
-            </span>
-            <span className="shell-chip shell-chip--neutral">
-              Commissioner Mode
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="shell-chip shell-chip--accent">
+                {dashboard.setupChecklist.completedItemCount}/{dashboard.setupChecklist.totalItemCount} setup tasks complete
+              </span>
+              <span className="shell-chip shell-chip--neutral">
+                Season {dashboard.leagueDashboard.season?.year ?? "Setup"}
+              </span>
+              <span className="shell-chip shell-chip--neutral">
+                Commissioner Mode
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/rules"
+                className="rounded-md border border-slate-600/60 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-slate-500"
+              >
+                Review Rules
+              </Link>
+              <Link
+                href="/commissioner"
+                className="rounded-md border border-sky-500/60 bg-sky-950/50 px-3 py-1.5 text-xs font-medium text-sky-100 transition hover:border-sky-400"
+              >
+                Commissioner Tools
+              </Link>
+            </div>
           </div>
         }
       />
@@ -133,11 +162,26 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
       />
 
       {/* Canonical Setup Progress */}
-      <NewLeagueChecklist 
-        checklist={dashboard.setupChecklist} 
-        prominence="primary"
-        testId="bootstrap-progress-overview" 
-      />
+      <div className="rounded-xl border border-slate-700/60 bg-slate-900/20" data-testid="bootstrap-checklist-collapse">
+        <button
+          type="button"
+          onClick={() => setChecklistExpanded((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm"
+          aria-expanded={checklistExpanded}
+        >
+          <span className="font-medium text-slate-200">Setup Checklist</span>
+          <span className="text-xs text-slate-400">{checklistExpanded ? "Collapse ›" : "Expand ›"}</span>
+        </button>
+        {checklistExpanded && (
+          <div className="border-t border-slate-700/60 p-4">
+            <NewLeagueChecklist
+              checklist={dashboard.setupChecklist}
+              prominence="primary"
+              testId="bootstrap-progress-overview"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Primary Action: Founder Team Setup */}
       {!founderSetup?.isComplete && (
@@ -314,32 +358,6 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         onSetupCopyFreshInviteLink={props.onSetupCopyFreshInviteLink}
         onChangeLeagueSize={props.onChangeLeagueSize}
       />
-
-      {/* Quick Actions for Moving Forward */}
-      <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-100">Ready for the next phase?</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Once you have teams and members, review rules and prepare for draft setup.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/rules"
-              className="rounded-md border border-slate-600/60 bg-slate-800/50 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-500"
-            >
-              Review Rules
-            </Link>
-            <Link
-              href="/commissioner"
-              className="rounded-md border border-sky-500/60 bg-sky-950/50 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-400"
-            >
-              Full Commissioner Tools
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {dashboard.setupChecklist.isComplete && (
         <div className="rounded-xl border border-emerald-600/50 bg-emerald-950/30 p-6 text-center">

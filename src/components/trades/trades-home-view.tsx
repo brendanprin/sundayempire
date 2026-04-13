@@ -428,11 +428,11 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
             >
               SundayEmpire
             </p>
-            <h2 
+            <h2
               className="mt-2 text-3xl font-semibold"
               style={{ color: "var(--foreground)" }}
             >
-              Trades
+              Trade Management
             </h2>
             <p 
               className="mt-2 text-sm"
@@ -482,6 +482,13 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
 
       {workflowStep ? <WorkflowContextBanner step={workflowStep} /> : null}
 
+      {showCommissionerEmptyBanner ? (
+        <CommissionerEmptyStateBanner allEmpty={totalTrades === 0} canCreate={canCreate} />
+      ) : null}
+
+      {totalTrades > 0 ? (
+      <>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map((card) => (
           <SummaryCard
@@ -501,9 +508,6 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
         ))}
       </div>
 
-      {showCommissionerEmptyBanner ? (
-        <CommissionerEmptyStateBanner allEmpty={totalTrades === 0} canCreate={canCreate} />
-      ) : null}
 
       {/* Tier 1: Commissioner-critical queues */}
       <div className={`grid gap-4 ${isCommissioner ? "xl:grid-cols-2" : ""}`}>
@@ -596,6 +600,8 @@ export function TradesHomeView(props: { data: TradeHomeResponse }) {
           limit={4}
         />
       </div>
+
+      </> ) : null}
 
     </div>
   );

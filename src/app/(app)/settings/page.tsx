@@ -90,8 +90,6 @@ export default async function SettingsPage() {
         headingLevel="h2"
       />
 
-      <PlatformInvitePanel />
-
       <CommissionerGovernancePanel />
 
       {isPlatformAdmin ? (
@@ -139,69 +137,76 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        <div
+        <details
           className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
           data-testid="settings-compatibility-links"
         >
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-amber-500/80">Secondary Access</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-100">Compatibility and utilities</h3>
-            <p className="mt-2 text-sm text-slate-300">
-              Bounded commissioner utilities and compatibility routes for specific administrative needs.
-            </p>
-            <p className="mt-2 text-sm text-slate-500" data-testid="settings-retired-prototype-note">
+          <summary className="flex cursor-pointer select-none items-center justify-between [&::-webkit-details-marker]:hidden">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-500/80">Secondary Access</p>
+              <h3 className="mt-1 text-xl font-semibold text-slate-100">Advanced</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Compatibility routes and deprecated utilities.
+              </p>
+            </div>
+            <span className="ml-4 shrink-0 text-xs text-slate-500">Expand ›</span>
+          </summary>
+
+          <div className="mt-4 border-t border-slate-800 pt-4">
+            <p className="text-sm text-slate-500" data-testid="settings-retired-prototype-note">
               Retired routes such as Contracts Utility, Pick Ownership Utility, Startup Draft, Planning,
               Collaboration, and Recaps are no longer listed here. Old bookmarks redirect to canonical replacements.
             </p>
-          </div>
+            <div className="mt-4 space-y-4">
+              {COMPATIBILITY_SECTIONS.map((section) => (
+                <section
+                  key={section.id}
+                  className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+                  data-testid={`settings-compatibility-section-${section.id}`}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{section.eyebrow}</p>
+                  <h4 className="mt-2 text-base font-semibold text-slate-100">{section.title}</h4>
+                  <p className="mt-2 text-sm text-slate-400">{section.description}</p>
 
-          <div className="mt-4 space-y-4">
-            {COMPATIBILITY_SECTIONS.map((section) => (
-              <section
-                key={section.id}
-                className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
-                data-testid={`settings-compatibility-section-${section.id}`}
-              >
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{section.eyebrow}</p>
-                <h4 className="mt-2 text-base font-semibold text-slate-100">{section.title}</h4>
-                <p className="mt-2 text-sm text-slate-400">{section.description}</p>
-
-                <ul className="mt-4 space-y-3">
-                  {section.routes.map((route) => (
-                    <li key={route.href}>
-                      <Link
-                        href={route.href}
-                        className="block rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition hover:border-slate-600"
-                        data-testid={`settings-compatibility-link-${route.id}`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-100">{route.label}</p>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[11px] ${badgeClassName(route.disposition)}`}
-                          >
-                            {route.disposition}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm text-slate-400">{route.description}</p>
-                        <dl className="mt-3 space-y-1 text-xs text-slate-500">
-                          <div>
-                            <dt className="inline font-medium text-slate-300">Canonical replacement:</dt>{" "}
-                            <dd className="inline">{route.canonicalReplacement}</dd>
+                  <ul className="mt-4 space-y-3">
+                    {section.routes.map((route) => (
+                      <li key={route.href}>
+                        <Link
+                          href={route.href}
+                          className="block rounded-xl border border-slate-800 bg-slate-950/70 p-4 transition hover:border-slate-600"
+                          data-testid={`settings-compatibility-link-${route.id}`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-slate-100">{route.label}</p>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[11px] ${badgeClassName(route.disposition)}`}
+                            >
+                              {route.disposition}
+                            </span>
                           </div>
-                          <div>
-                            <dt className="inline font-medium text-slate-300">Route:</dt>{" "}
-                            <dd className="inline">{route.href}</dd>
-                          </div>
-                        </dl>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+                          <p className="mt-2 text-sm text-slate-400">{route.description}</p>
+                          <dl className="mt-3 space-y-1 text-xs text-slate-500">
+                            <div>
+                              <dt className="inline font-medium text-slate-300">Canonical replacement:</dt>{" "}
+                              <dd className="inline">{route.canonicalReplacement}</dd>
+                            </div>
+                            <div>
+                              <dt className="inline font-medium text-slate-300">Route:</dt>{" "}
+                              <dd className="inline">{route.href}</dd>
+                            </div>
+                          </dl>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
           </div>
-        </div>
+        </details>
       </section>
+
+      <PlatformInvitePanel />
     </div>
   );
 }

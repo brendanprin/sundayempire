@@ -62,49 +62,130 @@ export function DraftHomeView(props: { draftHome: DraftHomeProjection }) {
         </DashboardCard>
       </div>
 
-      <section className="grid gap-4 xl:grid-cols-2" data-testid="draft-primary-workspaces">
-        <Link
-          href={props.draftHome.links.rookie}
-          className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.25)] transition hover:border-slate-600"
-          data-testid="draft-rookie-card"
-        >
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Primary workspace</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-100">Rookie Draft Workspace</h3>
-          <p className="mt-2 text-sm text-slate-400">
-            {rookieDraft
-              ? `${formatStatusLabel(rookieDraft.status)} · Pick ${rookieDraft.progress.currentPickNumber ?? "-"} of ${rookieDraft.progress.totalPicks}`
-              : "Set up the generated order, correct draft slots when needed, and start the rookie room."}
-          </p>
-          <p className="mt-4 text-sm font-medium text-sky-200">
-            {rookieDraft ? "Open Rookie Draft Workspace" : "Set Up Rookie Draft"}
-          </p>
-        </Link>
+      <section className="space-y-4" data-testid="draft-primary-workspaces">
+        {/* If one draft is live, surface it full-width at the top */}
+        {rookieDraft && !veteranAuction ? (
+          <>
+            <Link
+              href={props.draftHome.links.rookie}
+              className="block rounded-2xl border-2 border-sky-600/60 bg-gradient-to-br from-sky-950/30 to-slate-950/80 p-6 shadow-[0_18px_60px_rgba(14,165,233,0.15)] transition hover:border-sky-500/80"
+              data-testid="draft-rookie-card"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-sky-400/80">Live now</p>
+                <span className="rounded-full border border-sky-500/60 bg-sky-950/50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-200">
+                  {formatStatusLabel(rookieDraft.status)}
+                </span>
+              </div>
+              <h3 className="mt-2 text-2xl font-semibold text-sky-100">Rookie Draft Workspace</h3>
+              <p className="mt-2 text-sm text-sky-200/80">
+                Pick {rookieDraft.progress.currentPickNumber ?? "-"} of {rookieDraft.progress.totalPicks} · On the clock now
+              </p>
+              <p className="mt-4 text-sm font-medium text-sky-300">Open Rookie Draft Workspace →</p>
+            </Link>
+            <Link
+              href={props.draftHome.links.veteranAuction}
+              className="block rounded-2xl border border-slate-800 bg-slate-950/80 p-5 transition hover:border-slate-600"
+              data-testid="draft-veteran-card"
+            >
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Secondary workspace</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-300">Veteran Auction Workspace</h3>
+              <p className="mt-2 text-sm text-slate-400">Standard and emergency fill-in modes remain available.</p>
+              <p className="mt-3 text-sm font-medium text-slate-400">Set Up Veteran Auction →</p>
+            </Link>
+          </>
+        ) : veteranAuction && !rookieDraft ? (
+          <>
+            <Link
+              href={props.draftHome.links.veteranAuction}
+              className="block rounded-2xl border-2 border-sky-600/60 bg-gradient-to-br from-sky-950/30 to-slate-950/80 p-6 shadow-[0_18px_60px_rgba(14,165,233,0.15)] transition hover:border-sky-500/80"
+              data-testid="draft-veteran-card"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-sky-400/80">Live now</p>
+                <span className="rounded-full border border-sky-500/60 bg-sky-950/50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-200">
+                  {formatStatusLabel(veteranAuction.draft.status)}
+                </span>
+              </div>
+              <h3 className="mt-2 text-2xl font-semibold text-sky-100">Veteran Auction Workspace</h3>
+              <p className="mt-2 text-sm text-sky-200/80">
+                {veteranAuction.poolEntryCount} pool entries · {veteranAuction.resolvedEntryCount} resolved
+                {veteranAuction.blindWindowActive
+                  ? " · Blind-bid window active"
+                  : veteranAuction.auctionEndsAt
+                    ? ` · Ends ${new Date(veteranAuction.auctionEndsAt).toLocaleString()}`
+                    : ""}
+              </p>
+              <p className="mt-4 text-sm font-medium text-sky-300">Open Veteran Auction Workspace →</p>
+            </Link>
+            <Link
+              href={props.draftHome.links.rookie}
+              className="block rounded-2xl border border-slate-800 bg-slate-950/80 p-5 transition hover:border-slate-600"
+              data-testid="draft-rookie-card"
+            >
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Secondary workspace</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-300">Rookie Draft Workspace</h3>
+              <p className="mt-2 text-sm text-slate-400">Set up the generated order, correct draft slots when needed, and start the rookie room.</p>
+              <p className="mt-3 text-sm font-medium text-slate-400">Set Up Rookie Draft →</p>
+            </Link>
+          </>
+        ) : (
+          /* Both active or neither active — equal weight grid */
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Link
+              href={props.draftHome.links.rookie}
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.25)] transition hover:border-slate-600"
+              data-testid="draft-rookie-card"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Primary workspace</p>
+                {rookieDraft ? (
+                  <span className="rounded-full border border-sky-700/50 bg-sky-950/40 px-2 py-0.5 text-[11px] text-sky-300">Live</span>
+                ) : null}
+              </div>
+              <h3 className="mt-2 text-xl font-semibold text-slate-100">Rookie Draft Workspace</h3>
+              <p className="mt-2 text-sm text-slate-400">
+                {rookieDraft
+                  ? `${formatStatusLabel(rookieDraft.status)} · Pick ${rookieDraft.progress.currentPickNumber ?? "-"} of ${rookieDraft.progress.totalPicks}`
+                  : "Set up the generated order, correct draft slots when needed, and start the rookie room."}
+              </p>
+              <p className="mt-4 text-sm font-medium text-sky-200">
+                {rookieDraft ? "Open Rookie Draft Workspace" : "Set Up Rookie Draft"}
+              </p>
+            </Link>
 
-        <Link
-          href={props.draftHome.links.veteranAuction}
-          className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.25)] transition hover:border-slate-600"
-          data-testid="draft-veteran-card"
-        >
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Primary workspace</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-100">Veteran Auction Workspace</h3>
-          <p className="mt-2 text-sm text-slate-400">
-            {veteranAuction
-              ? `${formatStatusLabel(veteranAuction.draft.status)} · ${veteranAuction.poolEntryCount} pool entries · ${veteranAuction.resolvedEntryCount} resolved`
-              : "Set up the veteran pool, start the auction room, and manage open bidding."}
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            {veteranAuction
-              ? veteranAuction.blindWindowActive
-                ? "Blind-bid window is active."
-                : veteranAuction.auctionEndsAt
-                  ? `Auction ends ${new Date(veteranAuction.auctionEndsAt).toLocaleString()}.`
-                  : "Auction end time not configured."
-              : "Standard and emergency fill-in modes remain available."}
-          </p>
-          <p className="mt-4 text-sm font-medium text-sky-200">
-            {veteranAuction ? "Open Veteran Auction Workspace" : "Set Up Veteran Auction"}
-          </p>
-        </Link>
+            <Link
+              href={props.draftHome.links.veteranAuction}
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.25)] transition hover:border-slate-600"
+              data-testid="draft-veteran-card"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Primary workspace</p>
+                {veteranAuction ? (
+                  <span className="rounded-full border border-sky-700/50 bg-sky-950/40 px-2 py-0.5 text-[11px] text-sky-300">Live</span>
+                ) : null}
+              </div>
+              <h3 className="mt-2 text-xl font-semibold text-slate-100">Veteran Auction Workspace</h3>
+              <p className="mt-2 text-sm text-slate-400">
+                {veteranAuction
+                  ? `${formatStatusLabel(veteranAuction.draft.status)} · ${veteranAuction.poolEntryCount} pool entries · ${veteranAuction.resolvedEntryCount} resolved`
+                  : "Set up the veteran pool, start the auction room, and manage open bidding."}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                {veteranAuction
+                  ? veteranAuction.blindWindowActive
+                    ? "Blind-bid window is active."
+                    : veteranAuction.auctionEndsAt
+                      ? `Auction ends ${new Date(veteranAuction.auctionEndsAt).toLocaleString()}.`
+                      : "Auction end time not configured."
+                  : "Standard and emergency fill-in modes remain available."}
+              </p>
+              <p className="mt-4 text-sm font-medium text-sky-200">
+                {veteranAuction ? "Open Veteran Auction Workspace" : "Set Up Veteran Auction"}
+              </p>
+            </Link>
+          </div>
+        )}
       </section>
 
       <div className="grid gap-4">

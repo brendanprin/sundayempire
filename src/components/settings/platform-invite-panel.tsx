@@ -57,10 +57,17 @@ export function PlatformInvitePanel() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     void loadInvites();
   }, []);
+
+  useEffect(() => {
+    if (!sendSuccess) return;
+    const timer = setTimeout(() => setSendSuccess(null), 4000);
+    return () => clearTimeout(timer);
+  }, [sendSuccess]);
 
   async function loadInvites() {
     try {
@@ -105,6 +112,7 @@ export function PlatformInvitePanel() {
   async function revokeInvite(invite: SentInvite) {
     const key = `revoke:${invite.id}`;
     setBusyAction(key);
+    setActionError(null);
     try {
       await requestJson(
         `/api/platform/invites/${invite.id}/revoke`,
@@ -115,7 +123,7 @@ export function PlatformInvitePanel() {
         prev.map((i) => (i.id === invite.id ? { ...i, status: "revoked" as const, canRevoke: false, canResend: true } : i)),
       );
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not revoke the invitation.");
+      setActionError(err instanceof Error ? err.message : "Could not revoke the invitation.");
     } finally {
       setBusyAction(null);
     }
@@ -124,17 +132,17 @@ export function PlatformInvitePanel() {
   async function resendInvite(invite: SentInvite) {
     const key = `resend:${invite.id}`;
     setBusyAction(key);
+    setActionError(null);
     try {
       const data = await requestJson<{ invite: { id: string; email: string; expiresAt: string } }>(
         `/api/platform/invites/${invite.id}/resend`,
         { method: "POST" },
         "Could not resend the invitation.",
       );
-      // Replace the old invite with the new one returned (resend creates a new record)
       await loadInvites();
       setSendSuccess(`Invitation resent to ${data.invite.email}.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not resend the invitation.");
+      setActionError(err instanceof Error ? err.message : "Could not resend the invitation.");
     } finally {
       setBusyAction(null);
     }
@@ -210,6 +218,9 @@ export function PlatformInvitePanel() {
       ) : null}
       {sendError ? (
         <p className="text-sm text-red-300" data-testid="invite-send-error">{sendError}</p>
+      ) : null}
+      {actionError ? (
+        <p className="text-sm text-red-300" data-testid="invite-action-error">{actionError}</p>
       ) : null}
 
       {/* Invite list */}
