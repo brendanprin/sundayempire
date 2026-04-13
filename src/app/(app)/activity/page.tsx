@@ -147,8 +147,7 @@ export default function ActivityPage() {
         <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">League feed</p>
         <h2 className="mt-2 text-3xl font-semibold text-slate-100">League Activity</h2>
         <p className="mt-2 text-sm text-slate-400">
-          League-visible workflow events from league history. Commissioner-only audit
-          records stay on the separate audit route.
+          League-visible workflow events from league history. Commissioner-only audit trail — those events are not visible to league members.
         </p>
       </section>
 
@@ -157,7 +156,7 @@ export default function ActivityPage() {
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-400">Visibility</p>
             <p className="mt-1 text-sm text-slate-200" data-testid="activity-visibility-label">
-              League-visible events only
+              Visible to all league members
             </p>
           </div>
 
@@ -232,7 +231,7 @@ export default function ActivityPage() {
 
         <div className="mt-3 rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
           <p data-testid="activity-summary-total">
-            Total events in scope: {payload?.summary.total ?? 0}
+            {payload?.summary.total ?? 0} event{(payload?.summary.total ?? 0) === 1 ? "" : "s"} found
           </p>
         </div>
 
@@ -256,7 +255,7 @@ export default function ActivityPage() {
         {loading && !payload ? (
           <div className="mt-3">
             <CompactEmptyState
-              message="Loading league-visible events and filter options."
+              message="Loading activity feed..."
               testId="activity-loading-state"
             />
           </div>
@@ -315,7 +314,7 @@ export default function ActivityPage() {
 
           {!loading && (payload?.feed.length ?? 0) === 0 && !error ? (
             <CompactEmptyState
-              message="No league-visible events matched the current filters. Clear a filter or refresh after the next workflow update."
+              message="No events matched the current filters. Try adjusting your filters or check back after the next workflow update."
               testId="activity-empty-state"
             />
           ) : null}

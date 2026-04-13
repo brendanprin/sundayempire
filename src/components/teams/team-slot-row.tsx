@@ -91,69 +91,10 @@ export function getStatusBadge(slot: TeamSlot) {
 
 // ── Inline action dialogs ──────────────────────────────────────────────────
 
-function CreateTeamAction({
-  slotNumber,
-  onCreateTeam,
-  disabled,
-}: {
-  slotNumber: number;
-  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
-  disabled: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [teamName, setTeamName] = useState("");
-  const [teamAbbr, setTeamAbbr] = useState("");
-  const [division, setDivision] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teamName.trim()) return;
-    await onCreateTeam(slotNumber, { name: teamName.trim(), abbreviation: teamAbbr.trim(), divisionLabel: division.trim() });
-    setIsOpen(false);
-    setTeamName("");
-    setTeamAbbr("");
-    setDivision("");
-  };
-
-  return (
-    <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
-        disabled={disabled}
-      >
-        Create Team
-      </button>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 w-full max-w-md">
-            <h3 className="text-lg font-medium text-slate-100 mb-4">Create Team for Slot #{slotNumber}</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Team Name *</label>
-                <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="e.g., Lightning Bolts" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Abbreviation</label>
-                <input type="text" value={teamAbbr} onChange={(e) => setTeamAbbr(e.target.value)} placeholder="e.g., LB" maxLength={4} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Division</label>
-                <input type="text" value={division} onChange={(e) => setDivision(e.target.value)} placeholder="e.g., North" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsOpen(false)} className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300">Cancel</button>
-                <button type="submit" className="rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500" disabled={!teamName.trim()}>Create Team</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function InviteOwnerAction({
+// Combined form for both open slots (needs team + owner) and teams without an
+// owner (team pre-filled, just needs owner). When `slot.teamName` is set the
+// team fields are shown as read-only context and only owner fields are editable.
+function InviteUserAction({
   slot,
   onInviteMember,
   disabled,
@@ -163,49 +104,115 @@ function InviteOwnerAction({
   disabled: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const hasTeam = Boolean(slot.teamName);
+
+  const [teamName, setTeamName] = useState(slot.teamName ?? "");
+  const [teamNameEdited, setTeamNameEdited] = useState(false);
+  const [teamAbbr, setTeamAbbr] = useState(slot.teamAbbreviation ?? "");
+  const [division, setDivision] = useState(slot.divisionLabel ?? "");
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
 
+  const canSubmit = (hasTeam || teamName.trim().length > 0) && ownerName.trim().length > 0 && ownerEmail.trim().length > 0;
+
+  function deriveTeamName(email: string) {
+    const prefix = email.split("@")[0] ?? "";
+    return prefix ? `Team ${prefix}` : "";
+  }
+
+  const handleOpen = () => {
+    setTeamName(slot.teamName ?? "");
+    setTeamNameEdited(false);
+    setTeamAbbr(slot.teamAbbreviation ?? "");
+    setDivision(slot.divisionLabel ?? "");
+    setOwnerName("");
+    setOwnerEmail("");
+    setIsOpen(true);
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setOwnerEmail(val);
+    if (!hasTeam && !teamNameEdited) {
+      setTeamName(deriveTeamName(val));
+    }
+  };
+
+  const handleTeamNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeamName(e.target.value);
+    setTeamNameEdited(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ownerName.trim() || !ownerEmail.trim()) return;
+    if (!canSubmit) return;
     await onInviteMember(slot.slotNumber, {
       ownerName: ownerName.trim(),
       ownerEmail: ownerEmail.trim().toLowerCase(),
-      teamName: slot.teamName || "",
-      teamAbbreviation: slot.teamAbbreviation || "",
-      divisionLabel: slot.divisionLabel || "",
+      teamName: teamName.trim(),
+      teamAbbreviation: teamAbbr.trim(),
+      divisionLabel: division.trim(),
     });
     setIsOpen(false);
-    setOwnerName("");
-    setOwnerEmail("");
   };
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
-        className="rounded border border-amber-600 px-2 py-1 text-xs text-amber-300 hover:text-amber-100 hover:border-amber-500 disabled:opacity-50"
+        onClick={handleOpen}
+        className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
         disabled={disabled}
       >
-        Invite
+        Invite User
       </button>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-4 w-full max-w-md">
-            <h3 className="text-lg font-medium text-slate-100 mb-4">Invite Owner for {slot.teamName}</h3>
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-5 w-full max-w-md">
+            <h3 className="text-base font-semibold text-slate-100 mb-1">
+              {hasTeam ? `Invite owner for ${slot.teamName}` : "Invite a new member"}
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              {hasTeam
+                ? "Send an invite to claim this team. They'll set their own password on first login."
+                : "Fill in the team details and the person who will manage it. An invite email will be sent."}
+            </p>
             <form onSubmit={handleSubmit} className="space-y-3">
+              {hasTeam ? (
+                <div className="rounded border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs text-slate-400">
+                  <span className="font-medium text-slate-300">{slot.teamName}</span>
+                  {slot.teamAbbreviation && <span className="ml-2 text-slate-500">{slot.teamAbbreviation}</span>}
+                  {slot.divisionLabel && <span className="ml-2">· {slot.divisionLabel}</span>}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Team Name *</label>
+                    <input type="text" value={teamName} onChange={handleTeamNameChange} placeholder="e.g., Lightning Bolts" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Abbreviation</label>
+                      <input type="text" value={teamAbbr} onChange={(e) => setTeamAbbr(e.target.value)} placeholder="e.g., LB" maxLength={4} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 uppercase" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Division</label>
+                      <input type="text" value={division} onChange={(e) => setDivision(e.target.value)} placeholder="e.g., North" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                    </div>
+                  </div>
+                  <hr className="border-slate-700" />
+                </>
+              )}
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Owner Name *</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Owner Name *</label>
                 <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g., John Smith" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Owner Email *</label>
-                <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="e.g., john@example.com" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
+                <label className="block text-xs font-medium text-slate-300 mb-1">Owner Email *</label>
+                <input type="email" value={ownerEmail} onChange={handleEmailChange} placeholder="e.g., john@example.com" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsOpen(false)} className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300">Cancel</button>
-                <button type="submit" className="rounded bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-500" disabled={!ownerName.trim() || !ownerEmail.trim()}>Send Invite</button>
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setIsOpen(false)} className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:text-slate-100">Cancel</button>
+                <button type="submit" className="rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50" disabled={!canSubmit}>Send Invite</button>
               </div>
             </form>
           </div>
@@ -268,7 +275,6 @@ function TeamSlotActions({
   slot,
   busyAction,
   onEditTeam,
-  onCreateTeam,
   onInviteMember,
   onResendInvite,
   onRevokeInvite,
@@ -281,7 +287,6 @@ function TeamSlotActions({
   slot: TeamSlot;
   busyAction: string | null;
   onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
-  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onResendInvite: (invite: CommissionerInviteRow) => Promise<void>;
   onRevokeInvite: (invite: CommissionerInviteRow) => Promise<void>;
@@ -308,7 +313,7 @@ function TeamSlotActions({
     case "open_slot":
       return (
         <div className="flex items-center gap-2">
-          <CreateTeamAction slotNumber={slot.slotNumber} onCreateTeam={onCreateTeam} disabled={isRowBusy} />
+          <InviteUserAction slot={slot} onInviteMember={onInviteMember} disabled={isRowBusy} />
         </div>
       );
 
@@ -316,7 +321,7 @@ function TeamSlotActions({
       return (
         <div className="flex items-center gap-1">
           <button onClick={() => onEditTeam(slot.teamId!, getTeamDataFromSlot())} className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:text-slate-100 hover:border-slate-500 disabled:opacity-50" disabled={isRowBusy}>Edit</button>
-          <InviteOwnerAction slot={slot} onInviteMember={onInviteMember} disabled={isRowBusy} />
+          <InviteUserAction slot={slot} onInviteMember={onInviteMember} disabled={isRowBusy} />
           <RemoveTeamAction slot={slot} disabled={isRowBusy} onRemoveTeam={onRemoveTeam} />
         </div>
       );
@@ -354,7 +359,7 @@ function TeamSlotActions({
       return (
         <div className="flex items-center gap-1">
           <button onClick={() => onEditTeam(slot.teamId!, getTeamDataFromSlot())} className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:text-slate-100 hover:border-slate-500 disabled:opacity-50" disabled={isRowBusy}>Edit</button>
-          <InviteOwnerAction slot={slot} onInviteMember={onInviteMember} disabled={isRowBusy} />
+          <InviteUserAction slot={slot} onInviteMember={onInviteMember} disabled={isRowBusy} />
         </div>
       );
 
@@ -369,7 +374,6 @@ export function TeamSlotRow({
   slot,
   busyAction,
   onEditTeam,
-  onCreateTeam,
   onInviteMember,
   onResendInvite,
   onRevokeInvite,
@@ -382,7 +386,6 @@ export function TeamSlotRow({
   slot: TeamSlot;
   busyAction: string | null;
   onEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
-  onCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onResendInvite: (invite: CommissionerInviteRow) => Promise<void>;
   onRevokeInvite: (invite: CommissionerInviteRow) => Promise<void>;
@@ -445,7 +448,6 @@ export function TeamSlotRow({
           slot={slot}
           busyAction={busyAction}
           onEditTeam={onEditTeam}
-          onCreateTeam={onCreateTeam}
           onInviteMember={onInviteMember}
           onResendInvite={onResendInvite}
           onRevokeInvite={onRevokeInvite}

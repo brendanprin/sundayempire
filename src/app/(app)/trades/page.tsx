@@ -46,8 +46,8 @@ export default function TradesHomePage() {
   if (error) {
     return (
       <CanonicalRouteState
-        eyebrow="Trades"
-        title="Trades"
+        eyebrow="Trade Management"
+        title="Trade Management"
         description="Review pending actions, open proposals, and recent trade history."
         tone="error"
         message="Trades could not load."
@@ -61,8 +61,8 @@ export default function TradesHomePage() {
   if (!data) {
     return (
       <CanonicalRouteState
-        eyebrow="Trades"
-        title="Trades"
+        eyebrow="Trade Management"
+        title="Trade Management"
         description="Review pending actions, open proposals, and recent trade history."
         tone="loading"
         message="Loading trade proposals, action queues, and recent history."

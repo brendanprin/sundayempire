@@ -38,4 +38,4 @@ export type AssignmentFlow = {
 
 export const REMOVE_ASSIGNMENT = "__remove__";
 
-export type OwnerSelectOption = { id: string; label: string };
+export type OwnerSelectOption = { id: string; label: string; email?: string | null };

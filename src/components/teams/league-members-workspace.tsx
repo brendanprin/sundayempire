@@ -46,19 +46,10 @@ interface LeagueMembersWorkspaceProps {
   setupOpsBusyAction: string | null;
   setupOpsError: string | null;
   setupOpsMessage: string | null;
-  setupBulkCsvText: string;
-  setupBulkBusyAction: "validate" | "apply" | null;
-  setupBulkValidation: any;
-  setupBulkError: string | null;
-  setupBulkMessage: string | null;
-  setSetupBulkCsvText: (value: string) => void;
-  onSlotCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotRemoveTeam?: (teamId: string) => Promise<void>;
   onSlotViewTeam?: (teamId: string) => void;
-  onSetupBulkValidate: () => Promise<void>;
-  onSetupBulkApply: () => Promise<void>;
   onSetupInviteResend: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupInviteRevoke: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupCopyFreshInviteLink: (invite: CommissionerInviteRow) => Promise<void>;
@@ -156,6 +147,15 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
         </div>
       </div>
 
+      <InviteManagementPanel
+        invites={props.invites}
+        copyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
+        busyAction={props.setupOpsBusyAction}
+        onResend={props.onSetupInviteResend}
+        onRevoke={props.onSetupInviteRevoke}
+        onCopyFreshLink={props.onSetupCopyFreshInviteLink}
+      />
+
       {/* Team Slots Table */}
       <div className="rounded-xl border border-slate-700/60 bg-slate-900/20">
         <div className="overflow-x-auto">
@@ -177,7 +177,6 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
                   slot={slot}
                   busyAction={props.setupOpsBusyAction}
                   onEditTeam={props.onSlotEditTeam}
-                  onCreateTeam={props.onSlotCreateTeam}
                   onInviteMember={props.onSlotInviteMember}
                   onResendInvite={props.onSetupInviteResend}
                   onRevokeInvite={props.onSetupInviteRevoke}
@@ -191,71 +190,6 @@ export function LeagueMembersWorkspace(props: LeagueMembersWorkspaceProps) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Bulk Tools & Utilities */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-slate-100">Bulk Tools & Utilities</h3>
-
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/20 p-6">
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-slate-100">Bulk Team Import (CSV)</h4>
-              <p className="mt-1 text-xs text-slate-400">
-                Import multiple teams and invitations at once using CSV format.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <textarea
-                value={props.setupBulkCsvText}
-                onChange={(e) => props.setSetupBulkCsvText(e.target.value)}
-                placeholder={`team_name,owner_name,owner_email,abbreviation,division\nTeam Alpha,John Doe,john@example.com,ALPH,North\nTeam Beta,Jane Smith,jane@example.com,BETA,South`}
-                className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 font-mono"
-                rows={6}
-                disabled={Boolean(props.setupBulkBusyAction)}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={props.onSetupBulkValidate}
-                  className="rounded bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500"
-                  disabled={Boolean(props.setupBulkBusyAction) || !props.setupBulkCsvText.trim()}
-                >
-                  {props.setupBulkBusyAction === "validate" ? "Validating..." : "Validate CSV"}
-                </button>
-                {props.setupBulkValidation && (
-                  <button
-                    onClick={props.onSetupBulkApply}
-                    className="rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-500"
-                    disabled={Boolean(props.setupBulkBusyAction)}
-                  >
-                    {props.setupBulkBusyAction === "apply" ? "Importing..." : "Import Teams"}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {props.setupBulkError && (
-              <div className="rounded bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
-                {props.setupBulkError}
-              </div>
-            )}
-            {props.setupBulkMessage && (
-              <div className="rounded bg-green-500/10 border border-green-500/20 p-3 text-sm text-green-400">
-                {props.setupBulkMessage}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <InviteManagementPanel
-          invites={props.invites}
-          copyFreshLinkEnabled={props.setupInviteCopyFreshLinkEnabled}
-          busyAction={props.setupOpsBusyAction}
-          onResend={props.onSetupInviteResend}
-          onRevoke={props.onSetupInviteRevoke}
-          onCopyFreshLink={props.onSetupCopyFreshInviteLink}
-        />
       </div>
     </div>
   );

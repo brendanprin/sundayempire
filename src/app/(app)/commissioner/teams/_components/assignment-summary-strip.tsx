@@ -3,10 +3,12 @@ type LeagueStats = {
   assignedTeams: number;
   unassignedTeams: number;
   membersWithoutTeam: number;
+  pendingInvites: number;
 };
 
 export function AssignmentSummaryStrip({ stats }: { stats: LeagueStats }) {
-  const needsAttention = stats.unassignedTeams > 0 || stats.membersWithoutTeam > 0;
+  const needsAttention =
+    stats.unassignedTeams > 0 || stats.membersWithoutTeam > 0 || stats.pendingInvites > 0;
   const isEmpty = stats.totalTeams === 0;
 
   return (
@@ -70,7 +72,7 @@ export function AssignmentSummaryStrip({ stats }: { stats: LeagueStats }) {
         <div>
           <p className="text-xs text-slate-500">Pending Invites</p>
           <p className="mt-0.5 text-xl font-semibold text-slate-100" data-testid="summary-pending-invites">
-            0
+            {stats.pendingInvites}
           </p>
         </div>
       </div>

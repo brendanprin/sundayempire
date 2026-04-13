@@ -60,11 +60,6 @@ interface BootstrapDashboardProps {
   setupOpsBusyAction: string | null;
   setupOpsError: string | null;
   setupOpsMessage: string | null;
-  setupBulkCsvText: string;
-  setupBulkBusyAction: "validate" | "apply" | null;
-  setupBulkValidation: any;
-  setupBulkError: string | null;
-  setupBulkMessage: string | null;
   setFounderCreateTeamName: (value: string) => void;
   setFounderCreateTeamAbbreviation: (value: string) => void;
   setFounderCreateTeamDivisionLabel: (value: string) => void;
@@ -77,19 +72,15 @@ interface BootstrapDashboardProps {
   setSetupInviteTeamName: (value: string) => void;
   setSetupInviteTeamAbbreviation: (value: string) => void;
   setSetupInviteDivisionLabel: (value: string) => void;
-  setSetupBulkCsvText: (value: string) => void;
   onFounderCreateSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onFounderClaimSubmit: () => Promise<void>;
   onFounderSkip: () => Promise<void>;
   onSetupCreateTeamSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onSetupInviteSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  onSetupBulkValidate: () => Promise<void>;
-  onSetupBulkApply: () => Promise<void>;
   onSetupInviteResend: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupInviteRevoke: (invite: CommissionerInviteRow) => Promise<void>;
   onSetupCopyFreshInviteLink: (invite: CommissionerInviteRow) => Promise<void>;
   // New handlers for table-first interface
-  onSlotCreateTeam: (slotNumber: number, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotInviteMember: (slotNumber: number, memberData: { ownerName: string; ownerEmail: string; teamName: string; teamAbbreviation: string; divisionLabel: string }) => Promise<void>;
   onSlotEditTeam: (teamId: string, teamData: { name: string; abbreviation: string; divisionLabel: string }) => Promise<void>;
   onChangeLeagueSize?: (newSize: number) => Promise<void>;
@@ -316,17 +307,8 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         setupOpsBusyAction={props.setupOpsBusyAction}
         setupOpsError={props.setupOpsError}
         setupOpsMessage={props.setupOpsMessage}
-        setupBulkCsvText={props.setupBulkCsvText}
-        setupBulkBusyAction={props.setupBulkBusyAction}
-        setupBulkValidation={props.setupBulkValidation}
-        setupBulkError={props.setupBulkError}
-        setupBulkMessage={props.setupBulkMessage}
-        setSetupBulkCsvText={props.setSetupBulkCsvText}
-        onSlotCreateTeam={props.onSlotCreateTeam}
         onSlotInviteMember={props.onSlotInviteMember}
         onSlotEditTeam={props.onSlotEditTeam}
-        onSetupBulkValidate={props.onSetupBulkValidate}
-        onSetupBulkApply={props.onSetupBulkApply}
         onSetupInviteResend={props.onSetupInviteResend}
         onSetupInviteRevoke={props.onSetupInviteRevoke}
         onSetupCopyFreshInviteLink={props.onSetupCopyFreshInviteLink}

@@ -91,7 +91,7 @@ function DraftLauncherPageContent() {
     <div className="space-y-6">
       <PageHeaderBand
         eyebrow="SundayEmpire"
-        title="Picks & Draft"
+        title="Draft Operations"
         description="Move between rookie draft setup, veteran auction operations, and pick ownership from one draft workspace."
         titleTestId="draft-title"
         eyebrowTestId="draft-eyebrow"

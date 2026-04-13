@@ -296,25 +296,6 @@ function CommissionerEmptyStateBanner(props: { allEmpty: boolean; canCreate: boo
             <li>• Ask teams to start trade discussions</li>
           </ul>
         </div>
-        {props.canCreate ? (
-          <Link
-            href="/trades/new"
-            className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition"
-            style={{
-              border: "1px solid rgba(14, 165, 233, 0.5)",
-              backgroundColor: "rgba(14, 165, 233, 0.1)",
-              color: "rgb(125, 211, 252)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgb(14, 165, 233)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(14, 165, 233, 0.5)";
-            }}
-          >
-            Open Trade Builder
-          </Link>
-        ) : null}
       </div>
     </section>
   );

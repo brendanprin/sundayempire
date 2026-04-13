@@ -173,9 +173,9 @@ function buildNavSections(
         exactNavLink(`/league/${actor.leagueId}`, "League Dashboard"),
         prefixNavLink("/trades", "Trade Management"),
         prefixNavLink("/draft", "Draft Operations"),
-        exactNavLink("/activity", "Activity Monitor"),
+        exactNavLink("/activity", "League Activity"),
         exactNavLink("/rules", "Rules & Deadlines"),
-        exactNavLink("/settings", "League Configuration"),
+        exactNavLink("/settings", "Settings"),
       ],
     },
     {
