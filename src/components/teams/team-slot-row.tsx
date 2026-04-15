@@ -162,11 +162,12 @@ function InviteUserAction({
         onClick={handleOpen}
         className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
         disabled={disabled}
+        data-testid="slot-invite-user-btn"
       >
         Invite User
       </button>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="slot-invite-modal">
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-5 w-full max-w-md">
             <h3 className="text-base font-semibold text-slate-100 mb-1">
               {hasTeam ? `Invite owner for ${slot.teamName}` : "Invite a new member"}
@@ -187,16 +188,16 @@ function InviteUserAction({
                 <>
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1">Team Name *</label>
-                    <input type="text" value={teamName} onChange={handleTeamNameChange} placeholder="e.g., Lightning Bolts" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
+                    <input type="text" value={teamName} onChange={handleTeamNameChange} placeholder="e.g., Lightning Bolts" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required data-testid="slot-invite-team-name-input" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-300 mb-1">Abbreviation</label>
-                      <input type="text" value={teamAbbr} onChange={(e) => setTeamAbbr(e.target.value)} placeholder="e.g., LB" maxLength={4} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 uppercase" />
+                      <input type="text" value={teamAbbr} onChange={(e) => setTeamAbbr(e.target.value)} placeholder="e.g., LB" maxLength={4} className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 uppercase" data-testid="slot-invite-team-abbr-input" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-300 mb-1">Division</label>
-                      <input type="text" value={division} onChange={(e) => setDivision(e.target.value)} placeholder="e.g., North" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" />
+                      <input type="text" value={division} onChange={(e) => setDivision(e.target.value)} placeholder="e.g., North" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" data-testid="slot-invite-division-input" />
                     </div>
                   </div>
                   <hr className="border-slate-700" />
@@ -204,15 +205,15 @@ function InviteUserAction({
               )}
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Owner Name *</label>
-                <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g., John Smith" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
+                <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g., John Smith" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required data-testid="slot-invite-owner-name-input" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Owner Email *</label>
-                <input type="email" value={ownerEmail} onChange={handleEmailChange} placeholder="e.g., john@example.com" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required />
+                <input type="email" value={ownerEmail} onChange={handleEmailChange} placeholder="e.g., john@example.com" className="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100" required data-testid="slot-invite-owner-email-input" />
               </div>
               <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setIsOpen(false)} className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:text-slate-100">Cancel</button>
-                <button type="submit" className="rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50" disabled={!canSubmit}>Send Invite</button>
+                <button type="button" onClick={() => setIsOpen(false)} className="rounded border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:text-slate-100" data-testid="slot-invite-cancel-btn">Cancel</button>
+                <button type="submit" className="rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50" disabled={!canSubmit} data-testid="slot-invite-submit-btn">Send Invite</button>
               </div>
             </form>
           </div>
@@ -398,9 +399,9 @@ export function TeamSlotRow({
   const comprehensiveStatus = getComprehensiveStatus(slot);
 
   return (
-    <tr className="hover:bg-slate-800/30 transition-colors">
+    <tr className="hover:bg-slate-800/30 transition-colors" data-testid={`team-slot-row-${slot.slotNumber}`}>
       <td className="p-3 text-sm font-medium text-slate-200">#{slot.slotNumber}</td>
-      <td className="p-3">
+      <td className="p-3" data-testid={`team-slot-team-${slot.slotNumber}`}>
         {slot.teamName ? (
           <div>
             <div className="text-sm font-medium text-slate-100">{slot.teamName}</div>
@@ -442,7 +443,7 @@ export function TeamSlotRow({
       <td className="p-3">
         {slot.divisionLabel && <span className="text-sm text-slate-300">{slot.divisionLabel}</span>}
       </td>
-      <td className="p-3">{getStatusBadge(slot)}</td>
+      <td className="p-3" data-testid={`team-slot-status-${slot.slotNumber}`}>{getStatusBadge(slot)}</td>
       <td className="p-3">
         <TeamSlotActions
           slot={slot}
