@@ -339,7 +339,8 @@ export async function GET(request: NextRequest) {
     // protected app routes with no active league context).
     let destinationRoute: string;
     const isJoinReturnTo = returnTo?.startsWith("/join");
-    if (returnTo && (resolution.kind !== "no_league_access" || isJoinReturnTo) && !returnTo.startsWith("/league/") && !returnTo.startsWith("/dashboard")) {
+    const isInviteReturnTo = returnTo?.startsWith("/invite");
+    if (returnTo && (resolution.kind !== "no_league_access" || isJoinReturnTo || isInviteReturnTo) && !returnTo.startsWith("/league/") && !returnTo.startsWith("/dashboard")) {
       destinationRoute = returnTo;
     } else {
       destinationRoute = resolution.route;
