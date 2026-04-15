@@ -29,6 +29,7 @@ import { trackUiEvent } from "@/lib/ui-analytics";
 import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboard/types";
 import type { DraftHomeProjection } from "@/lib/read-models/draft/types";
 import type { TradeHomeResponse } from "@/types/trade-workflow";
+import type { TeamListItem } from "@/types/teams";
 import { PILOT_EVENT_TYPES } from "@/types/pilot";
 import {
   EMAIL_PATTERN,
@@ -77,6 +78,7 @@ export default function LeagueLandingDashboardPage() {
   const [setupInviteTeamName, setSetupInviteTeamName] = useState("");
   const [setupInviteTeamAbbreviation, setSetupInviteTeamAbbreviation] = useState("");
   const [setupInviteDivisionLabel, setSetupInviteDivisionLabel] = useState("");
+  const [setupTeams, setSetupTeams] = useState<TeamListItem[]>([]);
   const [setupInvites, setSetupInvites] = useState<CommissionerInviteRow[]>([]);
   const [setupInviteCopyFreshLinkEnabled, setSetupInviteCopyFreshLinkEnabled] = useState(false);
   const [setupOpsLoading, setSetupOpsLoading] = useState(false);
@@ -115,6 +117,7 @@ export default function LeagueLandingDashboardPage() {
     setSetupInviteTeamName("");
     setSetupInviteTeamAbbreviation("");
     setSetupInviteDivisionLabel("");
+    setSetupTeams([]);
     setSetupInvites([]);
     setSetupInviteCopyFreshLinkEnabled(false);
     setSetupOpsLoading(false);
@@ -178,12 +181,14 @@ export default function LeagueLandingDashboardPage() {
       ),
       requestJson<TradeHomeResponse>("/api/trades/home").catch(() => null),
       requestJson<DraftHomeProjection>("/api/drafts/home").catch(() => null),
+      requestJson<{ teams: TeamListItem[] }>("/api/teams?scope=all").catch(() => null),
     ])
-      .then(([dashboardPayload, tradesHomePayload, draftsHomePayload]) => {
+      .then(([dashboardPayload, tradesHomePayload, draftsHomePayload, teamsPayload]) => {
         if (!mounted) return;
         setDashboard(dashboardPayload);
         setTradesHome(tradesHomePayload);
         setDraftsHome(draftsHomePayload);
+        if (teamsPayload) setSetupTeams(teamsPayload.teams);
         setLoading(false);
       })
       .catch((requestError) => {
@@ -351,6 +356,17 @@ export default function LeagueLandingDashboardPage() {
     };
   }, [dashboard, leagueContextReady]);
 
+  async function loadSetupTeams() {
+    const payload = await requestJson<{ teams: TeamListItem[] }>(
+      "/api/teams?scope=all",
+      undefined,
+      "Failed to load team list.",
+    ).catch(() => null);
+    if (payload) {
+      setSetupTeams(payload.teams);
+    }
+  }
+
   async function refreshDashboardSurfaces() {
     const [dashboardPayload, tradesHomePayload, draftsHomePayload] = await Promise.all([
       requestJson<LeagueLandingDashboardProjection>(
@@ -360,6 +376,7 @@ export default function LeagueLandingDashboardPage() {
       ),
       requestJson<TradeHomeResponse>("/api/trades/home").catch(() => null),
       requestJson<DraftHomeProjection>("/api/drafts/home").catch(() => null),
+      loadSetupTeams(),
     ]);
 
     setDashboard(dashboardPayload);
@@ -956,6 +973,7 @@ export default function LeagueLandingDashboardPage() {
       {dashboard && dashboard.viewer.leagueRole === "COMMISSIONER" && dashboard.setupChecklist.available && !dashboard.setupChecklist.isComplete ? (
         <BootstrapDashboard
           dashboard={dashboard}
+          setupTeams={setupTeams}
           founderSetup={founderSetup}
           founderSetupLoading={founderSetupLoading}
           founderSetupError={founderSetupError}

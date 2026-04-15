@@ -13,6 +13,7 @@ import { NewLeagueChecklist } from "@/components/dashboard/new-league-checklist"
 import { LeagueMembersWorkspace } from "@/components/teams/league-members-workspace";
 import { buildTeamSlotsFromDashboard, buildLeagueMembersSummary } from "@/lib/teams/team-slot-helpers";
 import type { LeagueLandingDashboardProjection } from "@/lib/read-models/dashboard/types";
+import type { TeamListItem } from "@/types/teams";
 
 type FounderSetupStatus = "COMPLETE" | "INCOMPLETE_REQUIRED" | "INCOMPLETE_POSTPONED";
 type FounderSetupAction = "create" | "claim" | "skip";
@@ -37,6 +38,7 @@ type FounderSetupPayload = {
 
 interface BootstrapDashboardProps {
   dashboard: LeagueLandingDashboardProjection;
+  setupTeams: TeamListItem[];
   founderSetup: FounderSetupPayload | null;
   founderSetupLoading: boolean;
   founderSetupError: string | null;
@@ -87,7 +89,7 @@ interface BootstrapDashboardProps {
 }
 
 export function BootstrapDashboard(props: BootstrapDashboardProps) {
-  const { dashboard, founderSetup, setupInvites } = props;
+  const { dashboard, founderSetup, setupInvites, setupTeams } = props;
 
   const leagueId = dashboard.leagueDashboard.league.id;
   const seenKey = `bootstrap-checklist-seen-${leagueId}`;
@@ -106,7 +108,7 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
   const visibleAlerts = dashboard.alerts.filter((alert) => !(mirrorOnly && alert.id === "league-status"));
 
   // Build team slots and summary for the new table-first interface
-  const teamSlots = buildTeamSlotsFromDashboard(dashboard, setupInvites);
+  const teamSlots = buildTeamSlotsFromDashboard(dashboard, setupInvites, setupTeams.length > 0 ? setupTeams : undefined);
   const membersSummary = buildLeagueMembersSummary(dashboard, teamSlots);
 
   return (
