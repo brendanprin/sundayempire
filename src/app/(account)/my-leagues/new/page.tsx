@@ -117,14 +117,8 @@ export default function CreateLeaguePage() {
         body: JSON.stringify({ leagueId: response.league.id }),
       });
 
-      // Show success message briefly before navigating
-      setCreating(false);
-      setSuccess(true);
-      
-      // Navigate after brief success state
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
+      // Navigate directly to the new league workspace
+      router.push(`/league/${response.league.id}`);
     } catch (requestError) {
       setError(
         requestError instanceof ApiRequestError
