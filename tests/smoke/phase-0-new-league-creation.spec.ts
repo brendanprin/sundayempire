@@ -31,6 +31,7 @@
  *   23  Commissioner starts the veteran auction
  *   24  Each team places one open bid on a unique pool entry
  *   25  Bid windows expire; sync awards all bidded entries; auction completes
+ *   26  Commissioner advances phase to Regular Season via the readiness panel
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -941,6 +942,45 @@ test.describe("League Setup — Full Journey", () => {
 
         evidence.screenshots.push(
           ...(await captureSmokeEvidence(page, test.info(), "25-auction-completed")).screenshots,
+        );
+      });
+
+      // ── Then the commissioner advances the league to the regular season ────
+      await test.step("Then the commissioner advances the league to the regular season", async () => {
+        // ── 26  Phase transition: PRESEASON → REGULAR_SEASON ───────────────
+        // The Phase Readiness panel is blocked because teams have no starter
+        // slots configured yet (players land in BENCH slots after draft/auction).
+        // The commissioner uses the Deep Operations tab to force the transition —
+        // this is the intended override path when compliance issues are known.
+        await page.goto(`${commOrigin}/commissioner`);
+        await waitForPageStable(page);
+        await expect(page.getByTestId("commissioner-page")).toBeVisible({ timeout: 10_000 });
+
+        await page.getByTestId("commissioner-tab-operations").click();
+        await expect(page.getByTestId("commissioner-routine-phase-card")).toBeVisible({
+          timeout: 8_000,
+        });
+
+        // The transition triggers window.prompt() for a mandatory reason —
+        // register the handler before clicking so the dialog is caught.
+        page.once("dialog", async (dialog) => {
+          await dialog.accept("Preseason complete — rookie draft and veteran auction finished.");
+        });
+
+        const phaseCard = page.getByTestId("commissioner-routine-phase-card");
+        await phaseCard.getByRole("button", { name: "Regular Season" }).click();
+
+        // Confirm the phase landed on Regular Season by navigating to the
+        // league dashboard and checking the phase badge.
+        await page.goto(`${commOrigin}/league/${leagueId}`);
+        await waitForPageStable(page);
+        await expect(page.getByTestId("league-landing-phase-badge")).toContainText(
+          /Regular Season/i,
+          { timeout: 10_000 },
+        );
+
+        evidence.screenshots.push(
+          ...(await captureSmokeEvidence(page, test.info(), "26-regular-season-started")).screenshots,
         );
       });
     } catch (error) {
