@@ -630,6 +630,22 @@ async function seedLeagueCore() {
     },
   });
 
+  // Smoke test members — pre-existing users that full-journey tests invite via API.
+  // These users have no league memberships in the seed; they join fresh leagues created
+  // during the test run by accepting API-issued invites.
+  for (let i = 1; i <= 10; i++) {
+    const paddedIndex = String(i).padStart(2, "0");
+    await prisma.user.upsert({
+      where: { email: `smoke-member-${paddedIndex}@local.league` },
+      update: { name: `Smoke Member ${paddedIndex}`, platformRole: PlatformRole.USER },
+      create: {
+        email: `smoke-member-${paddedIndex}@local.league`,
+        name: `Smoke Member ${paddedIndex}`,
+        platformRole: PlatformRole.USER,
+      },
+    });
+  }
+
   return { leagueId: league.id, seasonId: season.id };
 }
 

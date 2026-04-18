@@ -18,7 +18,6 @@ export const playerRefreshJobInclude =
     _count: {
       select: {
         changes: true,
-        snapshots: true,
       },
     },
   });
@@ -44,9 +43,8 @@ export function createPlayerRefreshJobRepository(
     create(input: CreatePlayerRefreshJobInput) {
       return client.playerRefreshJob.create({
         data: {
-          leagueId: input.leagueId,
-          seasonId: input.seasonId,
           requestedByUserId: input.requestedByUserId ?? null,
+          triggerType: input.triggerType ?? "MANUAL",
           adapterKey: input.adapterKey,
           sourceLabel: input.sourceLabel ?? null,
           status: input.status ?? "PENDING",
@@ -70,15 +68,11 @@ export function createPlayerRefreshJobRepository(
       });
     },
 
-    listByLeague(input: {
-      leagueId: string;
-      seasonId?: string | null;
+    list(input: {
       statuses?: PlayerRefreshJobRecord["status"][];
-    }) {
+    } = {}) {
       return client.playerRefreshJob.findMany({
         where: {
-          leagueId: input.leagueId,
-          ...(input.seasonId ? { seasonId: input.seasonId } : {}),
           ...(input.statuses && input.statuses.length > 0
             ? {
                 status: {

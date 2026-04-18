@@ -1,10 +1,12 @@
 import { csvManualPlayerDirectoryAdapter } from "@/lib/domain/player/adapters/csv-manual-adapter";
 import { fantasyProsSeedPlayerDirectoryAdapter } from "@/lib/domain/player/adapters/fantasypros-seed-adapter";
+import { sleeperPlayerDirectoryAdapter } from "@/lib/domain/player/adapters/sleeper-adapter";
 import type { PlayerDirectoryAdapter } from "@/lib/domain/player/adapters/types";
 
 const adapters = [
   csvManualPlayerDirectoryAdapter,
   fantasyProsSeedPlayerDirectoryAdapter,
+  sleeperPlayerDirectoryAdapter,
 ] as const;
 
 export function getPlayerDirectoryAdapter(

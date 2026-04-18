@@ -25,13 +25,6 @@ export const playerRefreshChangeInclude =
         nflTeam: true,
       },
     },
-    snapshot: {
-      select: {
-        id: true,
-        seasonId: true,
-        capturedAt: true,
-      },
-    },
     reviewedByUser: {
       select: {
         id: true,
@@ -62,11 +55,8 @@ export function createPlayerRefreshChangeRepository(
     create(input: CreatePlayerRefreshChangeInput) {
       return client.playerRefreshChange.create({
         data: {
-          leagueId: input.leagueId,
-          seasonId: input.seasonId,
           jobId: input.jobId,
           playerId: input.playerId ?? null,
-          snapshotId: input.snapshotId ?? null,
           changeType: input.changeType,
           reviewStatus: input.reviewStatus ?? "PENDING",
           fieldMaskJson: nullableJson(input.fieldMaskJson),
@@ -107,7 +97,6 @@ export function createPlayerRefreshChangeRepository(
         },
         data: {
           playerId: input.playerId,
-          snapshotId: input.snapshotId,
           changeType: input.changeType,
           reviewStatus: input.reviewStatus,
           fieldMaskJson: nullableJson(input.fieldMaskJson),

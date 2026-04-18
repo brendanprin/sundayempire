@@ -173,7 +173,7 @@ export function PlayerRefreshJobsWorkspace() {
         title="Player Refresh Review"
         description={
           workspace
-            ? `Review canonical player refresh jobs for ${workspace.league.name}. ${pendingReviewCount} change(s) currently remain pending review.`
+            ? `${pendingReviewCount} change(s) currently remain pending review.`
             : "Load and review canonical player refresh jobs before trusting ambiguous player updates."
         }
         supportingContent={

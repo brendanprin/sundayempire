@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { resolveLeagueSeasonContext, type DashboardProjectionDbClient } from "@/lib/read-models/dashboard/shared";
+import type { DashboardProjectionDbClient } from "@/lib/read-models/dashboard/shared";
 import { createPlayerRefreshChangeRepository } from "@/lib/repositories/player/player-refresh-change-repository";
 import { createPlayerRefreshJobRepository } from "@/lib/repositories/player/player-refresh-job-repository";
 import {
@@ -122,13 +122,6 @@ function buildChangeDetail(
           nflTeam: change.player.nflTeam,
         }
       : null,
-    snapshot: change.snapshot
-      ? {
-          id: change.snapshot.id,
-          seasonId: change.snapshot.seasonId,
-          capturedAt: change.snapshot.capturedAt.toISOString(),
-        }
-      : null,
     reviewedByUser: change.reviewedByUser
       ? {
           id: change.reviewedByUser.id,
@@ -158,21 +151,10 @@ export function createPlayerRefreshJobDetailProjection(
 
   return {
     async read(input: {
-      leagueId: string;
-      seasonId?: string;
       jobId: string;
     }): Promise<PlayerRefreshJobDetailProjection | null> {
-      const context = await resolveLeagueSeasonContext(client, {
-        leagueId: input.leagueId,
-        seasonId: input.seasonId,
-      });
-
-      if (!context?.league) {
-        return null;
-      }
-
       const job = await jobRepository.findById(input.jobId);
-      if (!job || job.leagueId !== input.leagueId) {
+      if (!job) {
         return null;
       }
 
@@ -261,16 +243,6 @@ export function createPlayerRefreshJobDetailProjection(
       };
 
       return {
-        league: {
-          id: context.league.id,
-          name: context.league.name,
-        },
-        season: context.season
-          ? {
-              id: context.season.id,
-              year: context.season.year,
-            }
-          : null,
         job: jobSummary,
         summary: {
           ...baseSummary,

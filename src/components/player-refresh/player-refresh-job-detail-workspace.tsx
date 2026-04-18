@@ -253,7 +253,7 @@ export function PlayerRefreshJobDetailWorkspace(props: { jobId: string }) {
         title={detail ? `Refresh Job ${detail.job.id}` : "Refresh Job"}
         description={
           detail
-            ? `${detail.job.adapterLabel} refresh for ${detail.league.name}. ${detail.summary.pendingReviewCount} change(s) remain pending commissioner review.`
+            ? `${detail.job.adapterLabel} refresh. ${detail.summary.pendingReviewCount} change(s) remain pending commissioner review.`
             : "Review pending canonical player refresh changes."
         }
         supportingContent={

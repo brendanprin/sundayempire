@@ -14,19 +14,10 @@ import {
 } from "@/lib/domain/player/player-master-refresh-shared";
 import { normalizePlayerPosition, normalizePlayerSearchName } from "@/lib/domain/player/normalization";
 import { prisma } from "@/lib/prisma";
-import { CanonicalLeagueRole } from "@/lib/role-model";
 import { createPlayerIdentityMappingRepository } from "@/lib/repositories/player/player-identity-mapping-repository";
 import { createPlayerRefreshChangeRepository } from "@/lib/repositories/player/player-refresh-change-repository";
-import { createPlayerSeasonSnapshotRepository } from "@/lib/repositories/player/player-season-snapshot-repository";
-import { auditActorFromRequestActor, logTransaction } from "@/lib/transactions";
 
 type PlayerRefreshReviewDbClient = PrismaClient | Prisma.TransactionClient;
-
-type ReviewActor = {
-  email: string;
-  leagueRole: CanonicalLeagueRole;
-  teamId: string | null;
-};
 
 type ReviewAction =
   | {
@@ -49,7 +40,6 @@ type ResolveChangeResult = {
   jobId: string;
   reviewStatus: PlayerRefreshChangeReviewStatus;
   playerId: string | null;
-  snapshotId: string | null;
   mappingCreated: boolean;
 };
 
@@ -136,66 +126,35 @@ export function createCommissionerPlayerRefreshService(
 
   return {
     async triggerRefresh(input: {
-      leagueId: string;
-      seasonId: string;
       adapterKey?: string | null;
       sourceLabel?: string | null;
       requestedByUserId?: string | null;
       payload?: PlayerDirectoryImportEnvelope | null;
       now?: Date;
-      actor?: ReviewActor | null;
     }): Promise<PlayerMasterRefreshResult> {
-      const result = await masterRefreshService.run({
-        leagueId: input.leagueId,
-        seasonId: input.seasonId,
+      return masterRefreshService.run({
         adapterKey: input.adapterKey ?? null,
         sourceLabel: input.sourceLabel ?? null,
         requestedByUserId: input.requestedByUserId ?? null,
         payload: input.payload ?? null,
         now: input.now,
       });
-
-      await logTransaction(client, {
-        leagueId: input.leagueId,
-        seasonId: input.seasonId,
-        type: "COMMISSIONER_OVERRIDE",
-        summary: `Triggered player refresh via ${result.job.adapterKey}.`,
-        metadata: {
-          refreshJobId: result.job.id,
-          status: result.job.status,
-          adapterKey: result.job.adapterKey,
-          summary: result.summary,
-        },
-        audit: {
-          actor: auditActorFromRequestActor(input.actor ?? null),
-          source: "player.refresh.trigger",
-          entities: {
-            refreshJobId: result.job.id,
-          },
-        },
-      });
-
-      return result;
     },
 
     async resolveChange(input: {
-      leagueId: string;
-      seasonId: string;
       changeId: string;
       reviewedByUserId: string;
       action: ReviewAction;
       now?: Date;
-      actor?: ReviewActor | null;
     }): Promise<ResolveChangeResult> {
       const now = input.now ?? new Date();
 
       return runReviewTransaction(client, async (tx) => {
         const changeRepository = createPlayerRefreshChangeRepository(tx);
         const mappingRepository = createPlayerIdentityMappingRepository(tx);
-        const snapshotRepository = createPlayerSeasonSnapshotRepository(tx);
         const change = await changeRepository.findById(input.changeId);
 
-        if (!change || change.leagueId !== input.leagueId || change.seasonId !== input.seasonId) {
+        if (!change) {
           throw new Error("PLAYER_REFRESH_CHANGE_NOT_FOUND");
         }
 
@@ -211,34 +170,11 @@ export function createCommissionerPlayerRefreshService(
             reviewedByUserId: input.reviewedByUserId,
           });
 
-          await logTransaction(tx, {
-            leagueId: input.leagueId,
-            seasonId: input.seasonId,
-            type: "COMMISSIONER_OVERRIDE",
-            summary: "Rejected player refresh change.",
-            playerId: change.player?.id ?? null,
-            metadata: {
-              refreshJobId: change.job.id,
-              changeId: change.id,
-              changeType: change.changeType,
-              notes: input.action.notes ?? change.notes ?? null,
-            },
-            audit: {
-              actor: auditActorFromRequestActor(input.actor ?? null),
-              source: "player.refresh.reject",
-              entities: {
-                refreshJobId: change.job.id,
-                refreshChangeId: change.id,
-              },
-            },
-          });
-
           return {
             changeId: change.id,
             jobId: change.job.id,
             reviewStatus: "REJECTED",
             playerId: change.player?.id ?? null,
-            snapshotId: change.snapshot?.id ?? null,
             mappingCreated: false,
           };
         }
@@ -323,43 +259,8 @@ export function createCommissionerPlayerRefreshService(
             })
           : existingPlayer;
 
-        const existingSnapshot = await tx.playerSeasonSnapshot.findFirst({
-          where: {
-            refreshJobId: change.job.id,
-            playerId: persistedPlayer.id,
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        const snapshot =
-          existingSnapshot ??
-          (await snapshotRepository.create({
-            playerId: persistedPlayer.id,
-            leagueId: input.leagueId,
-            seasonId: input.seasonId,
-            refreshJobId: change.job.id,
-            sourceKey: persistedPlayer.sourceKey,
-            sourcePlayerId: persistedPlayer.sourcePlayerId,
-            externalId: persistedPlayer.externalId,
-            name: persistedPlayer.name,
-            displayName: persistedPlayer.displayName,
-            searchName: persistedPlayer.searchName,
-            position: persistedPlayer.position,
-            nflTeam: persistedPlayer.nflTeam,
-            age: persistedPlayer.age,
-            yearsPro: persistedPlayer.yearsPro,
-            injuryStatus: persistedPlayer.injuryStatus,
-            statusCode: persistedPlayer.statusCode,
-            statusText: persistedPlayer.statusText,
-            isRestricted: persistedPlayer.isRestricted,
-            capturedAt: now,
-          }));
-
         await changeRepository.update(change.id, {
           playerId: persistedPlayer.id,
-          snapshotId: snapshot.id,
           reviewStatus: "APPLIED",
           fieldMaskJson: serializePersistedJson(diff.changedFields),
           previousValuesJson: serializePersistedJson(
@@ -380,134 +281,57 @@ export function createCommissionerPlayerRefreshService(
           reviewedByUserId: input.reviewedByUserId,
         });
 
-        await logTransaction(tx, {
-          leagueId: input.leagueId,
-          seasonId: input.seasonId,
-          type: "COMMISSIONER_OVERRIDE",
-          summary: "Applied reviewed player refresh change.",
-          playerId: persistedPlayer.id,
-          metadata: {
-            refreshJobId: change.job.id,
-            changeId: change.id,
-            changeType: change.changeType,
-            mappingCreated,
-            changedFields: diff.changedFields,
-            restricted: persistedPlayer.isRestricted,
-          },
-          audit: {
-            actor: auditActorFromRequestActor(input.actor ?? null),
-            source: "player.refresh.resolve",
-            entities: {
-              refreshJobId: change.job.id,
-              refreshChangeId: change.id,
-              playerId: persistedPlayer.id,
-            },
-            before: diff.isChanged
-              ? diff.changedFields.reduce<Record<string, Prisma.InputJsonValue | null>>(
-                  (result, field) => {
-                    result[field] = ((existingPlayer as Record<string, unknown>)[field] ??
-                      null) as Prisma.InputJsonValue | null;
-                    return result;
-                  },
-                  {},
-                )
-              : null,
-            after: diff.isChanged
-              ? diff.changedFields.reduce<Record<string, Prisma.InputJsonValue | null>>(
-                  (result, field) => {
-                    result[field] = ((nextPlayerData as Record<string, unknown>)[field] ??
-                      null) as Prisma.InputJsonValue | null;
-                    return result;
-                  },
-                  {},
-                )
-              : null,
-          },
-        });
-
         return {
           changeId: change.id,
           jobId: change.job.id,
           reviewStatus: "APPLIED",
           playerId: persistedPlayer.id,
-          snapshotId: snapshot.id,
           mappingCreated,
         };
       });
     },
 
     async updatePlayerRestriction(input: {
-      leagueId: string;
-      seasonId: string;
       playerId: string;
       restricted: boolean;
       reviewedByUserId: string;
       now?: Date;
-      actor?: ReviewActor | null;
       changeId?: string | null;
       notes?: string | null;
     }): Promise<UpdatePlayerRestrictionResult> {
       const now = input.now ?? new Date();
 
-      return runReviewTransaction(client, async (tx) => {
-        const player = await tx.player.findUnique({
-          where: {
-            id: input.playerId,
-          },
-          select: {
-            id: true,
-            isRestricted: true,
-            name: true,
-          },
-        });
-
-        if (!player) {
-          throw new Error("PLAYER_NOT_FOUND");
-        }
-
-        if (player.isRestricted !== input.restricted) {
-          await tx.player.update({
-            where: {
-              id: player.id,
-            },
-            data: {
-              isRestricted: input.restricted,
-            },
-          });
-        }
-
-        await logTransaction(tx, {
-          leagueId: input.leagueId,
-          seasonId: input.seasonId,
-          type: "COMMISSIONER_OVERRIDE",
-          summary: `${input.restricted ? "Restricted" : "Reactivated"} player availability.`,
-          playerId: player.id,
-          metadata: {
-            changeId: input.changeId ?? null,
-            notes: input.notes ?? null,
-            restricted: input.restricted,
-          },
-          audit: {
-            actor: auditActorFromRequestActor(input.actor ?? null),
-            source: "player.refresh.restriction",
-            entities: {
-              playerId: player.id,
-              refreshChangeId: input.changeId ?? null,
-            },
-            before: {
-              isRestricted: player.isRestricted,
-            },
-            after: {
-              isRestricted: input.restricted,
-            },
-          },
-        });
-
-        return {
-          playerId: player.id,
-          isRestricted: input.restricted,
-        };
+      const player = await (client as PrismaClient).player.findUnique({
+        where: {
+          id: input.playerId,
+        },
+        select: {
+          id: true,
+          isRestricted: true,
+          name: true,
+        },
       });
+
+      if (!player) {
+        throw new Error("PLAYER_NOT_FOUND");
+      }
+
+      if (player.isRestricted !== input.restricted) {
+        await (client as PrismaClient).player.update({
+          where: {
+            id: player.id,
+          },
+          data: {
+            isRestricted: input.restricted,
+            updatedAt: now,
+          },
+        });
+      }
+
+      return {
+        playerId: player.id,
+        isRestricted: input.restricted,
+      };
     },
   };
 }

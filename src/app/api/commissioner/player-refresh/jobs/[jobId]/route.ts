@@ -10,7 +10,6 @@ export async function GET(
 ) {
   const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
   if (access.response) return access.response;
-  const { context: leagueContext } = access;
 
   const params = await routeContext.params;
   const jobId = params.jobId?.trim();
@@ -18,11 +17,7 @@ export async function GET(
     return apiError(400, "INVALID_REQUEST", "jobId is required.");
   }
 
-  const projection = await createPlayerRefreshJobDetailProjection(prisma).read({
-    leagueId: leagueContext.leagueId,
-    seasonId: leagueContext.seasonId,
-    jobId,
-  });
+  const projection = await createPlayerRefreshJobDetailProjection(prisma).read({ jobId });
 
   if (!projection?.job) {
     return apiError(404, "PLAYER_REFRESH_JOB_NOT_FOUND", "Player refresh job was not found.");

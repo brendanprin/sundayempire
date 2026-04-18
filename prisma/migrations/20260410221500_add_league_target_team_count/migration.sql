@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "League" ADD COLUMN "targetTeamCount" INTEGER NOT NULL DEFAULT 12;

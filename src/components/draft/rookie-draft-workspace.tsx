@@ -728,6 +728,7 @@ export function RookieDraftWorkspace() {
                       type="button"
                       onClick={() => runSetup(false)}
                       className="rounded-lg border border-sky-700 bg-sky-950/40 px-4 py-2 text-sm font-medium text-sky-100 hover:border-sky-500"
+                      data-testid="rookie-draft-generate-board-btn"
                     >
                       {setup.status.needsDraftCreation
                         ? "Create Draft & Generate Board"
@@ -785,7 +786,7 @@ export function RookieDraftWorkspace() {
                   Review the generated order and apply commissioner corrections when league context requires it.
                 </p>
               </div>
-              <p className="text-sm text-slate-400">{setup.entries.length} slots generated</p>
+              <p className="text-sm text-slate-400" data-testid="rookie-draft-slot-count">{setup.entries.length} slots generated</p>
             </div>
 
             {setup.entries.length === 0 ? (

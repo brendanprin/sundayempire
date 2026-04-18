@@ -2,6 +2,7 @@ import type {
   PlayerRefreshChangeReviewStatus,
   PlayerRefreshChangeType,
   PlayerRefreshJobStatus,
+  PlayerRefreshTriggerType,
   Position,
   Prisma,
   PrismaClient,
@@ -10,9 +11,8 @@ import type {
 export type PlayerRepositoriesDbClient = PrismaClient | Prisma.TransactionClient;
 
 export type CreatePlayerRefreshJobInput = {
-  leagueId: string;
-  seasonId: string;
   requestedByUserId?: string | null;
+  triggerType?: PlayerRefreshTriggerType;
   adapterKey: string;
   sourceLabel?: string | null;
   status?: PlayerRefreshJobStatus;
@@ -37,34 +37,9 @@ export type UpdatePlayerRefreshJobInput = {
   errorJson?: Prisma.InputJsonValue | null;
 };
 
-export type CreatePlayerSeasonSnapshotInput = {
-  playerId: string;
-  leagueId: string;
-  seasonId: string;
-  refreshJobId?: string | null;
-  sourceKey?: string | null;
-  sourcePlayerId?: string | null;
-  externalId?: string | null;
-  name: string;
-  displayName: string;
-  searchName: string;
-  position: Position;
-  nflTeam?: string | null;
-  age?: number | null;
-  yearsPro?: number | null;
-  injuryStatus?: string | null;
-  statusCode?: string | null;
-  statusText?: string | null;
-  isRestricted?: boolean;
-  capturedAt?: Date;
-};
-
 export type CreatePlayerRefreshChangeInput = {
-  leagueId: string;
-  seasonId: string;
   jobId: string;
   playerId?: string | null;
-  snapshotId?: string | null;
   changeType: PlayerRefreshChangeType;
   reviewStatus?: PlayerRefreshChangeReviewStatus;
   fieldMaskJson?: Prisma.InputJsonValue | null;
@@ -96,7 +71,6 @@ export type UpdatePlayerIdentityMappingInput = {
 
 export type UpdatePlayerRefreshChangeInput = {
   playerId?: string | null;
-  snapshotId?: string | null;
   changeType?: PlayerRefreshChangeType;
   reviewStatus?: PlayerRefreshChangeReviewStatus;
   fieldMaskJson?: Prisma.InputJsonValue | null;
@@ -107,3 +81,6 @@ export type UpdatePlayerRefreshChangeInput = {
   reviewedAt?: Date | null;
   reviewedByUserId?: string | null;
 };
+
+// Re-exported for backwards compatibility with position-related code
+export type { Position };

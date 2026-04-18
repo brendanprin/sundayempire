@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
   if (access.response) return access.response;
-  const { actor, context: leagueContext } = access;
+  const { actor } = access;
 
   const params = await routeContext.params;
   const playerId = params.playerId?.trim();
@@ -32,20 +32,11 @@ export async function PATCH(
 
   try {
     const result = await createCommissionerPlayerRefreshService(prisma).updatePlayerRestriction({
-      leagueId: leagueContext.leagueId,
-      seasonId: leagueContext.seasonId,
       playerId,
       restricted: body.restricted,
       reviewedByUserId: actor?.userId ?? "",
       changeId: typeof body.changeId === "string" ? body.changeId : null,
       notes: typeof body.notes === "string" ? body.notes : null,
-      actor: actor
-        ? {
-            email: actor.email,
-            leagueRole: actor.leagueRole,
-            teamId: actor.teamId,
-          }
-        : null,
     });
 
     return NextResponse.json(result);

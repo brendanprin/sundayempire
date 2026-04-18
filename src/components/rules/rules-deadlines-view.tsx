@@ -371,6 +371,7 @@ export function RulesDeadlinesView(props: {
                               value={props.form?.[field.key] ?? ""}
                               onChange={(event) => props.onFormChange(field.key, event.target.value)}
                               className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                              data-testid={field.key === "notes" ? "rules-notes-input" : undefined}
                             />
                           </label>
                         ))}
@@ -384,6 +385,7 @@ export function RulesDeadlinesView(props: {
                     variant="primary"
                     className="w-full"
                     loading={props.busy}
+                    data-testid="rules-save-btn"
                   >
                     {props.busy ? "Saving..." : "Save New Rules Version"}
                   </Button>

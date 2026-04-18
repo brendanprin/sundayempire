@@ -361,20 +361,6 @@ export function BootstrapDashboard(props: BootstrapDashboardProps) {
         onChangeLeagueSize={props.onChangeLeagueSize}
       />
 
-      {dashboard.setupChecklist.isComplete && (
-        <div className="rounded-xl border border-emerald-600/50 bg-emerald-950/30 p-6 text-center">
-          <h3 className="text-lg font-bold text-emerald-100">🎉 Bootstrap Complete!</h3>
-          <p className="mt-2 text-emerald-50/80">
-            Your league foundation is ready. You'll now see the full commissioner dashboard with advanced features.
-          </p>
-          <Link
-            href={`/league/${dashboard.leagueDashboard.league.id}`}
-            className="mt-4 inline-flex rounded-md border border-emerald-500/60 bg-emerald-950/50 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-400"
-          >
-            View Full Dashboard
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

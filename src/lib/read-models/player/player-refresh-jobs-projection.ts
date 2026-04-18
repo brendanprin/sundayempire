@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { listPlayerDirectoryAdapters } from "@/lib/domain/player/adapters/registry";
-import { resolveLeagueSeasonContext, type DashboardProjectionDbClient } from "@/lib/read-models/dashboard/shared";
+import type { DashboardProjectionDbClient } from "@/lib/read-models/dashboard/shared";
 import { createPlayerRefreshJobRepository } from "@/lib/repositories/player/player-refresh-job-repository";
 import { createPlayerRefreshJobSummaryMapper } from "@/lib/read-models/player/player-refresh-projection-shared";
 import type { PlayerRefreshJobsProjection } from "@/lib/read-models/player/player-refresh-types";
@@ -11,22 +11,9 @@ export function createPlayerRefreshJobsProjection(client: DashboardProjectionDbC
 
   return {
     async list(input: {
-      leagueId: string;
-      seasonId?: string;
       statuses?: Array<"PENDING" | "RUNNING" | "SUCCEEDED" | "PARTIAL" | "FAILED" | "CANCELED">;
-    }): Promise<PlayerRefreshJobsProjection | null> {
-      const context = await resolveLeagueSeasonContext(client, {
-        leagueId: input.leagueId,
-        seasonId: input.seasonId,
-      });
-
-      if (!context?.league) {
-        return null;
-      }
-
-      const jobs = await repository.listByLeague({
-        leagueId: input.leagueId,
-        seasonId: context.season?.id ?? null,
+    } = {}): Promise<PlayerRefreshJobsProjection> {
+      const jobs = await repository.list({
         statuses: input.statuses,
       });
 
@@ -73,16 +60,6 @@ export function createPlayerRefreshJobsProjection(client: DashboardProjectionDbC
       }
 
       return {
-        league: {
-          id: context.league.id,
-          name: context.league.name,
-        },
-        season: context.season
-          ? {
-              id: context.season.id,
-              year: context.season.year,
-            }
-          : null,
         adapters: listPlayerDirectoryAdapters().map((adapter) => ({
           key: adapter.key,
           label: adapter.label,

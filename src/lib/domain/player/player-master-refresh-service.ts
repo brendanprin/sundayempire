@@ -26,7 +26,6 @@ import {
 import { prisma } from "@/lib/prisma";
 import { createPlayerRefreshChangeRepository } from "@/lib/repositories/player/player-refresh-change-repository";
 import { createPlayerRefreshJobRepository } from "@/lib/repositories/player/player-refresh-job-repository";
-import { createPlayerSeasonSnapshotRepository } from "@/lib/repositories/player/player-season-snapshot-repository";
 
 type PlayerMasterRefreshDbClient = PrismaClient | Prisma.TransactionClient;
 
@@ -153,8 +152,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
 
   return {
     async run(input: {
-      leagueId: string;
-      seasonId: string;
       adapterKey?: string | null;
       sourceLabel?: string | null;
       requestedByUserId?: string | null;
@@ -169,9 +166,8 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
       }
 
       const job = await jobRepository.create({
-        leagueId: input.leagueId,
-        seasonId: input.seasonId,
         requestedByUserId: input.requestedByUserId ?? null,
+        triggerType: "MANUAL",
         adapterKey: adapter.key,
         sourceLabel: input.sourceLabel?.trim() || null,
         status: "RUNNING",
@@ -223,7 +219,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
 
         const transactionResult = await runPlayerRefreshTransaction(client, async (tx) => {
           const changeRepository = createPlayerRefreshChangeRepository(tx);
-          const snapshotRepository = createPlayerSeasonSnapshotRepository(tx);
 
           const counts = emptyCounts();
 
@@ -274,8 +269,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
           for (const error of parsed.errors) {
             counts.invalid += 1;
             await changeRepository.create({
-              leagueId: input.leagueId,
-              seasonId: input.seasonId,
               jobId: job.id,
               changeType: "INVALID",
               reviewStatus: "PENDING",
@@ -294,8 +287,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
             if (seenSourceIdentities.has(sourceIdentityKey)) {
               counts.duplicateSuspect += 1;
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 changeType: "DUPLICATE_SUSPECT",
                 reviewStatus: "PENDING",
@@ -312,8 +303,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
             if (resolution.status === "ambiguous") {
               counts.ambiguous += 1;
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 playerId: null,
                 changeType: "AMBIGUOUS",
@@ -333,34 +322,9 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
                 data: normalizeIncomingPlayerData(row, null, "new"),
               });
 
-              const snapshot = await snapshotRepository.create({
-                playerId: createdPlayer.id,
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
-                refreshJobId: job.id,
-                sourceKey: createdPlayer.sourceKey,
-                sourcePlayerId: createdPlayer.sourcePlayerId,
-                externalId: createdPlayer.externalId,
-                name: createdPlayer.name,
-                displayName: createdPlayer.displayName,
-                searchName: createdPlayer.searchName,
-                position: createdPlayer.position,
-                nflTeam: createdPlayer.nflTeam,
-                age: createdPlayer.age,
-                yearsPro: createdPlayer.yearsPro,
-                injuryStatus: createdPlayer.injuryStatus,
-                statusCode: createdPlayer.statusCode,
-                statusText: createdPlayer.statusText,
-                isRestricted: createdPlayer.isRestricted,
-                capturedAt: now,
-              });
-
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 playerId: createdPlayer.id,
-                snapshotId: snapshot.id,
                 changeType: "NEW",
                 reviewStatus: "APPLIED",
                 fieldMaskJson: serializePersistedJson([
@@ -406,8 +370,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
             if (processedPlayerIds.has(existingPlayer.id)) {
               counts.duplicateSuspect += 1;
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 playerId: existingPlayer.id,
                 changeType: "DUPLICATE_SUSPECT",
@@ -426,8 +388,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
             if (resolution.conflicts.length > 0) {
               counts.duplicateSuspect += 1;
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 playerId: existingPlayer.id,
                 changeType: "DUPLICATE_SUSPECT",
@@ -453,8 +413,6 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
             ) {
               counts.ambiguous += 1;
               await changeRepository.create({
-                leagueId: input.leagueId,
-                seasonId: input.seasonId,
                 jobId: job.id,
                 playerId: existingPlayer.id,
                 changeType: "AMBIGUOUS",
@@ -486,34 +444,9 @@ export function createPlayerMasterRefreshService(client: PlayerMasterRefreshDbCl
                 })
               : existingPlayer;
 
-            const snapshot = await snapshotRepository.create({
-              playerId: persistedPlayer.id,
-              leagueId: input.leagueId,
-              seasonId: input.seasonId,
-              refreshJobId: job.id,
-              sourceKey: persistedPlayer.sourceKey,
-              sourcePlayerId: persistedPlayer.sourcePlayerId,
-              externalId: persistedPlayer.externalId,
-              name: persistedPlayer.name,
-              displayName: persistedPlayer.displayName,
-              searchName: persistedPlayer.searchName,
-              position: persistedPlayer.position,
-              nflTeam: persistedPlayer.nflTeam,
-              age: persistedPlayer.age,
-              yearsPro: persistedPlayer.yearsPro,
-              injuryStatus: persistedPlayer.injuryStatus,
-              statusCode: persistedPlayer.statusCode,
-              statusText: persistedPlayer.statusText,
-              isRestricted: persistedPlayer.isRestricted,
-              capturedAt: now,
-            });
-
             await changeRepository.create({
-              leagueId: input.leagueId,
-              seasonId: input.seasonId,
               jobId: job.id,
               playerId: persistedPlayer.id,
-              snapshotId: snapshot.id,
               changeType: classification,
               reviewStatus,
               fieldMaskJson: serializePersistedJson(diff.changedFields),

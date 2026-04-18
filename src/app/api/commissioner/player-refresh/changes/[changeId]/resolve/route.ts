@@ -11,7 +11,7 @@ export async function POST(
 ) {
   const access = await requireCurrentLeagueRole(request, ["COMMISSIONER"]);
   if (access.response) return access.response;
-  const { actor, context: leagueContext } = access;
+  const { actor } = access;
 
   const params = await routeContext.params;
   const changeId = params.changeId?.trim();
@@ -26,18 +26,9 @@ export async function POST(
 
   try {
     const result = await createCommissionerPlayerRefreshService(prisma).resolveChange({
-      leagueId: leagueContext.leagueId,
-      seasonId: leagueContext.seasonId,
       changeId,
       reviewedByUserId: actor?.userId ?? "",
       now: new Date(),
-      actor: actor
-        ? {
-            email: actor.email,
-            leagueRole: actor.leagueRole,
-            teamId: actor.teamId,
-          }
-        : null,
       action:
         action === "APPLY_MAPPING"
           ? {

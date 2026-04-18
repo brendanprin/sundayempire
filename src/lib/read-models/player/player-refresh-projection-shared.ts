@@ -63,7 +63,6 @@ export function createPlayerRefreshJobSummaryMapper(
           }
         : null,
       changeCount: job._count.changes,
-      snapshotCount: job._count.snapshots,
       pendingReviewCount: reviewCounts?.pendingReviewCount ?? 0,
       appliedReviewCount: reviewCounts?.appliedReviewCount ?? 0,
       rejectedReviewCount: reviewCounts?.rejectedReviewCount ?? 0,

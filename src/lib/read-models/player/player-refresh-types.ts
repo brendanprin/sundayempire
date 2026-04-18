@@ -28,7 +28,6 @@ export type PlayerRefreshJobSummary = {
     name: string | null;
   } | null;
   changeCount: number;
-  snapshotCount: number;
   pendingReviewCount: number;
   appliedReviewCount: number;
   rejectedReviewCount: number;
@@ -68,11 +67,6 @@ export type PlayerRefreshChangeDetail = {
     position: string;
     nflTeam: string | null;
   } | null;
-  snapshot: {
-    id: string;
-    seasonId: string;
-    capturedAt: string;
-  } | null;
   reviewedByUser: {
     id: string;
     email: string;
@@ -89,14 +83,6 @@ export type PlayerRefreshChangeDetail = {
 };
 
 export type PlayerRefreshJobDetailProjection = {
-  league: {
-    id: string;
-    name: string;
-  };
-  season: {
-    id: string;
-    year: number;
-  } | null;
   job: PlayerRefreshJobSummary;
   summary: PlayerRefreshCountsSummary & {
     pendingReviewCount: number;
@@ -112,14 +98,6 @@ export type PlayerRefreshJobDetailProjection = {
 };
 
 export type PlayerRefreshJobsProjection = {
-  league: {
-    id: string;
-    name: string;
-  };
-  season: {
-    id: string;
-    year: number;
-  } | null;
   adapters: {
     key: string;
     label: string;

@@ -170,6 +170,11 @@ enum PlayerRefreshChangeReviewStatus {
   APPLIED
 }
 
+enum PlayerRefreshTriggerType {
+  MANUAL
+  SCHEDULED
+}
+
 enum SyncMismatchType {
   ROSTER_MISSING_IN_APP
   ROSTER_MISSING_IN_HOST
@@ -381,11 +386,12 @@ enum TransactionType {
 }
 
 model League {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  targetTeamCount Int      @default(12)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   seasons                  Season[]                 @relation("LeagueSeasons")
   teams                    Team[]
@@ -400,9 +406,6 @@ model League {
   auctionAwards            AuctionAward[]           @relation("LeagueAuctionAwards")
   blindTieResolutions      AuctionBlindTieResolution[] @relation("LeagueBlindTieResolutions")
   hostPlatformSyncJobs     HostPlatformSyncJob[]    @relation("LeagueHostPlatformSyncJobs")
-  playerRefreshJobs        PlayerRefreshJob[]
-  playerRefreshChanges     PlayerRefreshChange[]
-  playerSeasonSnapshots    PlayerSeasonSnapshot[]
   syncMismatches           SyncMismatch[]           @relation("LeagueSyncMismatches")
   trades                   Trade[]
   tradeProposals           TradeProposal[]          @relation("LeagueTradeProposals")
@@ -451,9 +454,6 @@ model Season {
   auctionAwards                    AuctionAward[]           @relation("SeasonAuctionAwards")
   blindTieResolutions              AuctionBlindTieResolution[] @relation("SeasonBlindTieResolutions")
   hostPlatformSyncJobs             HostPlatformSyncJob[]    @relation("SeasonHostPlatformSyncJobs")
-  playerRefreshJobs                PlayerRefreshJob[]
-  playerRefreshChanges             PlayerRefreshChange[]
-  playerSeasonSnapshots            PlayerSeasonSnapshot[]
   syncMismatches                   SyncMismatch[]           @relation("SeasonSyncMismatches")
   contractSeasonLedgers            ContractSeasonLedger[]   @relation("SeasonContractSeasonLedgers")
   franchiseTagUsages               FranchiseTagUsage[]      @relation("SeasonFranchiseTagUsages")
@@ -759,7 +759,6 @@ model Player {
   auctionAwards            AuctionAward[]           @relation("AuctionAwardPlayer")
   syncMismatches           SyncMismatch[]           @relation("PlayerSyncMismatches")
   refreshChanges           PlayerRefreshChange[]
-  seasonSnapshots          PlayerSeasonSnapshot[]
   identityMappings         PlayerIdentityMapping[]
   tradeAssets              TradeAsset[]
   activityEvents           ActivityEvent[]          @relation("PlayerActivityEvents")
@@ -789,98 +788,52 @@ model PlayerIdentityMapping {
 }
 
 model PlayerRefreshJob {
-  id                String                 @id @default(cuid())
-  leagueId          String
-  seasonId          String
+  id                String                   @id @default(cuid())
   requestedByUserId String?
+  triggerType       PlayerRefreshTriggerType @default(MANUAL)
   adapterKey        String
   sourceLabel       String?
-  status            PlayerRefreshJobStatus @default(PENDING)
+  status            PlayerRefreshJobStatus   @default(PENDING)
   startedAt         DateTime?
   completedAt       DateTime?
   payloadDigest     String?
   inputJson         Json?
   summaryJson       Json?
   errorJson         Json?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
 
-  league          League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  season          Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   requestedByUser User?                 @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
   changes         PlayerRefreshChange[]
-  snapshots       PlayerSeasonSnapshot[]
 
-  @@index([leagueId, seasonId, status])
+  @@index([status])
   @@index([requestedByUserId])
   @@index([createdAt])
 }
 
-model PlayerSeasonSnapshot {
-  id             String   @id @default(cuid())
-  playerId       String
-  leagueId       String
-  seasonId       String
-  refreshJobId   String?
-  sourceKey      String?
-  sourcePlayerId String?
-  externalId     String?
-  name           String
-  displayName    String
-  searchName     String
-  position       Position
-  nflTeam        String?
-  age            Int?
-  yearsPro       Int?
-  injuryStatus   String?
-  statusCode     String?
-  statusText     String?
-  isRestricted   Boolean  @default(false)
-  capturedAt     DateTime @default(now())
-  createdAt      DateTime @default(now())
-
-  player         Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  league         League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  season         Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  refreshJob     PlayerRefreshJob?     @relation(fields: [refreshJobId], references: [id], onDelete: SetNull)
-  refreshChanges PlayerRefreshChange[]
-
-  @@unique([refreshJobId, playerId])
-  @@index([leagueId, seasonId, playerId])
-  @@index([playerId, capturedAt])
-  @@index([refreshJobId])
-}
-
 model PlayerRefreshChange {
-  id               String                         @id @default(cuid())
-  leagueId         String
-  seasonId         String
-  jobId            String
-  playerId         String?
-  snapshotId       String?
-  changeType       PlayerRefreshChangeType
-  reviewStatus     PlayerRefreshChangeReviewStatus @default(PENDING)
-  fieldMaskJson    Json?
+  id                 String                          @id @default(cuid())
+  jobId              String
+  playerId           String?
+  changeType         PlayerRefreshChangeType
+  reviewStatus       PlayerRefreshChangeReviewStatus @default(PENDING)
+  fieldMaskJson      Json?
   previousValuesJson Json?
   incomingValuesJson Json?
-  appliedValuesJson Json?
-  notes            String?
-  reviewedAt       DateTime?
-  reviewedByUserId String?
-  createdAt        DateTime                       @default(now())
-  updatedAt        DateTime                       @updatedAt
+  appliedValuesJson  Json?
+  notes              String?
+  reviewedAt         DateTime?
+  reviewedByUserId   String?
+  createdAt          DateTime                        @default(now())
+  updatedAt          DateTime                        @updatedAt
 
-  league         League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  season         Season                @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  job            PlayerRefreshJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  player         Player?               @relation(fields: [playerId], references: [id], onDelete: SetNull)
-  snapshot       PlayerSeasonSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
-  reviewedByUser User?                 @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  job            PlayerRefreshJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  player         Player?          @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  reviewedByUser User?            @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
-  @@index([leagueId, seasonId, reviewStatus])
+  @@index([jobId, reviewStatus])
   @@index([jobId, changeType])
   @@index([playerId])
-  @@index([snapshotId])
   @@index([reviewedByUserId])
 }
 
